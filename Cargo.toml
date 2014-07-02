@@ -1,0 +1,13 @@
+[package]
+
+name = "oauth2"
+authors = ["Alex Crichton <alex@alexcrichton.com>"]
+version = "0.0.1"
+
+[[lib]]
+
+name = "oauth2"
+
+[dependencies.curl]
+
+path = "../curl-rust/"

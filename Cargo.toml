@@ -10,5 +10,4 @@ name = "oauth2"
 
 [dependencies.curl]
 
-git = "https://github.com/alexcrichton/curl-rust"
-branch = "cargo"
+git = "https://github.com/carllerche/curl-rust"

@@ -5,6 +5,8 @@ use url::Url;
 use std::collections::HashMap;
 use std::io::MemReader;
 
+use curl::http;
+
 /// Configuration of an oauth2 application.
 pub struct Config {
     pub client_id: String,
@@ -68,7 +70,7 @@ impl Config {
         let form = url::encode_form_urlencoded(&form);
         let mut form = MemReader::new(form.into_bytes());
 
-        let result = try!(curl::handle()
+        let result = try!(http::handle()
                                .post(self.token_url.to_str().as_slice(),
                                      &mut form as &mut Reader)
                                .header("Content-Type",
@@ -108,8 +110,8 @@ impl Config {
     }
 }
 
-impl<'a, 'b> Authorization for curl::Request<'a, 'b> {
-    fn auth_with(self, token: &Token) -> curl::Request<'a, 'b> {
+impl<'a, 'b> Authorization for http::Request<'a, 'b> {
+    fn auth_with(self, token: &Token) -> http::Request<'a, 'b> {
         self.header("Authorization",
                     format!("token {}", token.access_token).as_slice())
     }

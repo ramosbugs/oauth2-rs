@@ -47,12 +47,12 @@ impl Config {
 
     pub fn authorize_url(&self, state: String) -> Url {
         let mut url = self.auth_url.clone();
-        url.query.push(("client_id".to_string(), self.client_id.clone()));
-        url.query.push(("state".to_string(), state));
-        url.query.push(("scope".to_string(), self.scopes.connect(",")));
+        url.path.query.push(("client_id".to_string(), self.client_id.clone()));
+        url.path.query.push(("state".to_string(), state));
+        url.path.query.push(("scope".to_string(), self.scopes.connect(",")));
         if self.redirect_url.len() > 0 {
-            url.query.push(("redirect_uri".to_string(),
-                            self.redirect_url.clone()));
+            url.path.query.push(("redirect_uri".to_string(),
+                                 self.redirect_url.clone()));
         }
         return url;
     }
@@ -88,7 +88,8 @@ impl Config {
             token_type: String::new(),
         };
 
-        for(k, v) in url::decode_form_urlencoded(result.get_body()).move_iter() {
+        let form = try!(url::decode_form_urlencoded(result.get_body()));
+        for(k, v) in form.move_iter() {
             let v = match v.move_iter().next() { Some(v) => v, None => continue };
             match k.as_slice() {
                 "access_token" => token.access_token = v,

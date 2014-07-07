@@ -1,5 +1,8 @@
+#![feature(phase)]
+
 extern crate url;
 extern crate curl;
+#[phase(plugin, link)] extern crate log;
 
 use url::Url;
 use std::collections::HashMap;
@@ -87,8 +90,12 @@ impl Config {
             scopes: Vec::new(),
             token_type: String::new(),
         };
+        let mut error = String::new();
+        let mut error_desc = String::new();
+        let mut error_uri = String::new();
 
         let form = try!(url::decode_form_urlencoded(result.get_body()));
+        debug!("reponse: {}", form);
         for(k, v) in form.move_iter() {
             let v = match v.move_iter().next() { Some(v) => v, None => continue };
             match k.as_slice() {
@@ -98,16 +105,20 @@ impl Config {
                     token.scopes = v.as_slice().split(',')
                                     .map(|s| s.to_string()).collect();
                 }
+                "error" => error = v,
+                "error_description" => error_desc = v,
+                "error_uri" => error_uri = v,
                 _ => {}
             }
         }
 
-        if token.access_token.len() == 0 {
-            Err(format!("could not find access_token in the response"))
-        } else {
+        if token.access_token.len() != 0 {
             Ok(token)
+        } else if error.len() > 0 {
+            Err(format!("error `{}`: {}, see {}", error, error_desc, error_uri))
+        } else {
+            Err(format!("couldn't find access_token in the response"))
         }
-
     }
 }
 

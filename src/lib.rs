@@ -74,12 +74,12 @@ impl Config {
         let mut form = MemReader::new(form.into_bytes());
 
         let result = try!(http::handle()
-                               .post(self.token_url.to_str().as_slice(),
+                               .post(self.token_url.to_string().as_slice(),
                                      &mut form as &mut Reader)
                                .header("Content-Type",
                                        "application/x-www-form-urlencoded")
                                .exec()
-                               .map_err(|s| s.to_str()));
+                               .map_err(|s| s.to_string()));
 
         if result.get_code() != 200 {
             return Err(format!("expected `200`, found `{}`", result.get_code()))

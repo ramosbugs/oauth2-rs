@@ -42,40 +42,46 @@ impl Config {
             client_id: id.to_string(),
             client_secret: secret.to_string(),
             scopes: Vec::new(),
-            auth_url: from_str(auth_url).unwrap(),
-            token_url: from_str(token_url).unwrap(),
+            auth_url: Url::parse(auth_url).unwrap(),
+            token_url: Url::parse(token_url).unwrap(),
             redirect_url: String::new(),
         }
     }
 
     pub fn authorize_url(&self, state: String) -> Url {
-        let mut url = self.auth_url.clone();
-        url.path.query.push(("client_id".to_string(), self.client_id.clone()));
-        url.path.query.push(("state".to_string(), state));
-        url.path.query.push(("scope".to_string(), self.scopes.connect(",")));
+        let scopes = self.scopes.connect(",");
+        let mut pairs = vec![
+            ("client_id", &self.client_id),
+            ("state", &state),
+            ("scope", &scopes),
+        ];
         if self.redirect_url.len() > 0 {
-            url.path.query.push(("redirect_uri".to_string(),
-                                 self.redirect_url.clone()));
+            pairs.push(("redirect_uri", &self.redirect_url));
         }
+        let mut url = self.auth_url.clone();
+        url.set_query_from_pairs(pairs.iter().map(|&(k, v)| {
+            (k, v.as_slice())
+        }));
         return url;
     }
 
     pub fn exchange(&self, code: String) -> Result<Token, String> {
         let mut form = HashMap::new();
-        form.insert("client_id".to_string(), vec![self.client_id.clone()]);
-        form.insert("client_secret".to_string(), vec![self.client_secret.clone()]);
-        form.insert("code".to_string(), vec![code]);
+        form.insert("client_id", self.client_id.clone());
+        form.insert("client_secret", self.client_secret.clone());
+        form.insert("code", code);
         if self.redirect_url.len() > 0 {
-            form.insert("redirect_uri".to_string(),
-                        vec![self.redirect_url.clone()]);
+            form.insert("redirect_uri", self.redirect_url.clone());
         }
 
-        let form = url::encode_form_urlencoded(&form);
+        let form = url::form_urlencoded::serialize(form.iter().map(|(k, v)| {
+            (k.as_slice(), v.as_slice())
+        }), None);
         let mut form = MemReader::new(form.into_bytes());
 
         let result = try!(http::handle()
                                .post(self.token_url.to_string().as_slice(),
-                                     &mut form as &mut Reader)
+                                     &mut form)
                                .header("Content-Type",
                                        "application/x-www-form-urlencoded")
                                .exec()
@@ -94,10 +100,13 @@ impl Config {
         let mut error_desc = String::new();
         let mut error_uri = String::new();
 
-        let form = try!(url::decode_form_urlencoded(result.get_body()));
+        let form = match url::form_urlencoded::parse_bytes(result.get_body(),
+                                                           None, false, false) {
+            Some(vec) => vec,
+            None => return Err(format!("invalid urlencoded form in reponse"))
+        };
         debug!("reponse: {}", form);
         for(k, v) in form.move_iter() {
-            let v = match v.move_iter().next() { Some(v) => v, None => continue };
             match k.as_slice() {
                 "access_token" => token.access_token = v,
                 "token_type" => token.token_type = v,

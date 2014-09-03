@@ -1,2 +1,2 @@
-/src/bin
 /target
+/Cargo.lock

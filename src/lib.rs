@@ -106,7 +106,7 @@ impl Config {
             None => return Err(format!("invalid urlencoded form in reponse"))
         };
         debug!("reponse: {}", form);
-        for(k, v) in form.move_iter() {
+        for(k, v) in form.into_iter() {
             match k.as_slice() {
                 "access_token" => token.access_token = v,
                 "token_type" => token.token_type = v,

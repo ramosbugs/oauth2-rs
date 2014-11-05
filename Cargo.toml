@@ -5,7 +5,7 @@ version = "0.0.1"
 
 [dependencies.curl]
 git = "https://github.com/alexcrichton/curl-rust"
-branch = "bundle"
+branch = "build-cmd"
 
 [dependencies.url]
 git = "https://github.com/servo/rust-url"

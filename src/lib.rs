@@ -76,7 +76,7 @@ impl Config {
 
         let form = url::form_urlencoded::serialize(form.iter().map(|(k, v)| {
             (k.as_slice(), v.as_slice())
-        }), None);
+        }));
         let mut form = MemReader::new(form.into_bytes());
 
         let result = try!(http::handle()
@@ -100,11 +100,7 @@ impl Config {
         let mut error_desc = String::new();
         let mut error_uri = String::new();
 
-        let form = match url::form_urlencoded::parse_bytes(result.get_body(),
-                                                           None, false, false) {
-            Some(vec) => vec,
-            None => return Err(format!("invalid urlencoded form in reponse"))
-        };
+        let form = url::form_urlencoded::parse(result.get_body());
         debug!("reponse: {}", form);
         for(k, v) in form.into_iter() {
             match k.as_slice() {

@@ -20,7 +20,7 @@ pub struct Config {
     pub redirect_url: String,
 }
 
-#[deriving(Show, Clone, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Show, Clone, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Token {
     pub access_token: String,
     pub scopes: Vec<String>,

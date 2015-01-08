@@ -1,8 +1,6 @@
-#![feature(phase)]
-
 extern crate url;
 extern crate curl;
-#[phase(plugin, link)] extern crate log;
+#[macro_use] extern crate log;
 
 use url::Url;
 use std::collections::HashMap;

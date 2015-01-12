@@ -99,7 +99,7 @@ impl Config {
         let mut error_uri = String::new();
 
         let form = url::form_urlencoded::parse(result.get_body());
-        debug!("reponse: {}", form);
+        debug!("reponse: {:?}", form);
         for(k, v) in form.into_iter() {
             match k.as_slice() {
                 "access_token" => token.access_token = v,

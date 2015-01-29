@@ -1,10 +1,12 @@
+#![feature(core, collections, io)]
+
 extern crate url;
 extern crate curl;
 #[macro_use] extern crate log;
 
 use url::Url;
 use std::collections::HashMap;
-use std::io::MemReader;
+use std::old_io::MemReader;
 
 use curl::http;
 

@@ -1,4 +1,4 @@
-#![feature(core, collections, io)]
+#![feature(core, io)]
 
 extern crate url;
 extern crate curl;
@@ -20,7 +20,7 @@ pub struct Config {
     pub redirect_url: String,
 }
 
-#[derive(Show, Clone, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Token {
     pub access_token: String,
     pub scopes: Vec<String>,

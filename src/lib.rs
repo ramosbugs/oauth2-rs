@@ -1,4 +1,5 @@
-#![feature(core, io)]
+#![feature(core, old_io)]
+#![cfg_attr(test, deny(warnings))]
 
 extern crate url;
 extern crate curl;

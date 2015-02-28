@@ -1,12 +1,12 @@
 [package]
 name = "oauth2"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
-version = "0.1.6"
+version = "0.1.7"
 license = "MIT/Apache-2.0"
 description = "Bindings for exchanging OAuth 2 tokens"
 repository = "https://github.com/alexcrichton/oauth2-rs"
 
 [dependencies]
-curl = "0.1.0"
+curl = "0.2.0"
 url = "0.2.0"
 log = "0.2"

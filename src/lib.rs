@@ -1,4 +1,3 @@
-#![feature(core, old_io)]
 #![cfg_attr(test, deny(warnings))]
 
 extern crate url;
@@ -7,7 +6,6 @@ extern crate curl;
 
 use url::Url;
 use std::collections::HashMap;
-use std::old_io::MemReader;
 
 use curl::http;
 
@@ -61,7 +59,7 @@ impl Config {
         }
         let mut url = self.auth_url.clone();
         url.set_query_from_pairs(pairs.iter().map(|&(k, v)| {
-            (k, v.as_slice())
+            (k, &v[..])
         }));
         return url;
     }
@@ -76,13 +74,13 @@ impl Config {
         }
 
         let form = url::form_urlencoded::serialize(form.iter().map(|(k, v)| {
-            (k.as_slice(), v.as_slice())
+            (&k[..], &v[..])
         }));
-        let mut form = MemReader::new(form.into_bytes());
+        let form = form.into_bytes();
 
         let result = try!(http::handle()
-                               .post(self.token_url.to_string().as_slice(),
-                                     &mut form)
+                               .post(&self.token_url.to_string()[..],
+                                     &mut &form[..])
                                .header("Content-Type",
                                        "application/x-www-form-urlencoded")
                                .exec()
@@ -104,11 +102,11 @@ impl Config {
         let form = url::form_urlencoded::parse(result.get_body());
         debug!("reponse: {:?}", form);
         for(k, v) in form.into_iter() {
-            match k.as_slice() {
+            match &k[..] {
                 "access_token" => token.access_token = v,
                 "token_type" => token.token_type = v,
                 "scope" => {
-                    token.scopes = v.as_slice().split(',')
+                    token.scopes = v.split(',')
                                     .map(|s| s.to_string()).collect();
                 }
                 "error" => error = v,
@@ -131,6 +129,6 @@ impl Config {
 impl<'a, 'b> Authorization for http::Request<'a, 'b> {
     fn auth_with(self, token: &Token) -> http::Request<'a, 'b> {
         self.header("Authorization",
-                    format!("token {}", token.access_token).as_slice())
+                    &format!("token {}", token.access_token))
     }
 }

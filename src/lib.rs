@@ -77,10 +77,10 @@ impl Config {
             (&k[..], &v[..])
         }));
         let form = form.into_bytes();
+        let mut form = &form[..];
 
         let result = try!(http::handle()
-                               .post(&self.token_url.to_string()[..],
-                                     &mut &form[..])
+                               .post(&self.token_url.to_string(), &mut form)
                                .header("Content-Type",
                                        "application/x-www-form-urlencoded")
                                .exec()

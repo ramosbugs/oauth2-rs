@@ -47,9 +47,8 @@ impl Config {
         }
     }
 
-    #[allow(deprecated)] // connect => join in 1.3
     pub fn authorize_url(&self, state: String) -> Url {
-        let scopes = self.scopes.connect(",");
+        let scopes = self.scopes.join(",");
         let mut pairs = vec![
             ("client_id", &self.client_id),
             ("state", &state),

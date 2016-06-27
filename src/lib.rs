@@ -47,9 +47,8 @@ impl Config {
         }
     }
 
-    #[allow(deprecated)] // connect => join in 1.3
     pub fn authorize_url(&self, state: String) -> Url {
-        let scopes = self.scopes.connect(",");
+        let scopes = self.scopes.join(",");
         let mut pairs = vec![
             ("client_id", &self.client_id),
             ("state", &state),
@@ -59,9 +58,9 @@ impl Config {
             pairs.push(("redirect_uri", &self.redirect_url));
         }
         let mut url = self.auth_url.clone();
-        url.set_query_from_pairs(pairs.iter().map(|&(k, v)| {
-            (k, &v[..])
-        }));
+        url.query_pairs_mut().clear().extend_pairs(
+            pairs.iter().map(|&(k, v)| { (k, &v[..]) })
+        );
         return url;
     }
 
@@ -74,9 +73,10 @@ impl Config {
             form.insert("redirect_uri", self.redirect_url.clone());
         }
 
-        let form = url::form_urlencoded::serialize(form.iter().map(|(k, v)| {
-            (&k[..], &v[..])
-        }));
+        let form = url::form_urlencoded::Serializer::new(String::new()).extend_pairs(
+            form.iter().map(|(k, v)| { (&k[..], &v[..]) })
+        ).finish();
+
         let form = form.into_bytes();
         let mut form = &form[..];
 
@@ -101,18 +101,18 @@ impl Config {
         let mut error_uri = String::new();
 
         let form = url::form_urlencoded::parse(result.get_body());
-        debug!("reponse: {:?}", form);
+        debug!("reponse: {:?}", form.collect::<Vec<_>>());
         for(k, v) in form.into_iter() {
             match &k[..] {
-                "access_token" => token.access_token = v,
-                "token_type" => token.token_type = v,
+                "access_token" => token.access_token = v.into_owned(),
+                "token_type" => token.token_type = v.into_owned(),
                 "scope" => {
                     token.scopes = v.split(',')
                                     .map(|s| s.to_string()).collect();
                 }
-                "error" => error = v,
-                "error_description" => error_desc = v,
-                "error_uri" => error_uri = v,
+                "error" => error = v.into_owned(),
+                "error_description" => error_desc = v.into_owned(),
+                "error_uri" => error_uri = v.into_owned(),
                 _ => {}
             }
         }

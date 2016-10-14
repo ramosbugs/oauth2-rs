@@ -7,7 +7,8 @@ extern crate curl;
 use url::Url;
 use std::collections::HashMap;
 
-use curl::http;
+use std::io::Read;
+use curl::easy::Easy;
 
 /// Configuration of an oauth2 application.
 pub struct Config {
@@ -24,14 +25,6 @@ pub struct Token {
     pub access_token: String,
     pub scopes: Vec<String>,
     pub token_type: String,
-}
-
-/// Helper trait for extending the builder-style pattern of curl::Request.
-///
-/// This trait allows chaining the correct authorization headers onto a curl
-/// request via the builder style.
-pub trait Authorization {
-    fn auth_with(self, token: &Token) -> Self;
 }
 
 impl Config {
@@ -65,6 +58,8 @@ impl Config {
     }
 
     pub fn exchange(&self, code: String) -> Result<Token, String> {
+
+
         let mut form = HashMap::new();
         form.insert("client_id", self.client_id.clone());
         form.insert("client_secret", self.client_secret.clone());
@@ -80,16 +75,35 @@ impl Config {
         let form = form.into_bytes();
         let mut form = &form[..];
 
-        let result = try!(http::handle()
-                               .post(&self.token_url.to_string()[..], &mut form)
-                               .header("Content-Type",
-                                       "application/x-www-form-urlencoded")
-                               .exec()
-                               .map_err(|s| s.to_string()));
+        let mut easy = Easy::new();
 
-        if result.get_code() != 200 {
-            return Err(format!("expected `200`, found `{}`", result.get_code()))
+        easy.url(&self.token_url.to_string()[..]).unwrap();
+        easy.post(true).unwrap();
+        easy.post_field_size(form.len() as u64).unwrap();
+
+        let mut data = Vec::new();
+        {
+            let mut transfer = easy.transfer();
+
+            transfer.read_function(|buf| {
+                Ok(form.read(buf).unwrap_or(0))
+            }).unwrap();
+
+            transfer.write_function(|new_data| {
+                data.extend_from_slice(new_data);
+                Ok(new_data.len())
+            }).unwrap();
+
+            transfer.perform().unwrap();
         }
+
+        let code = easy.response_code().unwrap();
+
+        if code != 200 {
+            return Err(format!("expected `200`, found `{}`", code))
+        }
+
+        let form = url::form_urlencoded::parse(&data);
 
         let mut token = Token {
             access_token: String::new(),
@@ -100,7 +114,6 @@ impl Config {
         let mut error_desc = String::new();
         let mut error_uri = String::new();
 
-        let form = url::form_urlencoded::parse(result.get_body());
         debug!("reponse: {:?}", form.collect::<Vec<_>>());
         for(k, v) in form.into_iter() {
             match &k[..] {
@@ -124,12 +137,5 @@ impl Config {
         } else {
             Err(format!("couldn't find access_token in the response"))
         }
-    }
-}
-
-impl<'a, 'b> Authorization for http::Request<'a, 'b> {
-    fn auth_with(self, token: &Token) -> http::Request<'a, 'b> {
-        self.header("Authorization",
-                    &format!("token {}", token.access_token))
     }
 }

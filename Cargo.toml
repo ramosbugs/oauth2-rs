@@ -7,6 +7,6 @@ description = "Bindings for exchanging OAuth 2 tokens"
 repository = "https://github.com/alexcrichton/oauth2-rs"
 
 [dependencies]
-curl = "0.3.8"
+curl = "0.4.0"
 url = "1.0"
 log = "0.3"

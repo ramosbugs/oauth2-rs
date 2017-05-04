@@ -8,6 +8,7 @@ use url::Url;
 use std::collections::HashMap;
 
 use std::io::Read;
+use std::convert::Into;
 use curl::easy::Easy;
 
 /// Configuration of an oauth2 application.
@@ -57,13 +58,12 @@ impl Config {
         return url;
     }
 
-    pub fn exchange(&self, code: String) -> Result<Token, String> {
-
-
+    pub fn exchange<C: Into<String>, G: Into<String>>(&self, code: C, grant_type: G) -> Result<Token, String> {
         let mut form = HashMap::new();
         form.insert("client_id", self.client_id.clone());
         form.insert("client_secret", self.client_secret.clone());
-        form.insert("code", code);
+        form.insert("code", code.into());
+        form.insert("grant_type", grant_type.into());
         if self.redirect_url.len() > 0 {
             form.insert("redirect_uri", self.redirect_url.clone());
         }

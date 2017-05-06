@@ -7,7 +7,6 @@ extern crate serde_json;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate log;
 
-use std::collections::HashMap;
 use std::io::Read;
 use std::convert::Into;
 use std::fmt::{Display, Formatter};
@@ -86,19 +85,53 @@ impl Config {
         url
     }
 
+    #[deprecated(since="0.4.0", note="please use `exchange_code` instead")]
     pub fn exchange<C: Into<String>>(&self, code: C) -> Result<Token, String> {
-        let mut form = HashMap::new();
-        form.insert("client_id", self.client_id.clone());
-        form.insert("client_secret", self.client_secret.clone());
-        form.insert("code", code.into());
+        let params = vec![
+            ("code", code.into())
+        ];
+
+        self.request_token(params)
+    }
+
+    // See https://tools.ietf.org/html/rfc6749#section-4.1.3
+    pub fn exchange_code<C: Into<String>>(&self, code: C) -> Result<Token, String> {
+        let params = vec![
+            ("grant_type", "authorization_code".to_string()),
+            ("code", code.into())
+        ];
+
+        self.request_token(params)
+    }
+
+    // See https://tools.ietf.org/html/rfc6749#section-4.4.2
+    pub fn exchange_client_credentials(&self) -> Result<Token, String> {
+        let params = vec![
+            ("grant_type", "client_credentials".to_string())
+        ];
+
+        self.request_token(params)
+    }
+
+    // See https://tools.ietf.org/html/rfc6749#section-4.3.2
+    pub fn exchange_password<U: Into<String>, P: Into<String>>(&self, username: U, password: P) -> Result<Token, String> {
+        let params = vec![
+            ("grant_type", "password".to_string()),
+            ("username", username.into()),
+            ("password", password.into())
+        ];
+
+        self.request_token(params)
+    }
+
+    fn request_token(&self, mut params: Vec<(&str, String)>) -> Result<Token, String> {
+        params.push(("client_id", self.client_id.clone()));
+        params.push(("client_secret", self.client_secret.clone()));
         if self.redirect_url.len() > 0 {
-            form.insert("redirect_uri", self.redirect_url.clone());
+            params.push(("redirect_uri", self.redirect_url.clone()));
         }
 
-        let form = url::form_urlencoded::Serializer::new(String::new()).extend_pairs(
-            form.iter().map(|(k, v)| { (&k[..], &v[..]) })
-        ).finish();
-
+        let form = url::form_urlencoded::Serializer::new(String::new()).extend_pairs(params).finish();
         let form = form.into_bytes();
         let mut form = &form[..];
 

@@ -160,7 +160,8 @@ impl Config {
         let code = easy.response_code().unwrap();
 
         if code != 200 {
-            return Err(format!("expected `200`, found `{}`", code))
+            let reason = String::from_utf8_lossy(data.as_slice());
+            return Err(format!("expected `200`, found `{}`\nerr: {}", code, reason))
         }
 
         let content_type = easy.content_type().unwrap_or(None).unwrap_or("application/x-www-formurlencoded");

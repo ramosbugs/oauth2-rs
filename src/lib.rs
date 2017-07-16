@@ -215,7 +215,7 @@ impl Config {
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
     ///
-    #[deprecated(since="0.3.0", note="please use `exchange_code` instead")]
+    #[deprecated(since="1.0.0", note="please use `exchange_code` instead")]
     pub fn exchange<C>(&self, code: C) -> Result<Token, TokenError>
     where C: Into<String> {
         let params = vec![

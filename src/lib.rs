@@ -1,3 +1,95 @@
+#![warn(missing_docs)]
+//!
+//! A simple implementation of the OAuth2 flow, trying to adhere as much as possible to the [RFC](https://tools.ietf.org/html/rfc6749).
+//!
+//! # Getting started
+//!
+//! ## Example
+//!
+//! ```
+//! use oauth2::Config;
+//!
+//! // Create an OAuth2 config by specifying the client ID, client secret, authorization URL and token URL.
+//! let mut config = Config::new("client_id", "client_secret", "http://authorize", "http://token");
+//!
+//! // Set the desired scopes.
+//! config = config.add_scope("read");
+//! config = config.add_scope("write");
+//!
+//! // Set the URL the user will be redirected to after the authorization process.
+//! config = config.set_redirect_url("http://redirect");
+//!
+//! // Set a state parameter (optional, but recommended).
+//! config = config.set_state("1234");
+//!
+//! // Generate the full authorization URL.
+//! // This is the URL you should redirect the user to, in order to trigger the authorization process.
+//! println!("Browse to: {}", config.authorize_url());
+//!
+//! // Once the user has been redirected to the redirect URL, you'll have access to the authorization code.
+//! // Now you can trade it for an access token.
+//! let token_result = config.exchange_code("some authorization code");
+//!
+//! // Unwrapping token_result will either produce a Token or a TokenError.
+//! ```
+//!
+//! # The client credentials grant type
+//!
+//! You can ask for a *client credentials* access token by calling the `Config::exchange_client_credentials` method.
+//!
+//! ## Example
+//!
+//! ```
+//! use oauth2::Config;
+//!
+//! let mut config = Config::new("client_id", "client_secret", "http://authorize", "http://token");
+//! config = config.add_scope("read");
+//! config = config.set_redirect_url("http://redirect");
+//!
+//! let token_result = config.exchange_client_credentials();
+//! ```
+//!
+//! # The password grant type
+//!
+//! You can ask for a *password* access token by calling the `Config::exchange_password` method, while including
+//! the username and password.
+//!
+//! ## Example
+//!
+//! ```
+//! use oauth2::Config;
+//!
+//! let mut config = Config::new("client_id", "client_secret", "http://authorize", "http://token");
+//! config = config.add_scope("read");
+//! config = config.set_redirect_url("http://redirect");
+//!
+//! let token_result = config.exchange_password("user", "pass");
+//! ```
+//!
+//! # Setting a different response type
+//!
+//! The [RFC](https://tools.ietf.org/html/rfc6749#section-3.1.1) specifies various response types.
+//!
+//! The crate **defaults to the code response type**, but you can configure it to other values as well, by
+//! calling the `Config::set_response_type` method.
+//!
+//! ## Example
+//!
+//! ```
+//! use oauth2::{Config, ResponseType};
+//!
+//! let mut config = Config::new("client_id", "client_secret", "http://authorize", "http://token");
+//! config = config.set_response_type(ResponseType::Token);
+//! ```
+//!
+//! # Other examples
+//!
+//! More specific implementations are available as part of the examples:
+//!
+//! - [Google](https://github.com/alexcrichton/oauth2-rs/blob/master/examples/google.rs)
+//! - [Github](https://github.com/alexcrichton/oauth2-rs/blob/master/examples/github.rs)
+//!
+
 extern crate url;
 extern crate curl;
 extern crate serde;
@@ -12,7 +104,9 @@ use std::fmt::Error as FormatterError;
 use url::Url;
 use curl::easy::Easy;
 
-/// Configuration of an oauth2 application.
+///
+/// Stores the configuration for an OAuth2 client.
+///
 pub struct Config {
     client_id: String,
     client_secret: String,
@@ -25,6 +119,10 @@ pub struct Config {
 }
 
 impl Config {
+    ///
+    /// Initializes the OAuth2 client with the client ID, client secret, the base authorization URL and the URL
+    /// ment for requesting the access token.
+    ///
     pub fn new<I, S, A, T>(client_id: I, client_secret: S, auth_url: A, token_url: T) -> Self
     where I: Into<String>, S: Into<String>, A: AsRef<str>, T: AsRef<str> {
         Config {
@@ -39,6 +137,9 @@ impl Config {
         }
     }
 
+    ///
+    /// Appends a new scope to the authorization URL.
+    ///
     pub fn add_scope<S>(mut self, scope: S) -> Self
     where S: Into<String> {
         self.scopes.push(scope.into());
@@ -46,6 +147,11 @@ impl Config {
         self
     }
 
+    ///
+    /// Allows setting a particular response type. Both `&str` and `ResponseType` work here.
+    ///
+    /// The default response type is *code*.
+    ///
     pub fn set_response_type<R>(mut self, response_type: R) -> Self
     where R: Into<ResponseType> {
         self.response_type = response_type.into();
@@ -53,6 +159,9 @@ impl Config {
         self
     }
 
+    ///
+    /// Allows setting the redirect URL.
+    ///
     pub fn set_redirect_url<R>(mut self, redirect_url: R) -> Self
     where R: Into<String> {
         self.redirect_url = Some(redirect_url.into());
@@ -60,6 +169,10 @@ impl Config {
         self
     }
 
+    ///
+    /// Allows setting a state parameter inside the authorization URL, which we'll be returned
+    /// by the server after the authorization is over.
+    ///
     pub fn set_state<S>(mut self, state: S) -> Self
     where S: Into<String> {
         self.state = Some(state.into());
@@ -67,6 +180,9 @@ impl Config {
         self
     }
 
+    ///
+    /// Produces the full authorization URL.
+    ///
     pub fn authorize_url(&self) -> Url {
         let scopes = self.scopes.join(",");
         let response_type = self.response_type.to_string();
@@ -94,7 +210,12 @@ impl Config {
         url
     }
 
-    #[deprecated(since="0.4.0", note="please use `exchange_code` instead")]
+    ///
+    /// Exchanges a code produced by a successful authorization process with an access token.
+    ///
+    /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
+    ///
+    #[deprecated(since="0.3.0", note="please use `exchange_code` instead")]
     pub fn exchange<C>(&self, code: C) -> Result<Token, TokenError>
     where C: Into<String> {
         let params = vec![
@@ -104,7 +225,11 @@ impl Config {
         self.request_token(params)
     }
 
-    // See https://tools.ietf.org/html/rfc6749#section-4.1.3
+    ///
+    /// Exchanges a code produced by a successful authorization process with an access token.
+    ///
+    /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
+    ///
     pub fn exchange_code<C>(&self, code: C) -> Result<Token, TokenError>
     where C: Into<String> {
         let params = vec![
@@ -115,7 +240,11 @@ impl Config {
         self.request_token(params)
     }
 
-    // See https://tools.ietf.org/html/rfc6749#section-4.4.2
+    ///
+    /// Requests an access token for the *client credentials* grant type.
+    ///
+    /// See https://tools.ietf.org/html/rfc6749#section-4.4.2
+    ///
     pub fn exchange_client_credentials(&self) -> Result<Token, TokenError> {
         let params = vec![
             ("grant_type", "client_credentials".to_string())
@@ -124,7 +253,11 @@ impl Config {
         self.request_token(params)
     }
 
-    // See https://tools.ietf.org/html/rfc6749#section-4.3.2
+    ///
+    /// Requests an access token for the *password* grant type.
+    ///
+    /// See https://tools.ietf.org/html/rfc6749#section-4.3.2
+    ///
     pub fn exchange_password<U, P>(&self, username: U, password: P) -> Result<Token, TokenError>
     where U: Into<String>, P: Into<String> {
         let params = vec![
@@ -167,7 +300,7 @@ impl Config {
                 Ok(new_data.len())
             }).unwrap();
 
-            transfer.perform().unwrap();
+            transfer.perform().map_err(|e| TokenError::other(e.to_string()))?;
         }
 
         let code = easy.response_code().unwrap();
@@ -186,7 +319,12 @@ impl Config {
     }
 }
 
-// https://tools.ietf.org/html/rfc6749#section-3.1.1
+///
+/// The possible values for the `response_type` parameter.
+///
+/// See https://tools.ietf.org/html/rfc6749#section-3.1.1
+///
+#[allow(missing_docs)]
 pub enum ResponseType {
     Code,
     Token,
@@ -215,7 +353,12 @@ impl Display for ResponseType {
     }
 }
 
-// See https://tools.ietf.org/html/rfc6749#section-5.1
+///
+/// The token returned after a successful authorization process.
+///
+/// See https://tools.ietf.org/html/rfc6749#section-5.1
+///
+#[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Deserialize)]
 pub struct Token {
     pub token_type: String,
@@ -284,7 +427,15 @@ impl Token {
     }
 }
 
-// https://tools.ietf.org/html/rfc6749#section-4.2.2.1
+///
+/// An error that occured after a failed authorization process.
+///
+/// The same structure is returned both for OAuth2 specific errors, but also for parsing/transport errors.
+/// The latter can be differentiated by looking for the `ErrorType::Other` variant.
+///
+/// See https://tools.ietf.org/html/rfc6749#section-4.2.2.1
+///
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct TokenError {
     pub error: ErrorType,
@@ -326,6 +477,12 @@ impl Display for TokenError {
     }
 }
 
+///
+/// An OAuth2-specific error type or *other*.
+///
+/// See https://tools.ietf.org/html/rfc6749#section-4.2.2.1
+///
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq, Deserialize)]
 #[serde(rename_all="snake_case")]
 pub enum ErrorType {

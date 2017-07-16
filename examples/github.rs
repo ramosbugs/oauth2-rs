@@ -1,12 +1,12 @@
 //!
-//! This example showcases the Google OAuth2 process for requesting access to the Google Calendar features.
+//! This example showcases the Github OAuth2 process for requesting access to the user's public repos.
 //!
-//! Before running it, you'll need to generate your own Google OAuth2 credentials.
+//! Before running it, you'll need to generate your own Github OAuth2 credentials.
 //!
 //! In order to run the example call:
 //!
 //! ```sh
-//! GOOGLE_CLIENT_ID=xxx GOOGLE_CLIENT_SECRET=yyy cargo run --example google
+//! GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy cargo run --example github
 //! ```
 //!
 //! ...and follow the instructions.
@@ -22,16 +22,16 @@ use url::Url;
 use oauth2::Config;
 
 fn main() {
-    let google_client_id = env::var("GOOGLE_CLIENT_ID").expect("Missing the GOOGLE_CLIENT_ID environment variable.");
-    let google_client_secret = env::var("GOOGLE_CLIENT_SECRET").expect("Missing the GOOGLE_CLIENT_SECRET environment variable.");
-    let auth_url = "https://accounts.google.com/o/oauth2/v2/auth";
-    let token_url = "https://www.googleapis.com/oauth2/v3/token";
+    let github_client_id = env::var("GITHUB_CLIENT_ID").expect("Missing the GITHUB_CLIENT_ID environment variable.");
+    let github_client_secret = env::var("GITHUB_CLIENT_SECRET").expect("Missing the GITHUB_CLIENT_SECRET environment variable.");
+    let auth_url = "https://github.com/login/oauth/authorize";
+    let token_url = "https://github.com/login/oauth/access_token";
 
-    // Set up the config for the Google OAuth2 process.
-    let mut config = Config::new(google_client_id, google_client_secret, auth_url, token_url);
+    // Set up the config for the Github OAuth2 process.
+    let mut config = Config::new(github_client_id, github_client_secret, auth_url, token_url);
 
-    // This example is requesting access to the "calendar" features.
-    config = config.add_scope("https://www.googleapis.com/auth/calendar");
+    // This example is requesting access to the "public_repo" features.
+    config = config.add_scope("public_repo");
 
     // This example will be running its own server at localhost:8080.
     // See below for the server implementation.
@@ -91,11 +91,11 @@ fn main() {
         }
     };
 
-    println!("Google returned the following code:\n{}\n", code);
-    println!("Google returned the following state:\n{}\n", state);
+    println!("Github returned the following code:\n{}\n", code);
+    println!("Github returned the following state:\n{}\n", state);
 
     // Exchange the code with a token.
     let token = config.exchange_code(code);
 
-    println!("Google returned the following token:\n{:?}\n", token);
+    println!("Github returned the following token:\n{:?}\n", token);
 }

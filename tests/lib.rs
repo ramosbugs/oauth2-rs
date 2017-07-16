@@ -4,7 +4,7 @@ extern crate oauth2;
 
 use url::Url;
 use mockito::{mock, SERVER_URL};
-use oauth2::{Config, ResponseType};
+use oauth2::{Config, ResponseType, ErrorType};
 
 #[test]
 fn test_authorize_url() {
@@ -223,4 +223,133 @@ fn test_exchange_code_successful_with_redirect_url() {
     assert_eq!(vec!["read".to_string(), "write".to_string()], token.scopes);
     assert_eq!(None, token.expires_in);
     assert_eq!(None, token.refresh_token);
+}
+
+#[test]
+fn test_exchange_code_with_simple_form_error() {
+    let mock = mock("POST", "/token")
+        .match_body("grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb")
+        .with_body("error=invalid_request")
+        .create();
+
+    let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    let token = config.exchange_code("ccc");
+
+    mock.assert();
+
+    assert!(token.is_err());
+
+    let error = token.err().unwrap();
+    assert_eq!(ErrorType::InvalidRequest, error.error);
+    assert_eq!(None, error.error_description);
+    assert_eq!(None, error.error_uri);
+    assert_eq!(None, error.state);
+}
+
+#[test]
+fn test_exchange_code_with_simple_json_error() {
+    let mock = mock("POST", "/token")
+        .match_body("grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb")
+        .with_header("content-type", "application/json")
+        .with_body("{\"error\": \"invalid_request\"}")
+        .create();
+
+    let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    let token = config.exchange_code("ccc");
+
+    mock.assert();
+
+    assert!(token.is_err());
+
+    let error = token.err().unwrap();
+    assert_eq!(ErrorType::InvalidRequest, error.error);
+    assert_eq!(None, error.error_description);
+    assert_eq!(None, error.error_uri);
+    assert_eq!(None, error.state);
+}
+
+#[test]
+fn test_exchange_code_with_form_error_with_state() {
+    let mock = mock("POST", "/token")
+        .match_body("grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb")
+        .with_body("error=invalid_request&state=some%20state")
+        .create();
+
+    let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    let token = config.exchange_code("ccc");
+
+    mock.assert();
+
+    assert!(token.is_err());
+
+    let error = token.err().unwrap();
+    assert_eq!(ErrorType::InvalidRequest, error.error);
+    assert_eq!(None, error.error_description);
+    assert_eq!(None, error.error_uri);
+    assert_eq!(Some("some state".to_string()), error.state);
+}
+
+#[test]
+fn test_exchange_code_with_json_error_with_state() {
+    let mock = mock("POST", "/token")
+        .match_body("grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb")
+        .with_header("content-type", "application/json")
+        .with_body("{\"error\": \"invalid_request\", \"state\": \"some state\"}")
+        .create();
+
+    let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    let token = config.exchange_code("ccc");
+
+    mock.assert();
+
+    assert!(token.is_err());
+
+    let error = token.err().unwrap();
+    assert_eq!(ErrorType::InvalidRequest, error.error);
+    assert_eq!(None, error.error_description);
+    assert_eq!(None, error.error_uri);
+    assert_eq!(Some("some state".to_string()), error.state);
+}
+
+#[test]
+fn test_exchange_code_with_form_parse_error() {
+    let mock = mock("POST", "/token")
+        .match_body("grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb")
+        .with_body("broken form")
+        .create();
+
+    let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    let token = config.exchange_code("ccc");
+
+    mock.assert();
+
+    assert!(token.is_err());
+
+    let error = token.err().unwrap();
+    assert_eq!(ErrorType::Other("couldn't parse form response".to_string()), error.error);
+    assert_eq!(None, error.error_description);
+    assert_eq!(None, error.error_uri);
+    assert_eq!(None, error.state);
+}
+
+#[test]
+fn test_exchange_code_with_json_parse_error() {
+    let mock = mock("POST", "/token")
+        .match_body("grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb")
+        .with_header("content-type", "application/json")
+        .with_body("broken json")
+        .create();
+
+    let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    let token = config.exchange_code("ccc");
+
+    mock.assert();
+
+    assert!(token.is_err());
+
+    let error = token.err().unwrap();
+    assert_eq!(ErrorType::Other("couldn't parse json response: expected value at line 1 column 1".to_string()), error.error);
+    assert_eq!(None, error.error_description);
+    assert_eq!(None, error.error_uri);
+    assert_eq!(None, error.state);
 }

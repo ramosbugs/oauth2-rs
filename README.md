@@ -1,7 +1,7 @@
 # OAuth2
 
 <a href="https://crates.io/crates/oauth2"><img src="https://img.shields.io/crates/v/oauth2.svg"></a>
-<a href="https://travis-ci.org/alexcrichton/oauth2"><img src="https://travis-ci.org/alexcrichton/oauth2.svg?branch=master"></a>
+<a href="https://travis-ci.org/alexcrichton/oauth2-rs"><img src="https://travis-ci.org/alexcrichton/oauth2-rs.svg?branch=master"></a>
 
 A simple implementation of the OAuth2 flow in Rust.
 

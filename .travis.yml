@@ -7,16 +7,8 @@ sudo: false
 branches:
   only:
     - master
-before_script:
-  - pip install 'travis-cargo<0.2' --user && export PATH=$HOME/.local/bin:$PATH
 script:
   - cargo test -- --test-threads=1
-  - cargo doc --no-deps
-after_success:
-  - travis-cargo --only nightly doc-upload
-env:
-  global:
-    secure: "IQCEiqAPHaeSvRQgwDyhaM4rR3SaH1xgUE0xF0uavWeZXk9mbpP+IobBin1EUq4218EfvXtUA1JSSJ3qt+dQPrav6MaBf1GaVlMyfj6jX6mAmOJhlHxt4JB5MRPsc/9yUZdAd3VYENU88aIXvShRS+2Es83coUIQ44E4dg5Ih/g="
 notifications:
   email:
     on_success: never

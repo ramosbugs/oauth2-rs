@@ -353,3 +353,14 @@ fn test_exchange_code_with_json_parse_error() {
     assert_eq!(None, error.error_uri);
     assert_eq!(None, error.state);
 }
+
+#[test]
+fn test_exchange_code_fails_gracefully_on_transport_error() {
+    let config = Config::new("aaa", "bbb", "http://auth", "http://token");
+    let token = config.exchange_code("ccc");
+
+    assert!(token.is_err());
+
+    let error = token.err().unwrap();
+    assert_eq!(ErrorType::Other("[6] Couldn't resolve host name (Couldn't resolve host 'token')".to_string()), error.error);
+}

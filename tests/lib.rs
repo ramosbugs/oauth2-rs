@@ -23,7 +23,7 @@ fn test_authorize_url_with_scopes() {
 
     let url = config.authorize_url();
 
-    assert_eq!(Url::parse("http://example.com/auth?client_id=aaa&scope=read%2Cwrite&response_type=code").unwrap(), url);
+    assert_eq!(Url::parse("http://example.com/auth?client_id=aaa&scope=read+write&response_type=code").unwrap(), url);
 }
 
 #[test]

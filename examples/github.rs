@@ -1,5 +1,6 @@
 //!
-//! This example showcases the Github OAuth2 process for requesting access to the user's public repos.
+//! This example showcases the Github OAuth2 process for requesting access to the user's public repos and
+//! email address.
 //!
 //! Before running it, you'll need to generate your own Github OAuth2 credentials.
 //!
@@ -30,8 +31,9 @@ fn main() {
     // Set up the config for the Github OAuth2 process.
     let mut config = Config::new(github_client_id, github_client_secret, auth_url, token_url);
 
-    // This example is requesting access to the "public_repo" features.
+    // This example is requesting access to the user's public repos and email.
     config = config.add_scope("public_repo");
+    config = config.add_scope("user:email");
 
     // This example will be running its own server at localhost:8080.
     // See below for the server implementation.

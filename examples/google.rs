@@ -1,5 +1,6 @@
 //!
-//! This example showcases the Google OAuth2 process for requesting access to the Google Calendar features.
+//! This example showcases the Google OAuth2 process for requesting access to the Google Calendar features
+//! and the user's profile.
 //!
 //! Before running it, you'll need to generate your own Google OAuth2 credentials.
 //!
@@ -30,8 +31,9 @@ fn main() {
     // Set up the config for the Google OAuth2 process.
     let mut config = Config::new(google_client_id, google_client_secret, auth_url, token_url);
 
-    // This example is requesting access to the "calendar" features.
+    // This example is requesting access to the "calendar" features and the user's profile.
     config = config.add_scope("https://www.googleapis.com/auth/calendar");
+    config = config.add_scope("https://www.googleapis.com/auth/plus.me");
 
     // This example will be running its own server at localhost:8080.
     // See below for the server implementation.

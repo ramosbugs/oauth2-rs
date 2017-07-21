@@ -184,7 +184,7 @@ impl Config {
     /// Produces the full authorization URL.
     ///
     pub fn authorize_url(&self) -> Url {
-        let scopes = self.scopes.join(",");
+        let scopes = self.scopes.join(" ");
         let response_type = self.response_type.to_string();
 
         let mut pairs = vec![

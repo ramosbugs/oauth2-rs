@@ -6,3 +6,5 @@
 A simple implementation of the OAuth2 flow in Rust.
 
 Documentation is available on [docs.rs](https://docs.rs/crate/oauth2) or check the [examples](https://github.com/alexcrichton/oauth2-rs/tree/master/examples).
+
+Before upgrading make sure to check out the [changelog](https://github.com/alexcrichton/oauth2-rs/releases).

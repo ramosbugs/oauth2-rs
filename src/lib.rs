@@ -477,6 +477,15 @@ impl Display for TokenError {
     }
 }
 
+impl ::std::error::Error for TokenError {
+    fn description(&self) -> &str {
+        self.error_description.as_ref().map(AsRef::as_ref).unwrap_or(
+            "OAuth error"
+        )
+    }
+
+}
+
 ///
 /// An OAuth2-specific error type or *other*.
 ///

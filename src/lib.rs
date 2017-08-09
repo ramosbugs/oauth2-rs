@@ -101,6 +101,7 @@ use std::io::Read;
 use std::convert::{From, Into, AsRef};
 use std::fmt::{Display, Formatter};
 use std::fmt::Error as FormatterError;
+use std::error::Error;
 use url::Url;
 use curl::easy::Easy;
 
@@ -477,13 +478,10 @@ impl Display for TokenError {
     }
 }
 
-impl ::std::error::Error for TokenError {
+impl Error for TokenError {
     fn description(&self) -> &str {
-        self.error_description.as_ref().map(AsRef::as_ref).unwrap_or(
-            "OAuth error"
-        )
+        (&self.error).into()
     }
-
 }
 
 ///
@@ -520,9 +518,9 @@ impl<'a> From<&'a str> for ErrorType {
     }
 }
 
-impl Display for ErrorType {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
-        let formatted = match self {
+impl<'a> Into<&'a str> for &'a ErrorType {
+    fn into(self) -> &'a str {
+        match self {
             &ErrorType::InvalidRequest => "invalid_request",
             &ErrorType::UnauthorizedClient => "unauthorized_client",
             &ErrorType::AccessDenied => "access_denied",
@@ -531,8 +529,14 @@ impl Display for ErrorType {
             &ErrorType::ServerError => "server_error",
             &ErrorType::TemporarilyUnavailable => "temporarily_unavailable",
             &ErrorType::Other(ref other) => other,
-        };
+        }
+    }
+}
 
-        write!(f, "{}", formatted)
+impl Display for ErrorType {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
+        let message: &str = self.into();
+
+        write!(f, "{}", message)
     }
 }

@@ -2,6 +2,7 @@ extern crate mockito;
 extern crate url;
 extern crate oauth2;
 
+use std::error::Error;
 use url::Url;
 use mockito::{mock, SERVER_URL};
 use oauth2::{Config, ResponseType, ErrorType};
@@ -266,6 +267,24 @@ fn test_exchange_code_with_simple_json_error() {
     assert_eq!(None, error.error_description);
     assert_eq!(None, error.error_uri);
     assert_eq!(None, error.state);
+}
+
+#[test]
+fn test_exchange_code_with_simple_form_error_trait() {
+    let mock = mock("POST", "/token")
+        .match_body("grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb")
+        .with_body("error=invalid_request")
+        .create();
+
+    let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    let token = config.exchange_code("ccc");
+
+    mock.assert();
+
+    assert!(token.is_err());
+
+    let error = token.err().unwrap();
+    assert_eq!("invalid_request", error.description());
 }
 
 #[test]

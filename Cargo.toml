@@ -15,4 +15,4 @@ serde_json = "1.0"
 serde_derive = "1.0"
 
 [dev-dependencies]
-mockito = "0.8.1"
+mockito = "0.8.2"

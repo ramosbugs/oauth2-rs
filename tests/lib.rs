@@ -17,6 +17,15 @@ fn test_authorize_url() {
 }
 
 #[test]
+fn test_authorize_url_with_param() {
+    let config = Config::new("aaa", "bbb", "http://example.com/auth?foo=bar", "http://example.com/token");
+
+    let url = config.authorize_url();
+
+    assert_eq!(Url::parse("http://example.com/auth?foo=bar&client_id=aaa&scope=&response_type=code").unwrap(), url);
+}
+
+#[test]
 fn test_authorize_url_with_scopes() {
     let config = Config::new("aaa", "bbb", "http://example.com/auth", "http://example.com/token")
         .add_scope("read")

@@ -144,6 +144,30 @@ fn test_exchange_client_credentials_with_form_response() {
 }
 
 #[test]
+fn test_exchange_client_credentials_with_basic_auth() {
+    let mock = mock("POST", "/token")
+        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_body("grant_type=client_credentials")
+        .with_body("access_token=12%2F34&token_type=bearer&scope=read,write")
+        .create();
+
+    let mut config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    config = config.set_auth_type(oauth2::AuthType::BasicAuth);
+    let token = config.exchange_client_credentials();
+
+    mock.assert();
+
+    assert!(token.is_ok());
+
+    let token = token.unwrap();
+    assert_eq!("12/34", token.access_token);
+    assert_eq!("bearer", token.token_type);
+    assert_eq!(vec!["read".to_string(), "write".to_string()], token.scopes);
+    assert_eq!(None, token.expires_in);
+    assert_eq!(None, token.refresh_token);
+}
+
+#[test]
 fn test_exchange_client_credentials_with_json_response() {
     let mock = mock("POST", "/token")
         .match_body("grant_type=client_credentials&client_id=aaa&client_secret=bbb")
@@ -219,6 +243,32 @@ fn test_exchange_code_successful_with_redirect_url() {
         .create();
 
     let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"))
+        .set_redirect_url("http://redirect");
+
+    let token = config.exchange_code("ccc");
+
+    mock.assert();
+
+    assert!(token.is_ok());
+
+    let token = token.unwrap();
+    assert_eq!("12/34", token.access_token);
+    assert_eq!("bearer", token.token_type);
+    assert_eq!(vec!["read".to_string(), "write".to_string()], token.scopes);
+    assert_eq!(None, token.expires_in);
+    assert_eq!(None, token.refresh_token);
+}
+
+#[test]
+fn test_exchange_code_successful_with_basic_auth() {
+    let mock = mock("POST", "/token")
+        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_body("grant_type=authorization_code&code=ccc&redirect_uri=http%3A%2F%2Fredirect")
+        .with_body("access_token=12%2F34&token_type=bearer&scope=read,write")
+        .create();
+
+    let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"))
+        .set_auth_type(oauth2::AuthType::BasicAuth)
         .set_redirect_url("http://redirect");
 
     let token = config.exchange_code("ccc");

@@ -247,8 +247,10 @@ impl Config {
     /// See https://tools.ietf.org/html/rfc6749#section-4.4.2
     ///
     pub fn exchange_client_credentials(&self) -> Result<Token, TokenError> {
+        let scopes = self.scopes.join(" ");
         let params = vec![
-            ("grant_type", "client_credentials".to_string())
+            ("grant_type", "client_credentials".to_string()),
+            ("scope", scopes),
         ];
 
         self.request_token(params)

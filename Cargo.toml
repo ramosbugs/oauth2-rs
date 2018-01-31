@@ -1,7 +1,7 @@
 [package]
 name = "oauth2"
 authors = ["Alex Crichton <alex@alexcrichton.com>", "Florin Lipan <florinlipan@gmail.com>"]
-version = "1.2.0"
+version = "1.2.1"
 license = "MIT/Apache-2.0"
 description = "Bindings for exchanging OAuth 2 tokens"
 repository = "https://github.com/alexcrichton/oauth2-rs"

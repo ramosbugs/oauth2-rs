@@ -147,7 +147,7 @@ fn test_exchange_client_credentials_with_form_response() {
 fn test_exchange_client_credentials_with_basic_auth() {
     let mock = mock("POST", "/token")
         .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=client_credentials")
+        .match_body("grant_type=client_credentials&scope=")
         .with_body("access_token=12%2F34&token_type=bearer&scope=read,write")
         .create();
 

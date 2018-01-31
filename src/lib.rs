@@ -120,16 +120,16 @@ pub struct Config {
     state: Option<String>,
 }
 
-/// 
-/// Indicates whether requests to the authorization server should use basic authentication or
-/// include the parameters in the request body for requests in which eithr is valid.
 ///
-/// The default AuthType is *RequestBody*
+/// Indicates whether requests to the authorization server should use basic authentication or
+/// include the parameters in the request body for requests in which either is valid.
+///
+/// The default AuthType is *RequestBody*.
+///
 pub enum AuthType {
     /// The client_id and client_secret will be included as part of the request body.
     RequestBody,
-    /// The client_id and client_secret will be included using the basic auth authentication
-    /// scheme.
+    /// The client_id and client_secret will be included using the basic auth authentication scheme.
     BasicAuth,
 }
 
@@ -176,11 +176,9 @@ impl Config {
     }
 
     ///
-    /// Allows configuring whether basic auth is used to communicate with the authorization server
-    /// or not. This option affects 
-    /// auth authentication scheme.
+    /// Allows configuring whether basic auth is used to communicate with the authorization server.
     ///
-    /// The default response type is *code*.
+    /// The default auth type is to place the client_id and client_secret inside the request body.
     ///
     pub fn set_auth_type(mut self, auth_type: AuthType) -> Self {
         self.auth_type = auth_type;

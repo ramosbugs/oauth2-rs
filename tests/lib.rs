@@ -124,7 +124,7 @@ fn test_exchange_code_successful_with_json_response() {
 #[test]
 fn test_exchange_client_credentials_with_form_response() {
     let mock = mock("POST", "/token")
-        .match_body("grant_type=client_credentials&client_id=aaa&client_secret=bbb")
+        .match_body("grant_type=client_credentials&scope=&client_id=aaa&client_secret=bbb")
         .with_body("access_token=12%2F34&token_type=bearer&scope=read,write")
         .create();
 
@@ -170,7 +170,7 @@ fn test_exchange_client_credentials_with_basic_auth() {
 #[test]
 fn test_exchange_client_credentials_with_json_response() {
     let mock = mock("POST", "/token")
-        .match_body("grant_type=client_credentials&client_id=aaa&client_secret=bbb")
+        .match_body("grant_type=client_credentials&scope=&client_id=aaa&client_secret=bbb")
         .with_header("content-type", "application/json")
         .with_body("{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scopes\": [\"read\", \"write\"]}")
         .create();

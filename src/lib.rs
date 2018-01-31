@@ -112,11 +112,25 @@ pub struct Config {
     client_id: String,
     client_secret: String,
     auth_url: Url,
+    auth_type: AuthType,
     token_url: Url,
     scopes: Vec<String>,
     response_type: ResponseType,
     redirect_url: Option<String>,
     state: Option<String>,
+}
+
+/// 
+/// Indicates whether requests to the authorization server should use basic authentication or
+/// include the parameters in the request body for requests in which eithr is valid.
+///
+/// The default AuthType is *RequestBody*
+pub enum AuthType {
+    /// The client_id and client_secret will be included as part of the request body.
+    RequestBody,
+    /// The client_id and client_secret will be included using the basic auth authentication
+    /// scheme.
+    BasicAuth,
 }
 
 impl Config {
@@ -130,6 +144,7 @@ impl Config {
             client_id: client_id.into(),
             client_secret: client_secret.into(),
             auth_url: Url::parse(auth_url.as_ref()).unwrap(),
+            auth_type: AuthType::RequestBody,
             token_url: Url::parse(token_url.as_ref()).unwrap(),
             scopes: Vec::new(),
             response_type: ResponseType::Code,
@@ -156,6 +171,19 @@ impl Config {
     pub fn set_response_type<R>(mut self, response_type: R) -> Self
     where R: Into<ResponseType> {
         self.response_type = response_type.into();
+
+        self
+    }
+
+    ///
+    /// Allows configuring whether basic auth is used to communicate with the authorization server
+    /// or not. This option affects 
+    /// auth authentication scheme.
+    ///
+    /// The default response type is *code*.
+    ///
+    pub fn set_auth_type(mut self, auth_type: AuthType) -> Self {
+        self.auth_type = auth_type;
 
         self
     }
@@ -271,8 +299,18 @@ impl Config {
     }
 
     fn request_token(&self, mut params: Vec<(&str, String)>) -> Result<Token, TokenError> {
-        params.push(("client_id", self.client_id.clone()));
-        params.push(("client_secret", self.client_secret.clone()));
+        let mut easy = Easy::new();
+
+        match self.auth_type {
+            AuthType::RequestBody => {
+                params.push(("client_id", self.client_id.clone()));
+                params.push(("client_secret", self.client_secret.clone()));
+            }
+            AuthType::BasicAuth => {
+                easy.username(&self.client_id).unwrap();
+                easy.password(&self.client_secret).unwrap();
+            }
+        }
 
         if let Some(ref redirect_url) = self.redirect_url {
             params.push(("redirect_uri", redirect_url.to_string()));
@@ -281,8 +319,6 @@ impl Config {
         let form = url::form_urlencoded::Serializer::new(String::new()).extend_pairs(params).finish();
         let form = form.into_bytes();
         let mut form = &form[..];
-
-        let mut easy = Easy::new();
 
         easy.url(&self.token_url.to_string()[..]).unwrap();
         easy.post(true).unwrap();

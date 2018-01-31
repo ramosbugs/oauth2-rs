@@ -308,7 +308,11 @@ impl Config {
 
         if code != 200 {
             let reason = String::from_utf8_lossy(data.as_slice());
-            return Err(TokenError::other(format!("expected `200`, found `{}`\nerr: {}", code, reason)))
+            let error = match serde_json::from_str::<TokenError>(&reason) {
+                Ok(error) => error,
+                Err(error) => TokenError::other(format!("couldn't parse json response: {}", error))
+            };
+            return Err(error);
         }
 
         let content_type = easy.content_type().unwrap_or(None).unwrap_or("application/x-www-formurlencoded");

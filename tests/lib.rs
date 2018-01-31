@@ -383,6 +383,30 @@ fn test_exchange_code_with_json_parse_error() {
 }
 
 #[test]
+fn test_exchange_code_with_400_status_code() {
+    let body = r#"{"error":"invalid_request","error_description":"Expired code."}"#;
+    let mock = mock("POST", "/token")
+        .match_body("grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb")
+        .with_header("content-type", "application/json")
+        .with_body(body)
+        .with_status(400)
+        .create();
+
+    let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    let token = config.exchange_code("ccc");
+
+    mock.assert();
+
+    assert!(token.is_err());
+
+    let error = token.err().unwrap();
+    assert_eq!(ErrorType::InvalidRequest, error.error);
+    assert_eq!(Some("Expired code.".to_string()), error.error_description);
+    assert_eq!(None, error.error_uri);
+    assert_eq!(None, error.state);
+}
+
+#[test]
 fn test_exchange_code_fails_gracefully_on_transport_error() {
     let config = Config::new("aaa", "bbb", "http://auth", "http://token");
     let token = config.exchange_code("ccc");

@@ -400,7 +400,7 @@ impl Display for ResponseType {
 /// See https://tools.ietf.org/html/rfc6749#section-5.1
 ///
 #[allow(missing_docs)]
-#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct Token {
     pub token_type: String,
     pub access_token: String,
@@ -477,7 +477,7 @@ impl Token {
 /// See https://tools.ietf.org/html/rfc6749#section-4.2.2.1
 ///
 #[allow(missing_docs)]
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct TokenError {
     pub error: ErrorType,
     #[serde(default)]
@@ -530,7 +530,7 @@ impl Error for TokenError {
 /// See https://tools.ietf.org/html/rfc6749#section-4.2.2.1
 ///
 #[allow(missing_docs)]
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all="snake_case")]
 pub enum ErrorType {
     InvalidRequest,

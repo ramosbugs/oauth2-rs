@@ -108,6 +108,7 @@ use curl::easy::Easy;
 ///
 /// Stores the configuration for an OAuth2 client.
 ///
+#[derive(Clone)]
 pub struct Config {
     client_id: String,
     client_secret: String,
@@ -126,6 +127,7 @@ pub struct Config {
 ///
 /// The default AuthType is *RequestBody*.
 ///
+#[derive(Clone)]
 pub enum AuthType {
     /// The client_id and client_secret will be included as part of the request body.
     RequestBody,
@@ -366,6 +368,7 @@ impl Config {
 /// See https://tools.ietf.org/html/rfc6749#section-3.1.1
 ///
 #[allow(missing_docs)]
+#[derive(Clone)]
 pub enum ResponseType {
     Code,
     Token,

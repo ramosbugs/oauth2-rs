@@ -298,6 +298,21 @@ impl Config {
         self.request_token(params)
     }
 
+    ///
+    /// Exchanges a refresh token for an access token
+    ///
+    /// See https://tools.ietf.org/html/rfc6749#section-6
+    ///
+    pub fn exchange_refresh_token<T>(&self, token: T) -> Result<Token, TokenError>
+    where T: Into<String> {
+        let params = vec![
+            ("grant_type", "refresh_token".to_string()),
+            ("refresh_token", token.into()),
+        ];
+
+        self.request_token(params)
+    }
+
     fn request_token(&self, mut params: Vec<(&str, String)>) -> Result<Token, TokenError> {
         let mut easy = Easy::new();
 

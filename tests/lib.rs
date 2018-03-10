@@ -191,6 +191,75 @@ fn test_exchange_client_credentials_with_json_response() {
 }
 
 #[test]
+fn test_exchange_refresh_token_with_form_response() {
+    let mock = mock("POST", "/token")
+        .match_body("grant_type=refresh_token&refresh_token=ccc&client_id=aaa&client_secret=bbb")
+        .with_body("access_token=12%2F34&token_type=bearer&scope=read,write")
+        .create();
+
+    let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    let token = config.exchange_refresh_token("ccc");
+
+    mock.assert();
+
+    assert!(token.is_ok());
+
+    let token = token.unwrap();
+    assert_eq!("12/34", token.access_token);
+    assert_eq!("bearer", token.token_type);
+    assert_eq!(vec!["read".to_string(), "write".to_string()], token.scopes);
+    assert_eq!(None, token.expires_in);
+    assert_eq!(None, token.refresh_token);
+}
+
+#[test]
+fn test_exchange_refresh_token_with_basic_auth() {
+    let mock = mock("POST", "/token")
+        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_body("grant_type=refresh_token&refresh_token=ccc")
+        .with_body("access_token=12%2F34&token_type=bearer&scope=read,write")
+        .create();
+
+    let mut config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    config = config.set_auth_type(oauth2::AuthType::BasicAuth);
+    let token = config.exchange_refresh_token("ccc");
+
+    mock.assert();
+
+    assert!(token.is_ok());
+
+    let token = token.unwrap();
+    assert_eq!("12/34", token.access_token);
+    assert_eq!("bearer", token.token_type);
+    assert_eq!(vec!["read".to_string(), "write".to_string()], token.scopes);
+    assert_eq!(None, token.expires_in);
+    assert_eq!(None, token.refresh_token);
+}
+
+#[test]
+fn test_exchange_refresh_token_with_json_response() {
+     let mock = mock("POST", "/token")
+        .match_body("grant_type=refresh_token&refresh_token=ccc&client_id=aaa&client_secret=bbb")
+        .with_header("content-type", "application/json")
+        .with_body("{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scopes\": [\"read\", \"write\"]}")
+        .create();
+
+    let config = Config::new("aaa", "bbb", "http://example.com/auth", &(SERVER_URL.to_string() + "/token"));
+    let token = config.exchange_refresh_token("ccc");
+
+    mock.assert();
+
+    assert!(token.is_ok());
+
+    let token = token.unwrap();
+    assert_eq!("12/34", token.access_token);
+    assert_eq!("bearer", token.token_type);
+    assert_eq!(vec!["read".to_string(), "write".to_string()], token.scopes);
+    assert_eq!(None, token.expires_in);
+    assert_eq!(None, token.refresh_token);
+}
+
+#[test]
 fn test_exchange_password_with_form_response() {
     let mock = mock("POST", "/token")
         .match_body("grant_type=password&username=user&password=pass&client_id=aaa&client_secret=bbb")

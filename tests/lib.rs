@@ -38,10 +38,15 @@ fn test_authorize_url_with_scopes() {
 
 #[test]
 fn test_authorize_url_with_state() {
+    #[allow(deprecated)]
     let config = Config::new("aaa", "bbb", "http://example.com/auth", "http://example.com/token")
         .set_state("some state");
 
     let url = config.authorize_url();
+
+    assert_eq!(Url::parse("http://example.com/auth?client_id=aaa&scope=&response_type=code&state=some+state").unwrap(), url);
+
+    let url = config.authorize_url_with_state("some state".into());
 
     assert_eq!(Url::parse("http://example.com/auth?client_id=aaa&scope=&response_type=code&state=some+state").unwrap(), url);
 }

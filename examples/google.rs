@@ -15,12 +15,14 @@
 
 extern crate url;
 extern crate oauth2;
+extern crate rand;
 
 use std::env;
 use std::net::TcpListener;
 use std::io::{BufRead, BufReader, Write};
 use url::Url;
 use oauth2::Config;
+use rand::{thread_rng, Rng};
 
 fn main() {
     let google_client_id = env::var("GOOGLE_CLIENT_ID").expect("Missing the GOOGLE_CLIENT_ID environment variable.");
@@ -39,11 +41,12 @@ fn main() {
     // See below for the server implementation.
     config = config.set_redirect_url("http://localhost:8080");
 
-    // Set the state parameter (optional)
-    config = config.set_state("1234");
+    // Generate a random, per-request state value to prevent CSRF
+    let random: String = thread_rng().gen_ascii_chars().take(16).collect();
+    println!("Generated a random value for state:\n{}\n", random);
 
     // Generate the authorization URL to which we'll redirect the user.
-    let authorize_url = config.authorize_url();
+    let authorize_url = config.authorize_url_with_state(random);
 
     println!("Open this URL in your browser:\n{}\n", authorize_url.to_string());
 

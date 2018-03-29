@@ -202,6 +202,7 @@ impl Config {
     /// Allows setting a state parameter inside the authorization URL, which we'll be returned
     /// by the server after the authorization is over.
     ///
+    #[deprecated(since="1.3.1", note="Pass a random per-request state to authorize_url_with_state() instead")]
     pub fn set_state<S>(mut self, state: S) -> Self
     where S: Into<String> {
         self.state = Some(state.into());
@@ -212,7 +213,20 @@ impl Config {
     ///
     /// Produces the full authorization URL.
     ///
+    /// This method will reuse the same state paramter (if added) each time it is called.  
+    ///
     pub fn authorize_url(&self) -> Url {
+        self.impl_authorize_url(self.state.clone())
+    }
+
+    ///
+    /// Produces the full authorization URL.
+    ///
+    pub fn authorize_url_with_state(&self, state: String) -> Url {
+        self.impl_authorize_url(Some(state))
+    }
+
+    fn impl_authorize_url(&self, state: Option<String>) -> Url {
         let scopes = self.scopes.join(" ");
         let response_type = self.response_type.to_string();
 
@@ -226,7 +240,7 @@ impl Config {
             pairs.push(("redirect_uri", redirect_url));
         }
 
-        if let Some(ref state) = self.state {
+        if let Some(ref state) = state {
             pairs.push(("state", state));
         }
 

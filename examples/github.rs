@@ -40,7 +40,9 @@ fn main() {
     config = config.set_redirect_url("http://localhost:8080");
 
     // Set the state parameter (optional)
-    config = config.set_state("1234");
+    // Please upgrade to 2.0, this is deprecated because it reuses the same state for every request
+    #[allow(deprecated)]
+    let config = config.set_state("1234");
 
     // Generate the authorization URL to which we'll redirect the user.
     let authorize_url = config.authorize_url();

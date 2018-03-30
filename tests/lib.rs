@@ -38,6 +38,7 @@ fn test_authorize_url_with_scopes() {
 
 #[test]
 fn test_authorize_url_with_state() {
+    #[allow(deprecated)]
     let config = Config::new("aaa", "bbb", "http://example.com/auth", "http://example.com/token")
         .set_state("some state");
 

@@ -20,7 +20,9 @@
 //! config = config.set_redirect_url("http://redirect");
 //!
 //! // Set a state parameter (optional, but recommended).
-//! config = config.set_state("1234");
+//! // Please upgrade to 2.0, this is deprecated because it reuses the same state for every request
+//! #[allow(deprecated)]
+//! let config = config.set_state("1234");
 //!
 //! // Generate the full authorization URL.
 //! // This is the URL you should redirect the user to, in order to trigger the authorization process.
@@ -202,6 +204,14 @@ impl Config {
     /// Allows setting a state parameter inside the authorization URL, which we'll be returned
     /// by the server after the authorization is over.
     ///
+    /// *CSRF Protection*
+    ///
+    /// For proper CSRF protection you should set a per-request random state and verify that
+    /// the state matches in the callback.  This API will reuse the same state for every request,
+    /// therefore it is highly recommended that you upgrade to 2.0 and provide a random state
+    /// to the authorize_url() method.
+    ///
+    #[deprecated(since="1.3.1", note="Please upgrade to 2.0 and pass a random per-request state to authorize_url()")]
     pub fn set_state<S>(mut self, state: S) -> Self
     where S: Into<String> {
         self.state = Some(state.into());

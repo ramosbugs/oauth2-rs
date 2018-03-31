@@ -44,7 +44,7 @@
 //! // parameter returned by the server matches `csrf_state`.
 //!
 //! // Now you can trade it for an access token.
-//! let token_result = client.exchange_code("some authorization code");
+//! let token_result = client.exchange_code("some authorization code".to_string());
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
 //! # Ok(())
@@ -642,13 +642,11 @@ pub trait Token<T: TokenType> : Debug + DeserializeOwned + PartialEq + Serialize
 ///
 /// Error types enum.
 ///
-pub trait ErrorResponseType : Debug + DeserializeOwned + Display + PartialEq + Serialize {
-    ///
-    /// Returns a reference to the `snake_case` representation of this error type. This value
-    /// must match the error type from the relevant OAuth 2.0 standards (RFC 6749 or an extension).
-    ///
-    fn to_str(&self) -> &str;
-}
+/// NOTE: The implementation of the `Display` trait must return the `snake_case` representation of
+/// this error type. This value must match the error type from the relevant OAuth 2.0 standards
+/// (RFC 6749 or an extension).
+///
+pub trait ErrorResponseType : Debug + DeserializeOwned + Display + PartialEq + Serialize {}
 
 ///
 /// Error response returned by server after requesting an access token.
@@ -691,7 +689,7 @@ impl<T: ErrorResponseType> ErrorResponse<T> {
 
 impl<TE: ErrorResponseType> Display for ErrorResponse<TE> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
-        let mut formatted = self.error().to_str().to_string();
+        let mut formatted = self.error().to_string();
 
         if let &Some(ref error_description) = self.error_description() {
             formatted.push_str(": ");
@@ -847,8 +845,7 @@ pub mod basic {
         ///
         InvalidScope,
     }
-
-    impl ErrorResponseType for BasicErrorResponseType {
+    impl BasicErrorResponseType {
         fn to_str(&self) -> &str {
             match self {
                 &BasicErrorResponseType::InvalidRequest => "invalid_request",
@@ -860,6 +857,8 @@ pub mod basic {
             }
         }
     }
+
+    impl ErrorResponseType for BasicErrorResponseType {}
 
     impl Debug for BasicErrorResponseType {
         fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {

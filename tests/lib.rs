@@ -738,7 +738,7 @@ mod colorful_extension {
         WrongColorSpace,
     }
 
-    impl ErrorResponseType for ColorfulErrorResponseType {
+    impl ColorfulErrorResponseType {
         fn to_str(&self) -> &str {
             match self {
                 &ColorfulErrorResponseType::TooDark => "too_dark",
@@ -747,6 +747,8 @@ mod colorful_extension {
             }
         }
     }
+
+    impl ErrorResponseType for ColorfulErrorResponseType {}
 
     impl Debug for ColorfulErrorResponseType {
         fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {

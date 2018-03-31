@@ -115,7 +115,7 @@ fn test_authorize_url_with_extension_response_type() {
         BasicClient::new("aaa", Some("bbb"), "http://example.com/auth", "http://example.com/token")
             .unwrap();
 
-    let url = client.authorize_url_extension("code token", vec![("foo", "bar".to_string())]);
+    let url = client.authorize_url_extension("code token", vec![("foo", "bar")]);
 
     assert_eq!(
         Url::parse("http://example.com/auth?response_type=code+token&client_id=aaa&foo=bar")
@@ -160,7 +160,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
             "http://example.com/auth",
             &(SERVER_URL.to_string() + "/token")
         ).unwrap();
-    let token = client.exchange_code("ccc").unwrap();
+    let token = client.exchange_code("ccc".to_string()).unwrap();
 
     mock.assert();
 
@@ -201,7 +201,7 @@ fn test_exchange_code_successful_with_complete_json_response() {
         )
             .unwrap()
             .set_auth_type(oauth2::AuthType::RequestBody);
-    let token = client.exchange_code("ccc").unwrap();
+    let token = client.exchange_code("ccc".to_string()).unwrap();
 
     mock.assert();
 
@@ -407,7 +407,7 @@ fn test_exchange_code_successful_with_redirect_url() {
             .set_auth_type(oauth2::AuthType::RequestBody)
             .set_redirect_url("http://redirect");
 
-    let token = client.exchange_code("ccc").unwrap();
+    let token = client.exchange_code("ccc".to_string()).unwrap();
 
     mock.assert();
 
@@ -440,7 +440,7 @@ fn test_exchange_code_successful_with_basic_auth() {
             .set_auth_type(oauth2::AuthType::BasicAuth)
             .set_redirect_url("http://redirect");
 
-    let token = client.exchange_code("ccc").unwrap();
+    let token = client.exchange_code("ccc".to_string()).unwrap();
 
     mock.assert();
 
@@ -469,7 +469,7 @@ fn test_exchange_code_with_simple_json_error() {
             "http://example.com/auth",
             &(SERVER_URL.to_string() + "/token")
         ).unwrap();
-    let token = client.exchange_code("ccc");
+    let token = client.exchange_code("ccc".to_string());
 
     mock.assert();
 
@@ -550,7 +550,7 @@ fn test_exchange_code_with_json_parse_error() {
             "http://example.com/auth",
             &(SERVER_URL.to_string() + "/token")
         ).unwrap();
-    let token = client.exchange_code("ccc");
+    let token = client.exchange_code("ccc".to_string());
 
     mock.assert();
 
@@ -583,7 +583,7 @@ fn test_exchange_code_with_unexpected_content_type() {
             "http://example.com/auth",
             &(SERVER_URL.to_string() + "/token")
         ).unwrap();
-    let token = client.exchange_code("ccc");
+    let token = client.exchange_code("ccc".to_string());
 
     mock.assert();
 
@@ -620,7 +620,7 @@ fn test_exchange_code_with_invalid_token_type() {
         )
             .unwrap();
 
-    let token = client.exchange_code("ccc");
+    let token = client.exchange_code("ccc".to_string());
 
     mock.assert();
 
@@ -654,7 +654,7 @@ fn test_exchange_code_with_400_status_code() {
             "http://example.com/auth",
             &(SERVER_URL.to_string() + "/token")
         ).unwrap();
-    let token = client.exchange_code("ccc");
+    let token = client.exchange_code("ccc".to_string());
 
     mock.assert();
 
@@ -673,7 +673,7 @@ fn test_exchange_code_with_400_status_code() {
 #[test]
 fn test_exchange_code_fails_gracefully_on_transport_error() {
     let client = BasicClient::new("aaa", Some("bbb"), "http://auth", "http://token").unwrap();
-    let token = client.exchange_code("ccc");
+    let token = client.exchange_code("ccc".to_string());
 
     assert!(token.is_err());
 
@@ -782,7 +782,7 @@ fn test_extension_successful_with_minimal_json_response() {
             "http://example.com/auth",
             &(SERVER_URL.to_string() + "/token")
         ).unwrap();
-    let token = client.exchange_code("ccc").unwrap();
+    let token = client.exchange_code("ccc".to_string()).unwrap();
 
     mock.assert();
 
@@ -828,7 +828,7 @@ fn test_extension_successful_with_complete_json_response() {
         )
             .unwrap()
             .set_auth_type(oauth2::AuthType::RequestBody);
-    let token = client.exchange_code("ccc").unwrap();
+    let token = client.exchange_code("ccc".to_string()).unwrap();
 
     mock.assert();
 
@@ -875,7 +875,7 @@ fn test_extension_with_simple_json_error() {
             "http://example.com/auth",
             &(SERVER_URL.to_string() + "/token")
         ).unwrap();
-    let token = client.exchange_code("ccc");
+    let token = client.exchange_code("ccc".to_string());
 
     mock.assert();
 

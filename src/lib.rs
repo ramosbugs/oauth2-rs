@@ -328,7 +328,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     pub fn authorize_url_extension(
         &self,
         response_type: &str,
-        extra_params: Vec<(&str, String)>
+        extra_params: Vec<(&str, &str)>
     ) -> Url {
         self.authorize_url_impl(response_type, None, Some(extra_params))
     }
@@ -337,7 +337,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
         &self,
         response_type: &str,
         state_opt: Option<String>,
-        extra_params_opt: Option<Vec<(&str, String)>>
+        extra_params_opt: Option<Vec<(&str, &str)>>
     ) -> Url {
         let scopes = self.scopes.join(" ");
         let response_type_str = response_type.to_string();
@@ -378,13 +378,15 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///
     /// Exchanges a code produced by a successful authorization process with an access token.
     ///
+    /// Acquires ownership of the `code` because authorization codes may only be used to retrieve
+    /// an access token from the authorization server.
+    ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
     ///
-    pub fn exchange_code<C>(&self, code: C) -> Result<T, RequestTokenError<TE>>
-    where C: Into<String> {
+    pub fn exchange_code(&self, code: String) -> Result<T, RequestTokenError<TE>> {
         let params = vec![
-            ("grant_type", "authorization_code".to_string()),
-            ("code", code.into())
+            ("grant_type", "authorization_code"),
+            ("code", &code)
         ];
 
         self.request_token(params)
@@ -395,13 +397,12 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.3.2
     ///
-    pub fn exchange_password<U, P>(&self, username: U, password: P)
-        -> Result<T, RequestTokenError<TE>>
-    where U: Into<String>, P: Into<String> {
+    pub fn exchange_password(&self, username: &str, password: &str)
+        -> Result<T, RequestTokenError<TE>> {
         let params = vec![
-            ("grant_type", "password".to_string()),
-            ("username", username.into()),
-            ("password", password.into())
+            ("grant_type", "password"),
+            ("username", &username),
+            ("password", &password),
         ];
 
         self.request_token(params)
@@ -413,13 +414,20 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     /// See https://tools.ietf.org/html/rfc6749#section-4.4.2
     ///
     pub fn exchange_client_credentials(&self) -> Result<T, RequestTokenError<TE>> {
-        let mut params = vec![("grant_type", "client_credentials".to_string())];
-
+        // Generate the space-delimited scopes String before initializing params so that it has
+        // a long enough lifetime.
+        let scopes_opt;
         if !self.scopes.is_empty() {
-            let scopes = self.scopes.join(" ");
-            params.push(("scope", scopes));
+            scopes_opt = Some(self.scopes.join(" "));
+        } else {
+            scopes_opt = None;
         }
 
+        let mut params: Vec<(&str, &str)> = vec![("grant_type", "client_credentials")];
+
+        if let Some(ref scopes) = scopes_opt {
+            params.push(("scope", scopes));
+        }
         self.request_token(params)
     }
 
@@ -428,27 +436,26 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-6
     ///
-    pub fn exchange_refresh_token<U>(&self, refresh_token: U) -> Result<T, RequestTokenError<TE>>
-    where U: Into<String> {
+    pub fn exchange_refresh_token(&self, refresh_token: &str) -> Result<T, RequestTokenError<TE>> {
         let params = vec![
-            ("grant_type", "refresh_token".to_string()),
-            ("refresh_token", refresh_token.into()),
+            ("grant_type", "refresh_token"),
+            ("refresh_token", &refresh_token),
         ];
 
         self.request_token(params)
     }
 
-    fn post_request_token(
-        &self,
-        mut params: Vec<(&str, String)>
+    fn post_request_token<'a, 'b: 'a>(
+        &'b self,
+        mut params: Vec<(&'b str, &'a str)>
     ) -> Result<RequestTokenResponse, curl::Error> {
         let mut easy = Easy::new();
 
         match self.auth_type {
             AuthType::RequestBody => {
-                params.push(("client_id", self.client_id.clone()));
+                params.push(("client_id", &self.client_id));
                 if let Some(ref client_secret) = self.client_secret {
-                    params.push(("client_secret", client_secret.clone()));
+                    params.push(("client_secret", &client_secret));
                 }
             }
             AuthType::BasicAuth => {
@@ -460,7 +467,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
         }
 
         if let Some(ref redirect_url) = self.redirect_url {
-            params.push(("redirect_uri", redirect_url.to_string()));
+            params.push(("redirect_uri", redirect_url));
         }
 
         let form =
@@ -478,7 +485,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
         // request JSON here.
         let mut headers = curl::easy::List::new();
         let accept_header = format!("Accept: {}", CONTENT_TYPE_JSON);
-        headers.append(accept_header.as_str())?;
+        headers.append(&accept_header)?;
         easy.http_headers(headers)?;
 
         easy.post(true)?;
@@ -510,7 +517,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
         })
     }
 
-    fn request_token(&self, params: Vec<(&str, String)>) -> Result<T, RequestTokenError<TE>> {
+    fn request_token(&self, params: Vec<(&str, &str)>) -> Result<T, RequestTokenError<TE>> {
         let token_response =
             self.post_request_token(params)
                 .map_err(|error| RequestTokenError::Request(error))?;

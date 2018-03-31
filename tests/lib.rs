@@ -5,11 +5,10 @@ extern crate serde;
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
 
-use url::Url;
 use mockito::{mock, SERVER_URL};
 use oauth2::{Token, RequestTokenError};
 use oauth2::basic::*;
-
+use url::Url;
 
 #[test]
 fn test_authorize_url() {
@@ -167,7 +166,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
 
     assert_eq!("12/34", token.access_token());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(None, *token.expires_in());
+    assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 
     // Ensure that serialization produces an equivalent JSON value.
@@ -209,7 +208,7 @@ fn test_exchange_code_successful_with_complete_json_response() {
     assert_eq!("12/34", token.access_token());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
-    assert_eq!(Some(3600), *token.expires_in());
+    assert_eq!(3600, token.expires_in().unwrap().as_secs());
     assert_eq!(Some("foobar".to_string()), *token.refresh_token());
 
     // Ensure that serialization produces an equivalent JSON value.
@@ -250,7 +249,7 @@ fn test_exchange_client_credentials_with_basic_auth() {
     assert_eq!("12/34", token.access_token());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
-    assert_eq!(None, *token.expires_in());
+    assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
 
@@ -286,7 +285,7 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
     assert_eq!("12/34", token.access_token());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
-    assert_eq!(None, *token.expires_in());
+    assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
 
@@ -317,7 +316,7 @@ fn test_exchange_refresh_token_with_basic_auth() {
     assert_eq!("12/34", token.access_token());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
-    assert_eq!(None, *token.expires_in());
+    assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
 
@@ -349,7 +348,7 @@ fn test_exchange_refresh_token_with_json_response() {
     assert_eq!("12/34", token.access_token());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
-    assert_eq!(None, *token.expires_in());
+    assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
 
@@ -380,7 +379,7 @@ fn test_exchange_password_with_json_response() {
     assert_eq!("12/34", token.access_token());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
-    assert_eq!(None, *token.expires_in());
+    assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
 
@@ -415,7 +414,7 @@ fn test_exchange_code_successful_with_redirect_url() {
     assert_eq!("12/34", token.access_token());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
-    assert_eq!(None, *token.expires_in());
+    assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
 
@@ -448,7 +447,7 @@ fn test_exchange_code_successful_with_basic_auth() {
     assert_eq!("12/34", token.access_token());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
-    assert_eq!(None, *token.expires_in());
+    assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
 
@@ -479,14 +478,14 @@ fn test_exchange_code_with_simple_json_error() {
     let token_err = token.err().unwrap();
     match &token_err {
         &RequestTokenError::ServerResponse(ref error_response) => {
-            assert_eq!(BasicErrorResponseType::InvalidRequest, error_response.error);
-            assert_eq!(Some("stuff happened".to_string()), error_response.error_description);
-            assert_eq!(None, error_response.error_uri);
+            assert_eq!(BasicErrorResponseType::InvalidRequest, *error_response.error());
+            assert_eq!(Some("stuff happened".to_string()), *error_response.error_description());
+            assert_eq!(None, *error_response.error_uri());
 
             // Test Debug trait for ErrorResponse
             assert_eq!(
-                "ErrorResponse { error: invalid_request, \
-                error_description: Some(\"stuff happened\"), error_uri: None }",
+                "ErrorResponse { _error: invalid_request, \
+                _error_description: Some(\"stuff happened\"), _error_uri: None }",
                 format!("{:?}", error_response)
             );
             // Test Display trait for ErrorResponse
@@ -498,12 +497,12 @@ fn test_exchange_code_with_simple_json_error() {
             // Test Debug trait for BasicErrorResponseType
             assert_eq!(
                 "invalid_request",
-                format!("{:?}", error_response.error)
+                format!("{:?}", error_response.error())
             );
             // Test Display trait for BasicErrorResponseType
             assert_eq!(
                 "invalid_request",
-                format!("{}", error_response.error)
+                format!("{}", error_response.error())
             );
 
             // Ensure that serialization produces an equivalent JSON value.
@@ -523,8 +522,8 @@ fn test_exchange_code_with_simple_json_error() {
 
     // Test Debug trait for RequestTokenError
     assert_eq!(
-        "ServerResponse(ErrorResponse { error: invalid_request, \
-        error_description: Some(\"stuff happened\"), error_uri: None })",
+        "ServerResponse(ErrorResponse { _error: invalid_request, \
+        _error_description: Some(\"stuff happened\"), _error_uri: None })",
         format!("{:?}", token_err)
     );
     // Test Display trait for RequestTokenError
@@ -663,9 +662,9 @@ fn test_exchange_code_with_400_status_code() {
 
     match token.err().unwrap() {
         RequestTokenError::ServerResponse(error_response) => {
-            assert_eq!(BasicErrorResponseType::InvalidRequest, error_response.error);
-            assert_eq!(Some("Expired code.".to_string()), error_response.error_description);
-            assert_eq!(None, error_response.error_uri);
+            assert_eq!(BasicErrorResponseType::InvalidRequest, *error_response.error());
+            assert_eq!(Some("Expired code.".to_string()), *error_response.error_description());
+            assert_eq!(None, *error_response.error_uri());
         },
         other => panic!("Unexpected error: {:?}", other),
     }
@@ -693,6 +692,7 @@ mod colorful_extension {
     use oauth2::basic::BasicToken;
     use std::fmt::{Debug, Display, Formatter};
     use std::fmt::Error as FormatterError;
+    use std::time::Duration;
 
     pub type ColorfulClient = Client<ColorfulTokenType, ColorfulToken, ColorfulErrorResponseType>;
 
@@ -721,7 +721,7 @@ mod colorful_extension {
     impl Token<ColorfulTokenType> for ColorfulToken {
         fn access_token(&self) -> &str { &self._basic_token.access_token() }
         fn token_type(&self) -> &ColorfulTokenType { &self._basic_token.token_type() }
-        fn expires_in(&self) -> &Option<u32> { &self._basic_token.expires_in() }
+        fn expires_in(&self) -> Option<Duration> { self._basic_token.expires_in() }
         fn refresh_token(&self) -> &Option<String> { &self._basic_token.refresh_token() }
         fn scopes(&self) -> &Option<Vec<String>> { &self._basic_token.scopes() }
 
@@ -788,7 +788,7 @@ fn test_extension_successful_with_minimal_json_response() {
 
     assert_eq!("12/34", token.access_token());
     assert_eq!(ColorfulTokenType::Green, *token.token_type());
-    assert_eq!(None, *token.expires_in());
+    assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
     assert_eq!(None, *token.shape());
     assert_eq!(10, token.height());
@@ -835,7 +835,7 @@ fn test_extension_successful_with_complete_json_response() {
     assert_eq!("12/34", token.access_token());
     assert_eq!(ColorfulTokenType::Red, *token.token_type());
     assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
-    assert_eq!(Some(3600), *token.expires_in());
+    assert_eq!(3600, token.expires_in().unwrap().as_secs());
     assert_eq!(Some("foobar".to_string()), *token.refresh_token());
     assert_eq!(Some("round".to_string()), *token.shape());
     assert_eq!(12, token.height());
@@ -886,10 +886,10 @@ fn test_extension_with_simple_json_error() {
         &RequestTokenError::ServerResponse(ref error_response) => {
             assert_eq!(
                 ColorfulErrorResponseType::TooLight,
-                error_response.error
+                *error_response.error()
             );
-            assert_eq!(Some("stuff happened".to_string()), error_response.error_description);
-            assert_eq!(Some("https://errors".to_string()), error_response.error_uri);
+            assert_eq!(Some("stuff happened".to_string()), *error_response.error_description());
+            assert_eq!(Some("https://errors".to_string()), *error_response.error_uri());
 
             // Ensure that serialization produces an equivalent JSON value.
             let serialized_json = serde_json::to_string(&error_response).unwrap();
@@ -911,8 +911,8 @@ fn test_extension_with_simple_json_error() {
 
     // Test Debug trait for RequestTokenError
     assert_eq!(
-        "ServerResponse(ErrorResponse { error: too_light, \
-        error_description: Some(\"stuff happened\"), error_uri: Some(\"https://errors\") })",
+        "ServerResponse(ErrorResponse { _error: too_light, \
+        _error_description: Some(\"stuff happened\"), _error_uri: Some(\"https://errors\") })",
         format!("{:?}", token_err)
     );
     // Test Display trait for RequestTokenError

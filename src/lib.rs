@@ -152,6 +152,7 @@ use std::convert::{Into, AsRef};
 use std::fmt::{Debug, Display, Formatter};
 use std::fmt::Error as FormatterError;
 use std::marker::PhantomData;
+use std::time::Duration;
 use url::Url;
 
 const CONTENT_TYPE_JSON: &str = "application/json";
@@ -606,7 +607,7 @@ pub trait Token<T: TokenType> : Debug + DeserializeOwned + PartialEq + Serialize
     /// generated. If omitted, the authorization server SHOULD provide the expiration time via
     /// other means or document the default value.
     ///
-    fn expires_in(&self) -> &Option<u32>;
+    fn expires_in(&self) -> Option<Duration>;
     ///
     /// OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
     /// authorization grant as described in
@@ -652,36 +653,45 @@ pub trait ErrorResponseType : Debug + DeserializeOwned + Display + PartialEq + S
 ///
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct ErrorResponse<T: ErrorResponseType> {
+    #[serde(rename = "error")]
+    #[serde(bound(deserialize = "T: ErrorResponseType"))]
+    _error: T,
+    #[serde(rename = "error_description")]
+    #[serde(default)]
+    _error_description: Option<String>,
+    #[serde(rename = "error_uri")]
+    #[serde(default)]
+    _error_uri: Option<String>,
+}
+
+impl<T: ErrorResponseType> ErrorResponse<T> {
     ///
     /// REQUIRED. A single ASCII error code deserialized to the generic parameter
     /// `ErrorResponseType`.
     ///
-    #[serde(bound(deserialize = "T: ErrorResponseType"))]
-    pub error: T,
+    pub fn error(&self) -> &T { &self._error }
     ///
     /// OPTIONAL. Human-readable ASCII text providing additional information, used to assist
     /// the client developer in understanding the error that occurred.
     ///
-    #[serde(default)]
-    pub error_description: Option<String>,
+    pub fn error_description(&self) -> &Option<String> { &self._error_description }
     ///
     /// OPTIONAL. A URI identifying a human-readable web page with information about the error,
     /// used to provide the client developer with additional information about the error.
     ///
-    #[serde(default)]
-    pub error_uri: Option<String>,
+    pub fn error_uri(&self) -> &Option<String> { &self._error_uri }
 }
 
 impl<TE: ErrorResponseType> Display for ErrorResponse<TE> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
-        let mut formatted = self.error.to_str().to_string();
+        let mut formatted = self.error().to_str().to_string();
 
-        if let Some(ref error_description) = self.error_description {
+        if let &Some(ref error_description) = self.error_description() {
             formatted.push_str(": ");
             formatted.push_str(error_description);
         }
 
-        if let Some(ref error_uri) = self.error_uri {
+        if let &Some(ref error_uri) = self.error_uri() {
             formatted.push_str(" / See ");
             formatted.push_str(error_uri);
         }
@@ -768,7 +778,7 @@ pub mod basic {
         #[serde(deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive")]
         _token_type: T,
         #[serde(rename = "expires_in")]
-        _expires_in: Option<u32>,
+        _expires_in: Option<u64>,
         #[serde(rename = "refresh_token")]
         _refresh_token: Option<String>,
         #[serde(rename = "scope")]
@@ -781,7 +791,7 @@ pub mod basic {
     impl<T: TokenType> Token<T> for BasicToken<T> {
         fn access_token(&self) -> &str { &self._access_token }
         fn token_type(&self) -> &T { &self._token_type }
-        fn expires_in(&self) -> &Option<u32> { &self._expires_in }
+        fn expires_in(&self) -> Option<Duration> { self._expires_in.map(Duration::from_secs) }
         fn refresh_token(&self) -> &Option<String> { &self._refresh_token }
         fn scopes(&self) -> &Option<Vec<String>> { &self._scopes }
 

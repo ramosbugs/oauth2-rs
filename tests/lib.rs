@@ -6,17 +6,32 @@ extern crate serde;
 extern crate serde_json;
 
 use mockito::{mock, SERVER_URL};
-use oauth2::{Token, RequestTokenError};
+use oauth2::*;
 use oauth2::basic::*;
 use url::Url;
 
+fn new_client() -> BasicClient {
+    BasicClient::new(
+        ClientId::new("aaa".to_string()),
+        Some(ClientSecret::new("bbb".to_string())),
+        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+        TokenUrl::new(Url::parse("http://example.com/token").unwrap())
+    )
+}
+
+fn new_mock_client() -> BasicClient {
+    BasicClient::new(
+        ClientId::new("aaa".to_string()),
+        Some(ClientSecret::new("bbb".to_string())),
+        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+        TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+    )
+}
+
 #[test]
 fn test_authorize_url() {
-    let client =
-        BasicClient::new("aaa", Some("bbb"), "http://example.com/auth", "http://example.com/token")
-            .unwrap();
-
-    let url = client.authorize_url("csrf_token".to_string());
+    let client = new_client();
+    let url = client.authorize_url(&CsrfToken::new("csrf_token".to_string()));
 
     assert_eq!(
         Url::parse(
@@ -28,9 +43,7 @@ fn test_authorize_url() {
 
 #[test]
 fn test_authorize_url_insecure() {
-    let client =
-        BasicClient::new("aaa", Some("bbb"), "http://example.com/auth", "http://example.com/token")
-            .unwrap();
+    let client = new_client();
 
     let url = oauth2::insecure::authorize_url(&client);
 
@@ -42,11 +55,9 @@ fn test_authorize_url_insecure() {
 
 #[test]
 fn test_authorize_url_implicit() {
-    let client =
-        BasicClient::new("aaa", Some("bbb"), "http://example.com/auth", "http://example.com/token")
-            .unwrap();
+    let client = new_client();
 
-    let url = client.authorize_url_implicit("csrf_token".to_string());
+    let url = client.authorize_url_implicit(&CsrfToken::new("csrf_token".to_string()));
 
     assert_eq!(
         Url::parse(
@@ -58,9 +69,7 @@ fn test_authorize_url_implicit() {
 
 #[test]
 fn test_authorize_url_implicit_insecure() {
-    let client =
-        BasicClient::new("aaa", Some("bbb"), "http://example.com/auth", "http://example.com/token")
-            .unwrap();
+    let client = new_client();
 
     let url = oauth2::insecure::authorize_url_implicit(&client);
 
@@ -74,13 +83,13 @@ fn test_authorize_url_implicit_insecure() {
 fn test_authorize_url_with_param() {
     let client =
         BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth?foo=bar",
-            "http://example.com/token"
-        ).unwrap();
+            ClientId::new("aaa".to_string()),
+            Some(ClientSecret::new("bbb".to_string())),
+            AuthUrl::new(Url::parse("http://example.com/auth?foo=bar").unwrap()),
+            TokenUrl::new(Url::parse("http://example.com/token").unwrap())
+        );
 
-    let url = client.authorize_url("csrf_token".to_string());
+    let url = client.authorize_url(&CsrfToken::new("csrf_token".to_string()));
 
     assert_eq!(
         Url::parse(
@@ -93,12 +102,11 @@ fn test_authorize_url_with_param() {
 #[test]
 fn test_authorize_url_with_scopes() {
     let client =
-        BasicClient::new("aaa", Some("bbb"), "http://example.com/auth", "http://example.com/token")
-            .unwrap()
-            .add_scope("read")
-            .add_scope("write");
+        new_client()
+            .add_scope(Scope::new("read".to_string()))
+            .add_scope(Scope::new("write".to_string()));
 
-    let url = client.authorize_url("csrf_token".to_string());
+    let url = client.authorize_url(&CsrfToken::new("csrf_token".to_string()));
 
     assert_eq!(
         Url::parse(
@@ -111,11 +119,12 @@ fn test_authorize_url_with_scopes() {
 
 #[test]
 fn test_authorize_url_with_extension_response_type() {
-    let client =
-        BasicClient::new("aaa", Some("bbb"), "http://example.com/auth", "http://example.com/token")
-            .unwrap();
+    let client = new_client();
 
-    let url = client.authorize_url_extension("code token", &vec![("foo", "bar")]);
+    let url =
+        client.authorize_url_extension(
+            &ResponseType::new("code token".to_string()), &vec![("foo", "bar")]
+        );
 
     assert_eq!(
         Url::parse("http://example.com/auth?response_type=code+token&client_id=aaa&foo=bar")
@@ -127,11 +136,10 @@ fn test_authorize_url_with_extension_response_type() {
 #[test]
 fn test_authorize_url_with_redirect_url() {
     let client =
-        BasicClient::new("aaa", Some("bbb"), "http://example.com/auth", "http://example.com/token")
-            .unwrap()
-            .set_redirect_url("http://localhost/redirect");
+        new_client()
+            .set_redirect_url(RedirectUrl::new(Url::parse("http://localhost/redirect").unwrap()));
 
-    let url = client.authorize_url("csrf_token".to_string());
+    let url = client.authorize_url(&CsrfToken::new("csrf_token".to_string()));
 
     assert_eq!(
         Url::parse(
@@ -155,16 +163,16 @@ fn test_exchange_code_successful_with_minimal_json_response() {
 
     let client =
         BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        ).unwrap();
-    let token = client.exchange_code("ccc".to_string()).unwrap();
+            ClientId::new("aaa".to_string()),
+            Some(ClientSecret::new("bbb".to_string())),
+            AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+            TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+        );
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string())).unwrap();
 
     mock.assert();
 
-    assert_eq!("12/34", token.access_token());
+    assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
@@ -193,23 +201,20 @@ fn test_exchange_code_successful_with_complete_json_response() {
         .create();
 
     let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        )
-            .unwrap()
+        new_mock_client()
             .set_auth_type(oauth2::AuthType::RequestBody);
-    let token = client.exchange_code("ccc".to_string()).unwrap();
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string())).unwrap();
 
     mock.assert();
 
-    assert_eq!("12/34", token.access_token());
+    assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
+    assert_eq!(
+        Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
+        *token.scopes()
+    );
     assert_eq!(3600, token.expires_in().unwrap().as_secs());
-    assert_eq!(Some("foobar".to_string()), *token.refresh_token());
+    assert_eq!("foobar", token.refresh_token().clone().unwrap().secret());
 
     // Ensure that serialization produces an equivalent JSON value.
     let serialized_json = serde_json::to_string(&token).unwrap();
@@ -234,21 +239,18 @@ fn test_exchange_client_credentials_with_basic_auth() {
         .create();
 
     let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        )
-            .unwrap()
+        new_mock_client()
             .set_auth_type(oauth2::AuthType::BasicAuth);
     let token = client.exchange_client_credentials().unwrap();
 
     mock.assert();
 
-    assert_eq!("12/34", token.access_token());
+    assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
+    assert_eq!(
+        Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
+        *token.scopes()
+    );
     assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
@@ -268,23 +270,17 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
         .create();
 
     let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        )
-            .unwrap()
+        new_mock_client()
             .set_auth_type(oauth2::AuthType::RequestBody)
-            .add_scope("read")
-            .add_scope("write");
+            .add_scope(Scope::new("read".to_string()))
+            .add_scope(Scope::new("write".to_string()));
     let token = client.exchange_client_credentials().unwrap();
 
     mock.assert();
 
-    assert_eq!("12/34", token.access_token());
+    assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
+    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
     assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
@@ -301,21 +297,15 @@ fn test_exchange_refresh_token_with_basic_auth() {
         .create();
 
     let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        )
-            .unwrap()
+        new_mock_client()
             .set_auth_type(oauth2::AuthType::BasicAuth);
-    let token = client.exchange_refresh_token("ccc").unwrap();
+    let token = client.exchange_refresh_token(&RefreshToken::new("ccc".to_string())).unwrap();
 
     mock.assert();
 
-    assert_eq!("12/34", token.access_token());
+    assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
+    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
     assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
@@ -333,21 +323,14 @@ fn test_exchange_refresh_token_with_json_response() {
         )
         .create();
 
-    let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        )
-            .unwrap();
-    let token = client.exchange_refresh_token("ccc").unwrap();
+    let client = new_mock_client();
+    let token = client.exchange_refresh_token(&RefreshToken::new("ccc".to_string())).unwrap();
 
     mock.assert();
 
-    assert_eq!("12/34", token.access_token());
+    assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
+    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
     assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
@@ -364,21 +347,20 @@ fn test_exchange_password_with_json_response() {
         )
         .create();
 
-    let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        )
+    let client = new_mock_client();
+    let token =
+        client
+            .exchange_password(
+                &EndUserUsername::new("user".to_string()),
+                &EndUserPassword::new("pass".to_string())
+            )
             .unwrap();
-    let token = client.exchange_password("user", "pass").unwrap();
 
     mock.assert();
 
-    assert_eq!("12/34", token.access_token());
+    assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
+    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
     assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
@@ -389,7 +371,7 @@ fn test_exchange_code_successful_with_redirect_url() {
         .match_header("Accept", "application/json")
         .match_body(
             "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb&redirect_uri=\
-            http%3A%2F%2Fredirect"
+            http%3A%2F%2Fredirect%2Fhere"
         )
         .with_body(
             "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
@@ -397,23 +379,17 @@ fn test_exchange_code_successful_with_redirect_url() {
         .create();
 
     let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        )
-            .unwrap()
+        new_mock_client()
             .set_auth_type(oauth2::AuthType::RequestBody)
-            .set_redirect_url("http://redirect");
+            .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect/here").unwrap()));
 
-    let token = client.exchange_code("ccc".to_string()).unwrap();
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string())).unwrap();
 
     mock.assert();
 
-    assert_eq!("12/34", token.access_token());
+    assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
+    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
     assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
@@ -423,30 +399,26 @@ fn test_exchange_code_successful_with_basic_auth() {
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
         .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=authorization_code&code=ccc&redirect_uri=http%3A%2F%2Fredirect")
+        .match_body(
+            "grant_type=authorization_code&code=ccc&redirect_uri=http%3A%2F%2Fredirect%2Fhere"
+        )
         .with_body(
             "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
         )
         .create();
 
     let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        )
-            .unwrap()
+        new_mock_client()
             .set_auth_type(oauth2::AuthType::BasicAuth)
-            .set_redirect_url("http://redirect");
+            .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect/here").unwrap()));
 
-    let token = client.exchange_code("ccc".to_string()).unwrap();
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string())).unwrap();
 
     mock.assert();
 
-    assert_eq!("12/34", token.access_token());
+    assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
+    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
     assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
 }
@@ -462,14 +434,8 @@ fn test_exchange_code_with_simple_json_error() {
         .with_body("{\"error\": \"invalid_request\", \"error_description\": \"stuff happened\"}")
         .create();
 
-    let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        ).unwrap();
-    let token = client.exchange_code("ccc".to_string());
+    let client = new_mock_client();
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
 
     mock.assert();
 
@@ -543,14 +509,8 @@ fn test_exchange_code_with_json_parse_error() {
         .with_body("broken json")
         .create();
 
-    let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        ).unwrap();
-    let token = client.exchange_code("ccc".to_string());
+    let client = new_mock_client();
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
 
     mock.assert();
 
@@ -576,14 +536,8 @@ fn test_exchange_code_with_unexpected_content_type() {
         .with_body("broken json")
         .create();
 
-    let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        ).unwrap();
-    let token = client.exchange_code("ccc".to_string());
+    let client = new_mock_client();
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
 
     mock.assert();
 
@@ -612,15 +566,14 @@ fn test_exchange_code_with_invalid_token_type() {
         .create();
 
     let client =
-        BasicClient::new::<_, &str, _, _>(
-            "aaa",
+        BasicClient::new(
+            ClientId::new("aaa".to_string()),
             None,
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        )
-            .unwrap();
+            AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+            TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+        );
 
-    let token = client.exchange_code("ccc".to_string());
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
 
     mock.assert();
 
@@ -647,14 +600,8 @@ fn test_exchange_code_with_400_status_code() {
         .with_status(400)
         .create();
 
-    let client =
-        BasicClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        ).unwrap();
-    let token = client.exchange_code("ccc".to_string());
+    let client = new_mock_client();
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
 
     mock.assert();
 
@@ -672,8 +619,14 @@ fn test_exchange_code_with_400_status_code() {
 
 #[test]
 fn test_exchange_code_fails_gracefully_on_transport_error() {
-    let client = BasicClient::new("aaa", Some("bbb"), "http://auth", "http://token").unwrap();
-    let token = client.exchange_code("ccc".to_string());
+    let client =
+        BasicClient::new(
+            ClientId::new("aaa".to_string()),
+            Some(ClientSecret::new("bbb".to_string())),
+            AuthUrl::new(Url::parse("http://auth").unwrap()),
+            TokenUrl::new(Url::parse("http://token").unwrap())
+        );
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
 
     assert!(token.is_err());
 
@@ -719,11 +672,11 @@ mod colorful_extension {
     }
 
     impl Token<ColorfulTokenType> for ColorfulToken {
-        fn access_token(&self) -> &str { &self._basic_token.access_token() }
+        fn access_token(&self) -> &AccessToken { &self._basic_token.access_token() }
         fn token_type(&self) -> &ColorfulTokenType { &self._basic_token.token_type() }
         fn expires_in(&self) -> Option<Duration> { self._basic_token.expires_in() }
-        fn refresh_token(&self) -> &Option<String> { &self._basic_token.refresh_token() }
-        fn scopes(&self) -> &Option<Vec<String>> { &self._basic_token.scopes() }
+        fn refresh_token(&self) -> &Option<RefreshToken> { &self._basic_token.refresh_token() }
+        fn scopes(&self) -> &Option<Vec<Scope>> { &self._basic_token.scopes() }
 
         fn from_json(data: &str) -> Result<Self, serde_json::error::Error> {
             serde_json::from_str(data)
@@ -779,16 +732,16 @@ fn test_extension_successful_with_minimal_json_response() {
 
     let client =
         ColorfulClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        ).unwrap();
-    let token = client.exchange_code("ccc".to_string()).unwrap();
+            ClientId::new("aaa".to_string()),
+            Some(ClientSecret::new("bbb".to_string())),
+            AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+            TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+        );
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string())).unwrap();
 
     mock.assert();
 
-    assert_eq!("12/34", token.access_token());
+    assert_eq!("12/34", token.access_token().secret());
     assert_eq!(ColorfulTokenType::Green, *token.token_type());
     assert_eq!(None, token.expires_in());
     assert_eq!(None, *token.refresh_token());
@@ -823,22 +776,20 @@ fn test_extension_successful_with_complete_json_response() {
 
     let client =
         ColorfulClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        )
-            .unwrap()
-            .set_auth_type(oauth2::AuthType::RequestBody);
-    let token = client.exchange_code("ccc".to_string()).unwrap();
+            ClientId::new("aaa".to_string()),
+            Some(ClientSecret::new("bbb".to_string())),
+            AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+            TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+        ).set_auth_type(oauth2::AuthType::RequestBody);
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string())).unwrap();
 
     mock.assert();
 
-    assert_eq!("12/34", token.access_token());
+    assert_eq!("12/34", token.access_token().secret());
     assert_eq!(ColorfulTokenType::Red, *token.token_type());
-    assert_eq!(Some(vec!["read".to_string(), "write".to_string()]), *token.scopes());
+    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
     assert_eq!(3600, token.expires_in().unwrap().as_secs());
-    assert_eq!(Some("foobar".to_string()), *token.refresh_token());
+    assert_eq!("foobar", token.refresh_token().clone().unwrap().secret());
     assert_eq!(Some("round".to_string()), *token.shape());
     assert_eq!(12, token.height());
 
@@ -872,12 +823,12 @@ fn test_extension_with_simple_json_error() {
 
     let client =
         ColorfulClient::new(
-            "aaa",
-            Some("bbb"),
-            "http://example.com/auth",
-            &(SERVER_URL.to_string() + "/token")
-        ).unwrap();
-    let token = client.exchange_code("ccc".to_string());
+            ClientId::new("aaa".to_string()),
+            Some(ClientSecret::new("bbb".to_string())),
+            AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+            TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+        );
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
 
     mock.assert();
 

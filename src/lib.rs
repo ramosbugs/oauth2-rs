@@ -13,26 +13,34 @@
 //! extern crate base64;
 //! extern crate oauth2;
 //! extern crate rand;
+//! extern crate url;
 //!
-//! use oauth2::basic::BasicClient;
+//! use oauth2::*;
+//! use oauth2::basic::*;
 //! use rand::{thread_rng, Rng};
+//! use url::Url;
 //!
 //! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client =
-//!     BasicClient::new("client_id", Some("client_secret"), "http://authorize", "http://token")?
+//!     BasicClient::new(
+//!         ClientId::new("client_id".to_string()),
+//!         Some(ClientSecret::new("client_secret".to_string())),
+//!         AuthUrl::new(Url::parse("http://authorize")?),
+//!         TokenUrl::new(Url::parse("http://token")?)
+//!     )
 //!         // Set the desired scopes.
-//!         .add_scope("read")
-//!         .add_scope("write")
+//!         .add_scope(Scope::new("read".to_string()))
+//!         .add_scope(Scope::new("write".to_string()))
 //!
 //!         // Set the URL the user will be redirected to after the authorization process.
-//!         .set_redirect_url("http://redirect");
+//!         .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
 //!
 //! let mut rng = thread_rng();
 //! // Generate a 128-bit random string for CSRF protection (each time!).
 //! let random_bytes: Vec<u8> = (0..16).map(|_| rng.gen::<u8>()).collect();
-//! let csrf_state = base64::encode(&random_bytes);
+//! let csrf_state = CsrfToken::new(base64::encode(&random_bytes));
 //!
 //! // Generate the full authorization URL.
 //! // This is the URL you should redirect the user to, in order to trigger the authorization
@@ -44,7 +52,8 @@
 //! // parameter returned by the server matches `csrf_state`.
 //!
 //! // Now you can trade it for an access token.
-//! let token_result = client.exchange_code("some authorization code".to_string());
+//! let token_result =
+//!     client.exchange_code(AuthorizationCode::new("some authorization code".to_string()));
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
 //! # Ok(())
@@ -64,18 +73,26 @@
 //! extern crate base64;
 //! extern crate oauth2;
 //! extern crate rand;
+//! extern crate url;
 //!
-//! use oauth2::basic::BasicClient;
+//! use oauth2::*;
+//! use oauth2::basic::*;
 //! use rand::{thread_rng, Rng};
+//! use url::Url;
 //!
 //! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
 //! let client =
-//!     BasicClient::new("client_id", Some("client_secret"), "http://authorize", "http://token")?;
+//!     BasicClient::new(
+//!         ClientId::new("client_id".to_string()),
+//!         Some(ClientSecret::new("client_secret".to_string())),
+//!         AuthUrl::new(Url::parse("http://authorize")?),
+//!         TokenUrl::new(Url::parse("http://token")?)
+//!     );
 //!
 //! let mut rng = thread_rng();
 //! // Generate a 128-bit random string for CSRF protection (each time!).
 //! let random_bytes: Vec<u8> = (0..16).map(|_| rng.gen::<u8>()).collect();
-//! let csrf_state = base64::encode(&random_bytes);
+//! let csrf_state = CsrfToken::new(base64::encode(&random_bytes));
 //!
 //! // Generate the full authorization URL.
 //! // This is the URL you should redirect the user to, in order to trigger the authorization
@@ -94,17 +111,35 @@
 //! ## Example
 //!
 //! ```
-//! use oauth2::basic::BasicClient;
+//! extern crate base64;
+//! extern crate oauth2;
+//! extern crate rand;
+//! extern crate url;
+//!
+//! use oauth2::*;
+//! use oauth2::basic::*;
+//! use rand::{thread_rng, Rng};
+//! use url::Url;
 //!
 //! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
 //! let client =
-//!     BasicClient::new("client_id", Some("client_secret"), "http://authorize", "http://token")?
-//!         .add_scope("read")
-//!         .set_redirect_url("http://redirect");
+//!     BasicClient::new(
+//!         ClientId::new("client_id".to_string()),
+//!         Some(ClientSecret::new("client_secret".to_string())),
+//!         AuthUrl::new(Url::parse("http://authorize")?),
+//!         TokenUrl::new(Url::parse("http://token")?)
+//!     )
+//!         .add_scope(Scope::new("read".to_string()))
+//!         .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
 //!
-//! let token_result = client.exchange_password("user", "pass");
+//! let token_result =
+//!     client.exchange_password(
+//!         &EndUserUsername::new("user".to_string()),
+//!         &EndUserPassword::new("pass".to_string())
+//!     );
 //! # Ok(())
 //! # }
+//! # fn main() {}
 //! ```
 //!
 //! # Client Credentials Grant
@@ -115,17 +150,28 @@
 //! ## Example: 
 //!
 //! ```
-//! use oauth2::basic::BasicClient;
+//! extern crate oauth2;
+//! extern crate url;
+//!
+//! use oauth2::*;
+//! use oauth2::basic::*;
+//! use url::Url;
 //!
 //! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
 //! let client =
-//!     BasicClient::new("client_id", Some("client_secret"), "http://authorize", "http://token")?
-//!         .add_scope("read")
-//!         .set_redirect_url("http://redirect");
+//!     BasicClient::new(
+//!         ClientId::new("client_id".to_string()),
+//!         Some(ClientSecret::new("client_secret".to_string())),
+//!         AuthUrl::new(Url::parse("http://authorize")?),
+//!         TokenUrl::new(Url::parse("http://token")?)
+//!     )
+//!         .add_scope(Scope::new("read".to_string()))
+//!         .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
 //!
 //! let token_result = client.exchange_client_credentials();
 //! # Ok(())
 //! # }
+//! # fn main() {}
 //! ```
 //!
 //! # Other examples
@@ -148,10 +194,10 @@ use curl::easy::Easy;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::io::Read;
-use std::convert::{Into, AsRef};
 use std::fmt::{Debug, Display, Formatter};
 use std::fmt::Error as FormatterError;
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::time::Duration;
 use url::Url;
 
@@ -172,18 +218,188 @@ pub enum AuthType {
     BasicAuth,
 }
 
+pub trait NewType<T> : Clone + Debug + Deref + PartialEq {
+    fn new(val: T) -> Self;
+}
+
+pub trait SecretNewType<T> {
+    fn new(val: T) -> Self where Self: Sized;
+    fn secret(&self) -> &T;
+}
+// FIXME: make sure there's a test for this
+impl<T> Debug for SecretNewType<T> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
+        write!(f, "[redacted]")
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ClientId(String);
+impl NewType<String> for ClientId {
+    fn new(s: String) -> Self {
+        ClientId(s)
+    }
+}
+impl Deref for ClientId {
+    type Target = String;
+    fn deref(&self) -> &String {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ClientSecret(String);
+impl SecretNewType<String> for ClientSecret {
+    fn new(s: String) -> Self {
+        ClientSecret(s)
+    }
+    fn secret(&self) -> &String { &self.0 }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct AuthUrl(Url);
+impl NewType<Url> for AuthUrl {
+    fn new(s: Url) -> Self {
+        AuthUrl(s)
+    }
+}
+impl Deref for AuthUrl {
+    type Target = Url;
+    fn deref(&self) -> &Url {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TokenUrl(Url);
+impl NewType<Url> for TokenUrl {
+    fn new(s: Url) -> Self {
+        TokenUrl(s)
+    }
+}
+impl Deref for TokenUrl {
+    type Target = Url;
+    fn deref(&self) -> &Url {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct Scope(String);
+impl NewType<String> for Scope {
+    fn new(s: String) -> Self {
+        Scope(s)
+    }
+}
+impl Deref for Scope {
+    type Target = String;
+    fn deref(&self) -> &String {
+        &self.0
+    }
+}
+impl AsRef<str> for Scope {
+    fn as_ref(&self) -> &str { &self }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct RedirectUrl(Url);
+impl NewType<Url> for RedirectUrl {
+    fn new(s: Url) -> Self {
+        RedirectUrl(s)
+    }
+}
+impl Deref for RedirectUrl {
+    type Target = Url;
+    fn deref(&self) -> &Url {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CsrfToken(String);
+impl SecretNewType<String> for CsrfToken {
+    fn new(s: String) -> Self {
+        CsrfToken(s)
+    }
+    fn secret(&self) -> &String { &self.0 }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ResponseType(String);
+impl NewType<String> for ResponseType {
+    fn new(s: String) -> Self {
+        ResponseType(s)
+    }
+}
+impl Deref for ResponseType {
+    type Target = String;
+    fn deref(&self) -> &String {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct AuthorizationCode(String);
+impl SecretNewType<String> for AuthorizationCode {
+    fn new(s: String) -> Self {
+        AuthorizationCode(s)
+    }
+    fn secret(&self) -> &String { &self.0 }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct RefreshToken(String);
+impl SecretNewType<String> for RefreshToken {
+    fn new(s: String) -> Self {
+        RefreshToken(s)
+    }
+    fn secret(&self) -> &String { &self.0 }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct AccessToken(String);
+impl SecretNewType<String> for AccessToken {
+    fn new(s: String) -> Self {
+        AccessToken(s)
+    }
+    fn secret(&self) -> &String { &self.0 }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct EndUserUsername(String);
+impl NewType<String> for EndUserUsername {
+    fn new(s: String) -> Self {
+        EndUserUsername(s)
+    }
+}
+impl Deref for EndUserUsername {
+    type Target = String;
+    fn deref(&self) -> &String {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct EndUserPassword(String);
+impl SecretNewType<String> for EndUserPassword {
+    fn new(s: String) -> Self {
+        EndUserPassword(s)
+    }
+    fn secret(&self) -> &String { &self.0 }
+}
+
 ///
 /// Stores the configuration for an OAuth2 client.
 ///
 #[derive(Clone, Debug)]
 pub struct Client<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> {
-    client_id: String,
-    client_secret: Option<String>,
-    auth_url: Url,
+    client_id: ClientId,
+    client_secret: Option<ClientSecret>,
+    auth_url: AuthUrl,
     auth_type: AuthType,
-    token_url: Url,
-    scopes: Vec<String>,
-    redirect_url: Option<String>,
+    token_url: TokenUrl,
+    scopes: Vec<Scope>,
+    redirect_url: Option<RedirectUrl>,
     phantom_tt: PhantomData<TT>,
     phantom_t: PhantomData<T>,
     phantom_te: PhantomData<TE>,
@@ -209,30 +425,32 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///   all standard OAuth2 flows except the
     ///   [Implicit Grant](https://tools.ietf.org/html/rfc6749#section-4.2).
     ///
-    pub fn new<I, S, A, U>(client_id: I, client_secret: Option<S>, auth_url: A, token_url: U)
-        -> Result<Self, url::ParseError>
-    where I: Into<String>, S: Into<String>, A: AsRef<str>, U: AsRef<str> {
+    pub fn new(
+        client_id: ClientId,
+        client_secret: Option<ClientSecret>,
+        auth_url: AuthUrl,
+        token_url: TokenUrl
+    ) -> Self {
         let client = Client {
-            client_id: client_id.into(),
-            client_secret: client_secret.map(|s| s.into()),
-            auth_url: Url::parse(auth_url.as_ref())?,
+            client_id: client_id,
+            client_secret: client_secret,
+            auth_url: auth_url,
             auth_type: AuthType::BasicAuth,
-            token_url: Url::parse(token_url.as_ref())?,
+            token_url: token_url,
             scopes: Vec::new(),
             redirect_url: None,
             phantom_tt: PhantomData,
             phantom_t: PhantomData,
             phantom_te: PhantomData,
         };
-        Ok(client)
+        client
     }
 
     ///
     /// Appends a new scope to the authorization URL.
     ///
-    pub fn add_scope<S>(mut self, scope: S) -> Self
-    where S: Into<String> {
-        self.scopes.push(scope.into());
+    pub fn add_scope(mut self, scope: Scope) -> Self {
+        self.scopes.push(scope);
 
         self
     }
@@ -253,9 +471,8 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///
     /// Sets the the redirect URL used by the authorization endpoint.
     ///
-    pub fn set_redirect_url<R>(mut self, redirect_url: R) -> Self
-    where R: Into<String> {
-        self.redirect_url = Some(redirect_url.into());
+    pub fn set_redirect_url(mut self, redirect_url: RedirectUrl) -> Self {
+        self.redirect_url = Some(redirect_url);
 
         self
     }
@@ -280,8 +497,8 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///  attacks. To disable CSRF protections (NOT recommended), use `insecure::authorize_url`
     ///  instead.
     ///
-    pub fn authorize_url(&self, state: String) -> Url {
-        self.authorize_url_impl("code", Some(&state), None)
+    pub fn authorize_url(&self, state: &CsrfToken) -> Url {
+        self.authorize_url_impl("code", Some(state), None)
     }
 
     ///
@@ -303,8 +520,8 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///  attacks. To disable CSRF protections (NOT recommended), use
     /// `insecure::authorize_url_implicit` instead.
     ///
-    pub fn authorize_url_implicit(&self, state: String) -> Url {
-        self.authorize_url_impl("token", Some(&state), None)
+    pub fn authorize_url_implicit(&self, state: &CsrfToken) -> Url {
+        self.authorize_url_impl("token", Some(state), None)
     }
 
     ///
@@ -327,7 +544,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
     pub fn authorize_url_extension(
         &self,
-        response_type: &str,
+        response_type: &ResponseType,
         extra_params: &[(&str, &str)]
     ) -> Url {
         self.authorize_url_impl(response_type, None, Some(extra_params))
@@ -336,31 +553,30 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     fn authorize_url_impl(
         &self,
         response_type: &str,
-        state_opt: Option<&String>,
+        state_opt: Option<&CsrfToken>,
         extra_params_opt: Option<&[(&str, &str)]>
     ) -> Url {
-        let scopes = self.scopes.join(" ");
-        let response_type_str = response_type.to_string();
+        let scopes = self.scopes.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" ");
+        let response_type_str = response_type.clone();
 
-        let mut pairs = vec![
+        let mut pairs: Vec<(&str, &str) > = vec![
             ("response_type", &response_type_str),
             ("client_id", &self.client_id),
         ];
 
         if let Some(ref redirect_url) = self.redirect_url {
-            pairs.push(("redirect_uri", redirect_url));
+            pairs.push(("redirect_uri", redirect_url.as_str()));
         }
 
         if !scopes.is_empty() {
             pairs.push(("scope", &scopes));
         }
 
-
         if let Some(state) = state_opt {
-            pairs.push(("state", state));
+            pairs.push(("state", state.secret()));
         }
 
-        let mut url = self.auth_url.clone();
+        let mut url: Url = (*self.auth_url).clone();
 
         url.query_pairs_mut().extend_pairs(
             pairs.iter().map(|&(k, v)| { (k, &v[..]) })
@@ -383,12 +599,12 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
     ///
-    pub fn exchange_code(&self, code: String) -> Result<T, RequestTokenError<TE>> {
+    pub fn exchange_code(&self, code: AuthorizationCode) -> Result<T, RequestTokenError<TE>> {
         // Make Clippy happy since we're intentionally taking ownership.
         let code_owned = code;
         let params = vec![
             ("grant_type", "authorization_code"),
-            ("code", &code_owned)
+            ("code", code_owned.secret())
         ];
 
         self.request_token(params)
@@ -399,12 +615,12 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.3.2
     ///
-    pub fn exchange_password(&self, username: &str, password: &str)
+    pub fn exchange_password(&self, username: &EndUserUsername, password: &EndUserPassword)
         -> Result<T, RequestTokenError<TE>> {
         let params = vec![
             ("grant_type", "password"),
             ("username", username),
-            ("password", password),
+            ("password", password.secret()),
         ];
 
         self.request_token(params)
@@ -418,7 +634,12 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     pub fn exchange_client_credentials(&self) -> Result<T, RequestTokenError<TE>> {
         // Generate the space-delimited scopes String before initializing params so that it has
         // a long enough lifetime.
-        let scopes_opt = if !self.scopes.is_empty() { Some(self.scopes.join(" ")) } else { None };
+        let scopes_opt =
+            if !self.scopes.is_empty() {
+                Some(self.scopes.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" "))
+            } else {
+                None
+            };
 
         let mut params: Vec<(&str, &str)> = vec![("grant_type", "client_credentials")];
 
@@ -433,10 +654,12 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-6
     ///
-    pub fn exchange_refresh_token(&self, refresh_token: &str) -> Result<T, RequestTokenError<TE>> {
-        let params = vec![
+    pub fn exchange_refresh_token(
+        &self, refresh_token: &RefreshToken
+    ) -> Result<T, RequestTokenError<TE>> {
+        let params: Vec<(&str, &str)> = vec![
             ("grant_type", "refresh_token"),
-            ("refresh_token", refresh_token),
+            ("refresh_token", refresh_token.secret()),
         ];
 
         self.request_token(params)
@@ -452,19 +675,19 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
             AuthType::RequestBody => {
                 params.push(("client_id", &self.client_id));
                 if let Some(ref client_secret) = self.client_secret {
-                    params.push(("client_secret", client_secret));
+                    params.push(("client_secret", client_secret.secret()));
                 }
             }
             AuthType::BasicAuth => {
                 easy.username(&self.client_id)?;
                 if let Some(ref client_secret) = self.client_secret {
-                    easy.password(client_secret)?;
+                    easy.password(client_secret.secret())?;
                 }
             }
         }
 
         if let Some(ref redirect_url) = self.redirect_url {
-            params.push(("redirect_uri", redirect_url));
+            params.push(("redirect_uri", redirect_url.as_str()));
         }
 
         let form =
@@ -594,7 +817,7 @@ pub trait Token<T: TokenType> : Debug + DeserializeOwned + PartialEq + Serialize
     ///
     /// REQUIRED. The access token issued by the authorization server.
     ///
-    fn access_token(&self) -> &str;
+    fn access_token(&self) -> &AccessToken;
     ///
     /// REQUIRED. The type of the token issued as described in
     /// [Section 7.1](https://tools.ietf.org/html/rfc6749#section-7.1).
@@ -613,7 +836,7 @@ pub trait Token<T: TokenType> : Debug + DeserializeOwned + PartialEq + Serialize
     /// authorization grant as described in
     /// [Section 6](https://tools.ietf.org/html/rfc6749#section-6).
     ///
-    fn refresh_token(&self) -> &Option<String>;
+    fn refresh_token(&self) -> &Option<RefreshToken>;
     ///
     /// OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The
     /// scipe of the access token as described by
@@ -621,7 +844,7 @@ pub trait Token<T: TokenType> : Debug + DeserializeOwned + PartialEq + Serialize
     /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
     /// the response, this field is `None`.
     ///
-    fn scopes(&self) -> &Option<Vec<String>>;
+    fn scopes(&self) -> &Option<Vec<Scope>>;
 
     ///
     /// Factory method to deserialize a `Token` from a JSON response.
@@ -770,7 +993,7 @@ pub mod basic {
     #[derive(Debug, Deserialize, PartialEq, Serialize)]
     pub struct BasicToken<T: TokenType = BasicTokenType> {
         #[serde(rename = "access_token")]
-        _access_token: String,
+        _access_token: AccessToken,
         #[serde(bound(deserialize = "T: DeserializeOwned"))]
         #[serde(rename = "token_type")]
         #[serde(deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive")]
@@ -778,20 +1001,20 @@ pub mod basic {
         #[serde(rename = "expires_in")]
         _expires_in: Option<u64>,
         #[serde(rename = "refresh_token")]
-        _refresh_token: Option<String>,
+        _refresh_token: Option<RefreshToken>,
         #[serde(rename = "scope")]
         #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
         #[serde(serialize_with = "helpers::serialize_space_delimited_vec")]
         #[serde(default)]
-        _scopes: Option<Vec<String>>,
+        _scopes: Option<Vec<Scope>>,
     }
 
     impl<T: TokenType> Token<T> for BasicToken<T> {
-        fn access_token(&self) -> &str { &self._access_token }
+        fn access_token(&self) -> &AccessToken { &self._access_token }
         fn token_type(&self) -> &T { &self._token_type }
         fn expires_in(&self) -> Option<Duration> { self._expires_in.map(Duration::from_secs) }
-        fn refresh_token(&self) -> &Option<String> { &self._refresh_token }
-        fn scopes(&self) -> &Option<Vec<String>> { &self._scopes }
+        fn refresh_token(&self) -> &Option<RefreshToken> { &self._refresh_token }
+        fn scopes(&self) -> &Option<Vec<Scope>> { &self._scopes }
 
         fn from_json(data: &str) -> Result<Self, serde_json::error::Error> {
             serde_json::from_str(data)
@@ -1032,13 +1255,14 @@ pub mod helpers {
     /// If `string_vec_opt` is `None`, the function serializes it as `None` (e.g., `null`
     /// in the case of JSON serialization).
     ///
-    pub fn serialize_space_delimited_vec<S>(
-        string_vec_opt: &Option<Vec<String>>,
+    pub fn serialize_space_delimited_vec<'a, T, S>(
+        vec_opt: &'a Option<Vec<T>>,
         serializer: S
     ) -> Result<S::Ok, S::Error>
-    where S: Serializer {
-        if let Some(ref string_vec) = *string_vec_opt {
-            let space_delimited = string_vec.join(" ");
+    where T: AsRef<str>, S: Serializer {
+        if let Some(ref vec) = *vec_opt {
+            let space_delimited = vec.iter().map(|s| s.as_ref()).collect::<Vec<_>>().join(" ");
+
             serializer.serialize_str(&space_delimited)
         } else {
             serializer.serialize_none()

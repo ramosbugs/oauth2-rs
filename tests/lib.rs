@@ -874,3 +874,9 @@ fn test_extension_with_simple_json_error() {
         format!("{}", token_err)
     );
 }
+
+#[test]
+fn test_secret_redaction() {
+    let secret = ClientSecret::new("top_secret".to_string());
+    assert_eq!("ClientSecret([redacted])", format!("{:?}", secret));
+}

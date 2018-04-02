@@ -222,15 +222,9 @@ pub trait NewType<T> : Clone + Debug + Deref + PartialEq {
     fn new(val: T) -> Self;
 }
 
-pub trait SecretNewType<T> {
+pub trait SecretNewType<T> : Debug {
     fn new(val: T) -> Self where Self: Sized;
     fn secret(&self) -> &T;
-}
-// FIXME: make sure there's a test for this
-impl<T> Debug for SecretNewType<T> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
-        write!(f, "[redacted]")
-    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -247,13 +241,18 @@ impl Deref for ClientId {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 pub struct ClientSecret(String);
 impl SecretNewType<String> for ClientSecret {
     fn new(s: String) -> Self {
         ClientSecret(s)
     }
     fn secret(&self) -> &String { &self.0 }
+}
+impl Debug for ClientSecret {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
+        write!(f, "ClientSecret([redacted])")
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -315,13 +314,18 @@ impl Deref for RedirectUrl {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct CsrfToken(String);
 impl SecretNewType<String> for CsrfToken {
     fn new(s: String) -> Self {
         CsrfToken(s)
     }
     fn secret(&self) -> &String { &self.0 }
+}
+impl Debug for CsrfToken {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
+        write!(f, "CsrfToken([redacted])")
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -338,7 +342,7 @@ impl Deref for ResponseType {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 pub struct AuthorizationCode(String);
 impl SecretNewType<String> for AuthorizationCode {
     fn new(s: String) -> Self {
@@ -346,8 +350,13 @@ impl SecretNewType<String> for AuthorizationCode {
     }
     fn secret(&self) -> &String { &self.0 }
 }
+impl Debug for AuthorizationCode {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
+        write!(f, "AuthorizationCode([redacted])")
+    }
+}
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 pub struct RefreshToken(String);
 impl SecretNewType<String> for RefreshToken {
     fn new(s: String) -> Self {
@@ -355,14 +364,24 @@ impl SecretNewType<String> for RefreshToken {
     }
     fn secret(&self) -> &String { &self.0 }
 }
+impl Debug for RefreshToken {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
+        write!(f, "RefreshToken[redacted])")
+    }
+}
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 pub struct AccessToken(String);
 impl SecretNewType<String> for AccessToken {
     fn new(s: String) -> Self {
         AccessToken(s)
     }
     fn secret(&self) -> &String { &self.0 }
+}
+impl Debug for AccessToken {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
+        write!(f, "AccessToken([redacted])")
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -379,13 +398,18 @@ impl Deref for EndUserUsername {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 pub struct EndUserPassword(String);
 impl SecretNewType<String> for EndUserPassword {
     fn new(s: String) -> Self {
         EndUserPassword(s)
     }
     fn secret(&self) -> &String { &self.0 }
+}
+impl Debug for EndUserPassword {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
+        write!(f, "EndUserPassword([redacted])")
+    }
 }
 
 ///

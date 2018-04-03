@@ -45,7 +45,7 @@
 //! // Generate the full authorization URL.
 //! // This is the URL you should redirect the user to, in order to trigger the authorization
 //! // process.
-//! println!("Browse to: {}", client.authorize_url(csrf_state));
+//! println!("Browse to: {}", client.authorize_url(&csrf_state));
 //!
 //! // Once the user has been redirected to the redirect URL, you'll have access to the
 //! // authorization code. For security reasons, your code should verify that the `state`
@@ -97,7 +97,7 @@
 //! // Generate the full authorization URL.
 //! // This is the URL you should redirect the user to, in order to trigger the authorization
 //! // process.
-//! println!("Browse to: {}", client.authorize_url_implicit(csrf_state));
+//! println!("Browse to: {}", client.authorize_url_implicit(&csrf_state));
 //! # Ok(())
 //! # }
 //! # fn main() {}
@@ -297,7 +297,7 @@ impl Deref for Scope {
     }
 }
 impl AsRef<str> for Scope {
-    fn as_ref(&self) -> &str { &self }
+    fn as_ref(&self) -> &str { self }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -455,19 +455,18 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
         auth_url: AuthUrl,
         token_url: TokenUrl
     ) -> Self {
-        let client = Client {
-            client_id: client_id,
-            client_secret: client_secret,
-            auth_url: auth_url,
+        Client {
+            client_id,
+            client_secret,
+            auth_url,
             auth_type: AuthType::BasicAuth,
-            token_url: token_url,
+            token_url,
             scopes: Vec::new(),
             redirect_url: None,
             phantom_tt: PhantomData,
             phantom_t: PhantomData,
             phantom_te: PhantomData,
-        };
-        client
+        }
     }
 
     ///
@@ -581,10 +580,9 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
         extra_params_opt: Option<&[(&str, &str)]>
     ) -> Url {
         let scopes = self.scopes.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" ");
-        let response_type_str = response_type.clone();
 
         let mut pairs: Vec<(&str, &str) > = vec![
-            ("response_type", &response_type_str),
+            ("response_type", response_type),
             ("client_id", &self.client_id),
         ];
 
@@ -860,7 +858,7 @@ pub trait Token<T: TokenType> : Debug + DeserializeOwned + PartialEq + Serialize
     /// authorization grant as described in
     /// [Section 6](https://tools.ietf.org/html/rfc6749#section-6).
     ///
-    fn refresh_token(&self) -> &Option<RefreshToken>;
+    fn refresh_token(&self) -> Option<&RefreshToken>;
     ///
     /// OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The
     /// scipe of the access token as described by
@@ -868,7 +866,7 @@ pub trait Token<T: TokenType> : Debug + DeserializeOwned + PartialEq + Serialize
     /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
     /// the response, this field is `None`.
     ///
-    fn scopes(&self) -> &Option<Vec<Scope>>;
+    fn scopes(&self) -> Option<&Vec<Scope>>;
 
     ///
     /// Factory method to deserialize a `Token` from a JSON response.
@@ -919,24 +917,24 @@ impl<T: ErrorResponseType> ErrorResponse<T> {
     /// OPTIONAL. Human-readable ASCII text providing additional information, used to assist
     /// the client developer in understanding the error that occurred.
     ///
-    pub fn error_description(&self) -> &Option<String> { &self._error_description }
+    pub fn error_description(&self) -> Option<&String> { self._error_description.as_ref() }
     ///
     /// OPTIONAL. A URI identifying a human-readable web page with information about the error,
     /// used to provide the client developer with additional information about the error.
     ///
-    pub fn error_uri(&self) -> &Option<String> { &self._error_uri }
+    pub fn error_uri(&self) -> Option<&String> { self._error_uri.as_ref() }
 }
 
 impl<TE: ErrorResponseType> Display for ErrorResponse<TE> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
         let mut formatted = self.error().to_string();
 
-        if let Some(ref error_description) = *self.error_description() {
+        if let Some(error_description) = self.error_description() {
             formatted.push_str(": ");
             formatted.push_str(error_description);
         }
 
-        if let Some(ref error_uri) = *self.error_uri() {
+        if let Some(error_uri) = self.error_uri() {
             formatted.push_str(" / See ");
             formatted.push_str(error_uri);
         }
@@ -1037,8 +1035,8 @@ pub mod basic {
         fn access_token(&self) -> &AccessToken { &self._access_token }
         fn token_type(&self) -> &T { &self._token_type }
         fn expires_in(&self) -> Option<Duration> { self._expires_in.map(Duration::from_secs) }
-        fn refresh_token(&self) -> &Option<RefreshToken> { &self._refresh_token }
-        fn scopes(&self) -> &Option<Vec<Scope>> { &self._scopes }
+        fn refresh_token(&self) -> Option<&RefreshToken> { self._refresh_token.as_ref() }
+        fn scopes(&self) -> Option<&Vec<Scope>> { self._scopes.as_ref() }
 
         fn from_json(data: &str) -> Result<Self, serde_json::error::Error> {
             serde_json::from_str(data)
@@ -1279,8 +1277,8 @@ pub mod helpers {
     /// If `string_vec_opt` is `None`, the function serializes it as `None` (e.g., `null`
     /// in the case of JSON serialization).
     ///
-    pub fn serialize_space_delimited_vec<'a, T, S>(
-        vec_opt: &'a Option<Vec<T>>,
+    pub fn serialize_space_delimited_vec<T, S>(
+        vec_opt: &Option<Vec<T>>,
         serializer: S
     ) -> Result<S::Ok, S::Error>
     where T: AsRef<str>, S: Serializer {

@@ -175,7 +175,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, *token.refresh_token());
+    assert_eq!(None, token.refresh_token());
 
     // Ensure that serialization produces an equivalent JSON value.
     let serialized_json = serde_json::to_string(&token).unwrap();
@@ -210,8 +210,8 @@ fn test_exchange_code_successful_with_complete_json_response() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
-        *token.scopes()
+        Some(&vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
+        token.scopes()
     );
     assert_eq!(3600, token.expires_in().unwrap().as_secs());
     assert_eq!("foobar", token.refresh_token().clone().unwrap().secret());
@@ -248,11 +248,11 @@ fn test_exchange_client_credentials_with_basic_auth() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
-        *token.scopes()
+        Some(&vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
+        token.scopes()
     );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, *token.refresh_token());
+    assert_eq!(None, token.refresh_token());
 }
 
 #[test]
@@ -280,9 +280,12 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
+    assert_eq!(
+        Some(&vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
+        token.scopes()
+    );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, *token.refresh_token());
+    assert_eq!(None, token.refresh_token());
 }
 
 #[test]
@@ -305,9 +308,12 @@ fn test_exchange_refresh_token_with_basic_auth() {
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
+    assert_eq!(
+        Some(&vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
+        token.scopes()
+    );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, *token.refresh_token());
+    assert_eq!(None, token.refresh_token());
 }
 
 #[test]
@@ -330,9 +336,12 @@ fn test_exchange_refresh_token_with_json_response() {
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
+    assert_eq!(
+        Some(&vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
+        token.scopes()
+    );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, *token.refresh_token());
+    assert_eq!(None, token.refresh_token());
 }
 
 #[test]
@@ -360,9 +369,12 @@ fn test_exchange_password_with_json_response() {
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
+    assert_eq!(
+        Some(&vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
+        token.scopes()
+    );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, *token.refresh_token());
+    assert_eq!(None, token.refresh_token());
 }
 
 #[test]
@@ -389,9 +401,12 @@ fn test_exchange_code_successful_with_redirect_url() {
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
+    assert_eq!(
+        Some(&vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
+        token.scopes()
+    );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, *token.refresh_token());
+    assert_eq!(None, token.refresh_token());
 }
 
 #[test]
@@ -418,9 +433,12 @@ fn test_exchange_code_successful_with_basic_auth() {
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
-    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
+    assert_eq!(
+        Some(&vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
+        token.scopes()
+    );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, *token.refresh_token());
+    assert_eq!(None, token.refresh_token());
 }
 
 #[test]
@@ -445,8 +463,8 @@ fn test_exchange_code_with_simple_json_error() {
     match &token_err {
         &RequestTokenError::ServerResponse(ref error_response) => {
             assert_eq!(BasicErrorResponseType::InvalidRequest, *error_response.error());
-            assert_eq!(Some("stuff happened".to_string()), *error_response.error_description());
-            assert_eq!(None, *error_response.error_uri());
+            assert_eq!(Some(&"stuff happened".to_string()), error_response.error_description());
+            assert_eq!(None, error_response.error_uri());
 
             // Test Debug trait for ErrorResponse
             assert_eq!(
@@ -610,8 +628,8 @@ fn test_exchange_code_with_400_status_code() {
     match token.err().unwrap() {
         RequestTokenError::ServerResponse(error_response) => {
             assert_eq!(BasicErrorResponseType::InvalidRequest, *error_response.error());
-            assert_eq!(Some("Expired code.".to_string()), *error_response.error_description());
-            assert_eq!(None, *error_response.error_uri());
+            assert_eq!(Some(&"Expired code.".to_string()), error_response.error_description());
+            assert_eq!(None, error_response.error_uri());
         },
         other => panic!("Unexpected error: {:?}", other),
     }
@@ -667,7 +685,7 @@ mod colorful_extension {
         _height: u32,
     }
     impl ColorfulToken {
-        pub fn shape(&self) -> &Option<String> { &self._shape }
+        pub fn shape(&self) -> Option<&String> { self._shape.as_ref() }
         pub fn height(&self) -> u32 { self._height }
     }
 
@@ -675,8 +693,8 @@ mod colorful_extension {
         fn access_token(&self) -> &AccessToken { &self._basic_token.access_token() }
         fn token_type(&self) -> &ColorfulTokenType { &self._basic_token.token_type() }
         fn expires_in(&self) -> Option<Duration> { self._basic_token.expires_in() }
-        fn refresh_token(&self) -> &Option<RefreshToken> { &self._basic_token.refresh_token() }
-        fn scopes(&self) -> &Option<Vec<Scope>> { &self._basic_token.scopes() }
+        fn refresh_token(&self) -> Option<&RefreshToken> { self._basic_token.refresh_token() }
+        fn scopes(&self) -> Option<&Vec<Scope>> { self._basic_token.scopes() }
 
         fn from_json(data: &str) -> Result<Self, serde_json::error::Error> {
             serde_json::from_str(data)
@@ -744,8 +762,8 @@ fn test_extension_successful_with_minimal_json_response() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(ColorfulTokenType::Green, *token.token_type());
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, *token.refresh_token());
-    assert_eq!(None, *token.shape());
+    assert_eq!(None, token.refresh_token());
+    assert_eq!(None, token.shape());
     assert_eq!(10, token.height());
 
     // Ensure that serialization produces an equivalent JSON value.
@@ -787,10 +805,13 @@ fn test_extension_successful_with_complete_json_response() {
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(ColorfulTokenType::Red, *token.token_type());
-    assert_eq!(Some(vec![Scope::new("read".to_string()), Scope::new("write".to_string())]), *token.scopes());
+    assert_eq!(
+        Some(&vec![Scope::new("read".to_string()), Scope::new("write".to_string())]),
+        token.scopes()
+    );
     assert_eq!(3600, token.expires_in().unwrap().as_secs());
     assert_eq!("foobar", token.refresh_token().clone().unwrap().secret());
-    assert_eq!(Some("round".to_string()), *token.shape());
+    assert_eq!(Some(&"round".to_string()), token.shape());
     assert_eq!(12, token.height());
 
     // Ensure that serialization produces an equivalent JSON value.
@@ -841,8 +862,8 @@ fn test_extension_with_simple_json_error() {
                 ColorfulErrorResponseType::TooLight,
                 *error_response.error()
             );
-            assert_eq!(Some("stuff happened".to_string()), *error_response.error_description());
-            assert_eq!(Some("https://errors".to_string()), *error_response.error_uri());
+            assert_eq!(Some(&"stuff happened".to_string()), error_response.error_description());
+            assert_eq!(Some(&"https://errors".to_string()), error_response.error_uri());
 
             // Ensure that serialization produces an equivalent JSON value.
             let serialized_json = serde_json::to_string(&error_response).unwrap();

@@ -360,8 +360,8 @@ fn test_exchange_password_with_json_response() {
     let token =
         client
             .exchange_password(
-                &EndUserUsername::new("user".to_string()),
-                &EndUserPassword::new("pass".to_string())
+                &ResourceOwnerUsername::new("user".to_string()),
+                &ResourceOwnerPassword::new("pass".to_string())
             )
             .unwrap();
 

@@ -128,13 +128,16 @@ fn main() {
                 // space-separated scopes. Github-specific clients can parse this scope into
                 // multiple scopes by splitting at the commas. Note that it's not safe for the
                 // library to do this by default because RFC 6749 allows scopes to contain commas.
-                let scopes_raw = token.scopes().clone().unwrap_or_else(|| Vec::new());
                 let scopes =
-                    scopes_raw
-                        .iter()
-                        .map(|comma_separated| comma_separated.split(","))
-                        .flat_map(|inner_scopes| inner_scopes)
-                        .collect::<Vec<_>>();
+                    if let Some(scopes_vec) = token.scopes() {
+                        scopes_vec
+                            .iter()
+                            .map(|comma_separated| comma_separated.split(","))
+                            .flat_map(|inner_scopes| inner_scopes)
+                            .collect::<Vec<_>>()
+                    } else {
+                        Vec::new()
+                    };
                 println!("Github returned the following scopes:\n{:?}\n", scopes);
             }
 

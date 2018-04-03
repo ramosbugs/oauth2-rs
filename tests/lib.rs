@@ -115,7 +115,7 @@ fn test_authorize_url_with_extension_response_type() {
         BasicClient::new("aaa", Some("bbb"), "http://example.com/auth", "http://example.com/token")
             .unwrap();
 
-    let url = client.authorize_url_extension("code token", vec![("foo", "bar")]);
+    let url = client.authorize_url_extension("code token", &vec![("foo", "bar")]);
 
     assert_eq!(
         Url::parse("http://example.com/auth?response_type=code+token&client_id=aaa&foo=bar")

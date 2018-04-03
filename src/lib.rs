@@ -281,7 +281,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///  instead.
     ///
     pub fn authorize_url(&self, state: String) -> Url {
-        self.authorize_url_impl("code", Some(state), None)
+        self.authorize_url_impl("code", Some(&state), None)
     }
 
     ///
@@ -304,7 +304,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     /// `insecure::authorize_url_implicit` instead.
     ///
     pub fn authorize_url_implicit(&self, state: String) -> Url {
-        self.authorize_url_impl("token", Some(state), None)
+        self.authorize_url_impl("token", Some(&state), None)
     }
 
     ///
@@ -328,7 +328,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     pub fn authorize_url_extension(
         &self,
         response_type: &str,
-        extra_params: Vec<(&str, &str)>
+        extra_params: &[(&str, &str)]
     ) -> Url {
         self.authorize_url_impl(response_type, None, Some(extra_params))
     }
@@ -336,8 +336,8 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     fn authorize_url_impl(
         &self,
         response_type: &str,
-        state_opt: Option<String>,
-        extra_params_opt: Option<Vec<(&str, &str)>>
+        state_opt: Option<&String>,
+        extra_params_opt: Option<&[(&str, &str)]>
     ) -> Url {
         let scopes = self.scopes.join(" ");
         let response_type_str = response_type.to_string();
@@ -356,7 +356,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
         }
 
 
-        if let Some(ref state) = state_opt {
+        if let Some(state) = state_opt {
             pairs.push(("state", state));
         }
 
@@ -366,9 +366,9 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
             pairs.iter().map(|&(k, v)| { (k, &v[..]) })
         );
 
-        if let Some(ref extra_params) = extra_params_opt {
+        if let Some(extra_params) = extra_params_opt {
             url.query_pairs_mut().extend_pairs(
-                extra_params.iter().map(|p| { p })
+                extra_params.iter().cloned()
             );
         }
 
@@ -384,9 +384,11 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
     ///
     pub fn exchange_code(&self, code: String) -> Result<T, RequestTokenError<TE>> {
+        // Make Clippy happy since we're intentionally taking ownership.
+        let code_owned = code;
         let params = vec![
             ("grant_type", "authorization_code"),
-            ("code", &code)
+            ("code", &code_owned)
         ];
 
         self.request_token(params)
@@ -401,8 +403,8 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
         -> Result<T, RequestTokenError<TE>> {
         let params = vec![
             ("grant_type", "password"),
-            ("username", &username),
-            ("password", &password),
+            ("username", username),
+            ("password", password),
         ];
 
         self.request_token(params)
@@ -416,12 +418,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     pub fn exchange_client_credentials(&self) -> Result<T, RequestTokenError<TE>> {
         // Generate the space-delimited scopes String before initializing params so that it has
         // a long enough lifetime.
-        let scopes_opt;
-        if !self.scopes.is_empty() {
-            scopes_opt = Some(self.scopes.join(" "));
-        } else {
-            scopes_opt = None;
-        }
+        let scopes_opt = if !self.scopes.is_empty() { Some(self.scopes.join(" ")) } else { None };
 
         let mut params: Vec<(&str, &str)> = vec![("grant_type", "client_credentials")];
 
@@ -439,7 +436,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     pub fn exchange_refresh_token(&self, refresh_token: &str) -> Result<T, RequestTokenError<TE>> {
         let params = vec![
             ("grant_type", "refresh_token"),
-            ("refresh_token", &refresh_token),
+            ("refresh_token", refresh_token),
         ];
 
         self.request_token(params)
@@ -455,13 +452,13 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
             AuthType::RequestBody => {
                 params.push(("client_id", &self.client_id));
                 if let Some(ref client_secret) = self.client_secret {
-                    params.push(("client_secret", &client_secret));
+                    params.push(("client_secret", client_secret));
                 }
             }
             AuthType::BasicAuth => {
                 easy.username(&self.client_id)?;
                 if let Some(ref client_secret) = self.client_secret {
-                    easy.password(&client_secret)?;
+                    easy.password(client_secret)?;
                 }
             }
         }
@@ -511,17 +508,14 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
         let content_type = easy.content_type()?;
 
         Ok(RequestTokenResponse{
-            http_status: http_status,
+            http_status,
             content_type: content_type.map(|s| s.to_string()),
             response_body: data,
         })
     }
 
     fn request_token(&self, params: Vec<(&str, &str)>) -> Result<T, RequestTokenError<TE>> {
-        let token_response =
-            self.post_request_token(params)
-                .map_err(|error| RequestTokenError::Request(error))?;
-
+        let token_response = self.post_request_token(params).map_err(RequestTokenError::Request)?;
         if token_response.http_status != 200 {
             let reason = String::from_utf8_lossy(token_response.response_body.as_slice());
             if reason.is_empty() {
@@ -570,8 +564,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
                         )
                     )?;
 
-            T::from_json(&response_body)
-                .map_err(|error_str| RequestTokenError::Parse(error_str))
+            T::from_json(&response_body).map_err(RequestTokenError::Parse)
         }
     }
 }
@@ -691,12 +684,12 @@ impl<TE: ErrorResponseType> Display for ErrorResponse<TE> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
         let mut formatted = self.error().to_string();
 
-        if let &Some(ref error_description) = self.error_description() {
+        if let Some(ref error_description) = *self.error_description() {
             formatted.push_str(": ");
             formatted.push_str(error_description);
         }
 
-        if let &Some(ref error_uri) = self.error_uri() {
+        if let Some(ref error_uri) = *self.error_uri() {
             formatted.push_str(" / See ");
             formatted.push_str(error_uri);
         }
@@ -847,13 +840,13 @@ pub mod basic {
     }
     impl BasicErrorResponseType {
         fn to_str(&self) -> &str {
-            match self {
-                &BasicErrorResponseType::InvalidRequest => "invalid_request",
-                &BasicErrorResponseType::InvalidClient => "invalid_client",
-                &BasicErrorResponseType::InvalidGrant => "invalid_grant",
-                &BasicErrorResponseType::UnauthorizedClient => "unauthorized_client",
-                &BasicErrorResponseType::UnsupportedGrantType => "unsupported_grant_type",
-                &BasicErrorResponseType::InvalidScope => "invalid_scope",
+            match *self {
+                BasicErrorResponseType::InvalidRequest => "invalid_request",
+                BasicErrorResponseType::InvalidClient => "invalid_client",
+                BasicErrorResponseType::InvalidGrant => "invalid_grant",
+                BasicErrorResponseType::UnauthorizedClient => "unauthorized_client",
+                BasicErrorResponseType::UnsupportedGrantType => "unsupported_grant_type",
+                BasicErrorResponseType::InvalidScope => "invalid_scope",
             }
         }
     }
@@ -1044,7 +1037,7 @@ pub mod helpers {
         serializer: S
     ) -> Result<S::Ok, S::Error>
     where S: Serializer {
-        if let &Some(ref string_vec) = string_vec_opt {
+        if let Some(ref string_vec) = *string_vec_opt {
             let space_delimited = string_vec.join(" ");
             serializer.serialize_str(&space_delimited)
         } else {

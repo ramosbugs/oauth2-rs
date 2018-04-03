@@ -15,9 +15,18 @@
 //! extern crate rand;
 //! extern crate url;
 //!
-//! use oauth2::*;
-//! use oauth2::basic::*;
-//! use rand::{thread_rng, Rng};
+//! use oauth2::prelude::*;
+//! use oauth2::{
+//!     AuthorizationCode,
+//!     AuthUrl,
+//!     ClientId,
+//!     ClientSecret,
+//!     CsrfToken,
+//!     RedirectUrl,
+//!     Scope,
+//!     TokenUrl
+//! };
+//! use oauth2::basic::BasicClient;
 //! use url::Url;
 //!
 //! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
@@ -37,10 +46,8 @@
 //!         // Set the URL the user will be redirected to after the authorization process.
 //!         .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
 //!
-//! let mut rng = thread_rng();
-//! // Generate a 128-bit random string for CSRF protection (each time!).
-//! let random_bytes: Vec<u8> = (0..16).map(|_| rng.gen::<u8>()).collect();
-//! let csrf_state = CsrfToken::new(base64::encode(&random_bytes));
+//! // Generate a new random token for CSRF protection (each time!).
+//! let csrf_state = CsrfToken::new_random();
 //!
 //! // Generate the full authorization URL.
 //! // This is the URL you should redirect the user to, in order to trigger the authorization
@@ -75,9 +82,17 @@
 //! extern crate rand;
 //! extern crate url;
 //!
-//! use oauth2::*;
-//! use oauth2::basic::*;
-//! use rand::{thread_rng, Rng};
+//! use oauth2::prelude::*;
+//! use oauth2::{
+//!     AuthUrl,
+//!     ClientId,
+//!     ClientSecret,
+//!     CsrfToken,
+//!     RedirectUrl,
+//!     Scope,
+//!     TokenUrl
+//! };
+//! use oauth2::basic::BasicClient;
 //! use url::Url;
 //!
 //! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
@@ -89,10 +104,8 @@
 //!         TokenUrl::new(Url::parse("http://token")?)
 //!     );
 //!
-//! let mut rng = thread_rng();
-//! // Generate a 128-bit random string for CSRF protection (each time!).
-//! let random_bytes: Vec<u8> = (0..16).map(|_| rng.gen::<u8>()).collect();
-//! let csrf_state = CsrfToken::new(base64::encode(&random_bytes));
+//! // Generate a new random token for CSRF protection (each time!).
+//! let csrf_state = CsrfToken::new_random();
 //!
 //! // Generate the full authorization URL.
 //! // This is the URL you should redirect the user to, in order to trigger the authorization
@@ -116,9 +129,17 @@
 //! extern crate rand;
 //! extern crate url;
 //!
-//! use oauth2::*;
-//! use oauth2::basic::*;
-//! use rand::{thread_rng, Rng};
+//! use oauth2::prelude::*;
+//! use oauth2::{
+//!     AuthUrl,
+//!     ClientId,
+//!     ClientSecret,
+//!     ResourceOwnerPassword,
+//!     ResourceOwnerUsername,
+//!     Scope,
+//!     TokenUrl
+//! };
+//! use oauth2::basic::BasicClient;
 //! use url::Url;
 //!
 //! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
@@ -129,13 +150,12 @@
 //!         AuthUrl::new(Url::parse("http://authorize")?),
 //!         TokenUrl::new(Url::parse("http://token")?)
 //!     )
-//!         .add_scope(Scope::new("read".to_string()))
-//!         .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
+//!         .add_scope(Scope::new("read".to_string()));
 //!
 //! let token_result =
 //!     client.exchange_password(
-//!         &EndUserUsername::new("user".to_string()),
-//!         &EndUserPassword::new("pass".to_string())
+//!         &ResourceOwnerUsername::new("user".to_string()),
+//!         &ResourceOwnerPassword::new("pass".to_string())
 //!     );
 //! # Ok(())
 //! # }
@@ -153,8 +173,15 @@
 //! extern crate oauth2;
 //! extern crate url;
 //!
-//! use oauth2::*;
-//! use oauth2::basic::*;
+//! use oauth2::prelude::*;
+//! use oauth2::{
+//!     AuthUrl,
+//!     ClientId,
+//!     ClientSecret,
+//!     Scope,
+//!     TokenUrl
+//! };
+//! use oauth2::basic::BasicClient;
 //! use url::Url;
 //!
 //! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
@@ -165,8 +192,7 @@
 //!         AuthUrl::new(Url::parse("http://authorize")?),
 //!         TokenUrl::new(Url::parse("http://token")?)
 //!     )
-//!         .add_scope(Scope::new("read".to_string()))
-//!         .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
+//!         .add_scope(Scope::new("read".to_string()));
 //!
 //! let token_result = client.exchange_client_credentials();
 //! # Ok(())
@@ -182,24 +208,30 @@
 //! - [Github](https://github.com/alexcrichton/oauth2-rs/blob/master/examples/github.rs)
 //!
 
+extern crate base64;
 extern crate curl;
 extern crate failure;
 #[macro_use] extern crate failure_derive;
+extern crate rand;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
 extern crate url;
 
-use curl::easy::Easy;
-use serde::Serialize;
-use serde::de::DeserializeOwned;
 use std::io::Read;
 use std::fmt::{Debug, Display, Formatter};
 use std::fmt::Error as FormatterError;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::time::Duration;
+
+use curl::easy::Easy;
+use rand::{thread_rng, Rng};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 use url::Url;
+
+use prelude::*;
 
 const CONTENT_TYPE_JSON: &str = "application/json";
 
@@ -218,199 +250,271 @@ pub enum AuthType {
     BasicAuth,
 }
 
-pub trait NewType<T> : Clone + Debug + Deref + PartialEq {
-    fn new(val: T) -> Self;
-}
+///
+/// Crate prelude that should be wildcard-imported by crate users.
+///
+pub mod prelude {
+    use std::fmt::Debug;
+    use std::ops::Deref;
 
-pub trait SecretNewType<T> : Debug {
-    fn new(val: T) -> Self where Self: Sized;
-    fn secret(&self) -> &T;
-}
+    ///
+    /// New type to wrap a more primitive type in a more typesafe manner.
+    ///
+    pub trait NewType<T> : Clone + Debug + Deref + PartialEq {
+        ///
+        /// Create a new instance to wrap the given `val`.
+        ///
+        fn new(val: T) -> Self;
+    }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct ClientId(String);
-impl NewType<String> for ClientId {
-    fn new(s: String) -> Self {
-        ClientId(s)
-    }
-}
-impl Deref for ClientId {
-    type Target = String;
-    fn deref(&self) -> &String {
-        &self.0
-    }
-}
-
-#[derive(Clone, Deserialize, PartialEq, Serialize)]
-pub struct ClientSecret(String);
-impl SecretNewType<String> for ClientSecret {
-    fn new(s: String) -> Self {
-        ClientSecret(s)
-    }
-    fn secret(&self) -> &String { &self.0 }
-}
-impl Debug for ClientSecret {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
-        write!(f, "ClientSecret([redacted])")
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct AuthUrl(Url);
-impl NewType<Url> for AuthUrl {
-    fn new(s: Url) -> Self {
-        AuthUrl(s)
-    }
-}
-impl Deref for AuthUrl {
-    type Target = Url;
-    fn deref(&self) -> &Url {
-        &self.0
+    ///
+    /// New type representing a secret value to wrap a more primitive type in a more typesafe
+    /// manner.
+    ///
+    pub trait SecretNewType<T> : Debug {
+        ///
+        /// Create a new instance to wrap the given `val`.
+        ///
+        fn new(val: T) -> Self where Self: Sized;
+        ///
+        /// Get the secret contained within this type.
+        ///
+        /// # Security Warning
+        ///
+        /// Leaking this value may compromise the security of the OAuth2 flow.
+        ///
+        fn secret(&self) -> &T;
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct TokenUrl(Url);
-impl NewType<Url> for TokenUrl {
-    fn new(s: Url) -> Self {
-        TokenUrl(s)
-    }
-}
-impl Deref for TokenUrl {
-    type Target = Url;
-    fn deref(&self) -> &Url {
-        &self.0
+macro_rules! new_type {
+    (
+        $(#[$attr:meta])*
+        $name:ident($type:ty)
+    ) => {
+        new_type![
+            $(#[$attr])*
+            $name($type)
+            concat!(
+                "Create a new `",
+                stringify!($name),
+                "` to wrap the given `",
+                stringify!($type),
+                "`."
+            )
+        ];
+    };
+    (
+        $(#[$attr:meta])*
+        $name:ident($type:ty)
+        $new_doc:expr
+    ) => {
+        $(#[$attr])*
+        #[derive(Clone, Debug, PartialEq)]
+        pub struct $name($type);
+        impl NewType<$type> for $name {
+            #[doc = $new_doc]
+            fn new(s: $type) -> Self {
+                $name(s)
+            }
+        }
+        impl Deref for $name {
+            type Target = $type;
+            fn deref(&self) -> &$type {
+                &self.0
+            }
+        }
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct Scope(String);
-impl NewType<String> for Scope {
-    fn new(s: String) -> Self {
-        Scope(s)
-    }
+macro_rules! new_secret_type {
+    (
+        $(#[$attr:meta])*
+        $name:ident($type:ty)
+    ) => {
+        new_secret_type![
+            $(#[$attr])*
+            $name($type)
+            impl {}
+        ];
+    };
+    (
+        $(#[$attr:meta])*
+        $name:ident($type:ty)
+        impl {
+            $($item:tt)*
+        }
+    ) => {
+        new_secret_type![
+            $(#[$attr])*,
+            $name($type),
+            concat!(
+                "Create a new `",
+                stringify!($name),
+                "` to wrap the given `",
+                stringify!($type),
+                "`."
+            ),
+            concat!("Get the secret contained within this `", stringify!($name), "`."),
+            impl {
+                $($item)*
+            }
+        ];
+    };
+    (
+        $(#[$attr:meta])*,
+        $name:ident($type:ty),
+        $new_doc:expr,
+        $secret_doc:expr,
+        impl {
+            $($item:tt)*
+        }
+    ) => {
+        $(
+            #[$attr]
+        )*
+        #[derive(Clone, PartialEq)]
+        pub struct $name($type);
+        impl $name {
+            $($item)*
+        }
+        impl SecretNewType<$type> for $name {
+            #[doc = $new_doc]
+            fn new(s: $type) -> Self {
+                $name(s)
+            }
+            ///
+            #[doc = $secret_doc]
+            ///
+            /// # Security Warning
+            ///
+            /// Leaking this value may compromise the security of the OAuth2 flow.
+            ///
+            fn secret(&self) -> &$type { &self.0 }
+        }
+        impl Debug for $name {
+            fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
+                write!(f, concat!(stringify!($name), "([redacted])"))
+            }
+        }
+    };
 }
-impl Deref for Scope {
-    type Target = String;
-    fn deref(&self) -> &String {
-        &self.0
-    }
-}
+
+new_type![
+    ///
+    /// Client identifier issued to the client during the registration process described by
+    /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
+    ///
+    #[derive(Deserialize, Serialize)]
+    ClientId(String)
+];
+
+new_type![
+    ///
+    /// URL of the authorization server's authorization endpoint.
+    ///
+    AuthUrl(Url)
+];
+new_type![
+    ///
+    /// URL of the authorization server's token endpoint.
+    ///
+    TokenUrl(Url)
+];
+new_type![
+    ///
+    /// URL of the client's redirection endpoint.
+    ///
+    RedirectUrl(Url)
+];
+new_type![
+    ///
+    /// Authorization endpoint response (grant) type defined in
+    /// [Section 3.1.1](https://tools.ietf.org/html/rfc6749#section-3.1.1).
+    ///
+    #[derive(Deserialize, Serialize)]
+    ResponseType(String)
+];
+new_type![
+    ///
+    /// Resource owner's username used directly as an authorization grant to obtain an access
+    /// token.
+    ///
+    ResourceOwnerUsername(String)
+];
+
+new_type![
+    ///
+    /// Access token scope, as defined by the authorization server.
+    ///
+    #[derive(Deserialize, Serialize)]
+    Scope(String)
+];
 impl AsRef<str> for Scope {
     fn as_ref(&self) -> &str { self }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct RedirectUrl(Url);
-impl NewType<Url> for RedirectUrl {
-    fn new(s: Url) -> Self {
-        RedirectUrl(s)
+new_secret_type![
+    ///
+    /// Client password issued to the client during the registration process described by
+    /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
+    ///
+    ClientSecret(String)
+];
+new_secret_type![
+    ///
+    /// Value used for [CSRF]((https://tools.ietf.org/html/rfc6749#section-10.12)) protection
+    /// via the `state` parameter.
+    ///
+    CsrfToken(String)
+    impl {
+        ///
+        /// Generate a new random, base64-encoded 128-bit CSRF token.
+        ///
+        pub fn new_random() -> Self {
+            CsrfToken::new_random_len(16)
+        }
+        ///
+        /// Generate a new random, base64-encoded CSRF token of the specified length.
+        ///
+        /// # Arguments
+        ///
+        /// * `num_bytes` - Number of random bytes to generate, prior to base64-encoding.
+        ///
+        pub fn new_random_len(num_bytes: u32) -> Self {
+            let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
+            CsrfToken::new(base64::encode(&random_bytes))
+        }
     }
-}
-impl Deref for RedirectUrl {
-    type Target = Url;
-    fn deref(&self) -> &Url {
-        &self.0
-    }
-}
+];
+new_secret_type![
+    ///
+    /// Authorization code returned from the authorization endpoint.
+    ///
+    AuthorizationCode(String)
+];
+new_secret_type![
+    ///
+    /// Refresh token used to obtain a new access token (if supported by the authorization server).
+    ///
+    #[derive(Deserialize, Serialize)]
+    RefreshToken(String)
+];
+new_secret_type![
+    ///
+    /// Access token returned by the token endpoint and used to access protected resources.
+    ///
+    #[derive(Deserialize, Serialize)]
+    AccessToken(String)
+];
+new_secret_type![
+    ///
+    /// Resource owner's password used directly as an authorization grant to obtain an access
+    /// token.
+    ///
+    ResourceOwnerPassword(String)
+];
 
-#[derive(Clone, PartialEq)]
-pub struct CsrfToken(String);
-impl SecretNewType<String> for CsrfToken {
-    fn new(s: String) -> Self {
-        CsrfToken(s)
-    }
-    fn secret(&self) -> &String { &self.0 }
-}
-impl Debug for CsrfToken {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
-        write!(f, "CsrfToken([redacted])")
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct ResponseType(String);
-impl NewType<String> for ResponseType {
-    fn new(s: String) -> Self {
-        ResponseType(s)
-    }
-}
-impl Deref for ResponseType {
-    type Target = String;
-    fn deref(&self) -> &String {
-        &self.0
-    }
-}
-
-#[derive(Clone, Deserialize, PartialEq, Serialize)]
-pub struct AuthorizationCode(String);
-impl SecretNewType<String> for AuthorizationCode {
-    fn new(s: String) -> Self {
-        AuthorizationCode(s)
-    }
-    fn secret(&self) -> &String { &self.0 }
-}
-impl Debug for AuthorizationCode {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
-        write!(f, "AuthorizationCode([redacted])")
-    }
-}
-
-#[derive(Clone, Deserialize, PartialEq, Serialize)]
-pub struct RefreshToken(String);
-impl SecretNewType<String> for RefreshToken {
-    fn new(s: String) -> Self {
-        RefreshToken(s)
-    }
-    fn secret(&self) -> &String { &self.0 }
-}
-impl Debug for RefreshToken {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
-        write!(f, "RefreshToken[redacted])")
-    }
-}
-
-#[derive(Clone, Deserialize, PartialEq, Serialize)]
-pub struct AccessToken(String);
-impl SecretNewType<String> for AccessToken {
-    fn new(s: String) -> Self {
-        AccessToken(s)
-    }
-    fn secret(&self) -> &String { &self.0 }
-}
-impl Debug for AccessToken {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
-        write!(f, "AccessToken([redacted])")
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct EndUserUsername(String);
-impl NewType<String> for EndUserUsername {
-    fn new(s: String) -> Self {
-        EndUserUsername(s)
-    }
-}
-impl Deref for EndUserUsername {
-    type Target = String;
-    fn deref(&self) -> &String {
-        &self.0
-    }
-}
-
-#[derive(Clone, Deserialize, PartialEq, Serialize)]
-pub struct EndUserPassword(String);
-impl SecretNewType<String> for EndUserPassword {
-    fn new(s: String) -> Self {
-        EndUserPassword(s)
-    }
-    fn secret(&self) -> &String { &self.0 }
-}
-impl Debug for EndUserPassword {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
-        write!(f, "EndUserPassword([redacted])")
-    }
-}
 
 ///
 /// Stores the configuration for an OAuth2 client.
@@ -637,8 +741,11 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.3.2
     ///
-    pub fn exchange_password(&self, username: &EndUserUsername, password: &EndUserPassword)
-        -> Result<T, RequestTokenError<TE>> {
+    pub fn exchange_password(
+        &self,
+        username: &ResourceOwnerUsername,
+        password: &ResourceOwnerPassword
+    ) -> Result<T, RequestTokenError<TE>> {
         let params = vec![
             ("grant_type", "password"),
             ("username", username),
@@ -978,7 +1085,26 @@ pub enum RequestTokenError<T: ErrorResponseType> {
 /// ([RFC 6749](https://tools.ietf.org/html/rfc6749)).
 /// 
 pub mod basic {
-    use super::*;
+    extern crate serde_json;
+
+    use std::fmt::Error as FormatterError;
+    use std::fmt::{Debug, Display, Formatter};
+    use std::time::Duration;
+
+    use serde::de::DeserializeOwned;
+
+    use super::{
+        AccessToken,
+        Client,
+        ErrorResponse,
+        ErrorResponseType,
+        RefreshToken,
+        RequestTokenError,
+        Scope,
+        Token,
+        TokenType,
+    };
+    use super::helpers;
 
     ///
     /// Basic OAuth2 client specialization, suitable for most applications.
@@ -1127,7 +1253,14 @@ pub mod basic {
 /// Insecure methods -- not recommended for most applications.
 ///
 pub mod insecure {
-    use super::*;
+    use url::Url;
+
+    use super::{
+        Client,
+        ErrorResponseType,
+        Token,
+        TokenType,
+    };
 
     ///
     /// Produces the full authorization URL used by the
@@ -1140,7 +1273,7 @@ pub mod insecure {
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12) attacks.
     /// It is highly recommended to use the `Client::authorize_url` function instead.
     ///
-    pub fn authorize_url<TT, T, TE>(client: &super::Client<TT, T, TE>) -> Url
+    pub fn authorize_url<TT, T, TE>(client: &Client<TT, T, TE>) -> Url
     where TT: TokenType, T: Token<TT>, TE: ErrorResponseType {
         client.authorize_url_impl("code", None, None)
     }
@@ -1155,7 +1288,7 @@ pub mod insecure {
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12) attacks.
     /// It is highly recommended to use the `Client::authorize_url_implicit` function instead.
     ///
-    pub fn authorize_url_implicit<TT, T, TE>(client: &super::Client<TT, T, TE>) -> Url
+    pub fn authorize_url_implicit<TT, T, TE>(client: &Client<TT, T, TE>) -> Url
     where TT: TokenType, T: Token<TT>, TE: ErrorResponseType {
         client.authorize_url_impl("token", None, None)
     }

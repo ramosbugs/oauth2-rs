@@ -18,9 +18,19 @@ extern crate oauth2;
 extern crate rand;
 extern crate url;
 
-use oauth2::*;
+use oauth2::prelude::*;
+use oauth2::{
+    AuthorizationCode,
+    AuthUrl,
+    ClientId,
+    ClientSecret,
+    CsrfToken,
+    RedirectUrl,
+    Scope,
+    Token,
+    TokenUrl,
+};
 use oauth2::basic::BasicClient;
-use rand::{thread_rng, Rng};
 use std::env;
 use std::net::TcpListener;
 use std::io::{BufRead, BufReader, Write};
@@ -64,10 +74,8 @@ fn main() {
                 )
             );
 
-    let mut rng = thread_rng();
-    // Generate a 128-bit random string for CSRF protection (each time!).
-    let random_bytes: Vec<u8> = (0..16).map(|_| rng.gen::<u8>()).collect();
-    let csrf_state = CsrfToken::new(base64::encode(&random_bytes));
+    // Generate a new random token for CSRF protection (each time!).
+    let csrf_state = CsrfToken::new_random();
 
     // Generate the authorization URL to which we'll redirect the user.
     let authorize_url = client.authorize_url(&csrf_state);

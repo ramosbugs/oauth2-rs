@@ -74,11 +74,8 @@ fn main() {
                 )
             );
 
-    // Generate a new random token for CSRF protection (each time!).
-    let csrf_state = CsrfToken::new_random();
-
     // Generate the authorization URL to which we'll redirect the user.
-    let authorize_url = client.authorize_url(&csrf_state);
+    let (authorize_url, csrf_state) = client.authorize_url(CsrfToken::new_random);
 
     println!("Open this URL in your browser:\n{}\n", authorize_url.to_string());
 

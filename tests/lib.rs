@@ -6,9 +6,12 @@ extern crate serde;
 extern crate serde_json;
 
 use mockito::{mock, SERVER_URL};
+use url::Url;
+use url::form_urlencoded::byte_serialize;
+
+use oauth2::prelude::*;
 use oauth2::*;
 use oauth2::basic::*;
-use url::Url;
 
 fn new_client() -> BasicClient {
     BasicClient::new(
@@ -31,11 +34,29 @@ fn new_mock_client() -> BasicClient {
 #[test]
 fn test_authorize_url() {
     let client = new_client();
-    let url = client.authorize_url(&CsrfToken::new("csrf_token".to_string()));
+    let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token".to_string()));
 
     assert_eq!(
         Url::parse(
             "http://example.com/auth?response_type=code&client_id=aaa&state=csrf_token"
+        ).unwrap(),
+        url
+    );
+}
+
+#[test]
+fn test_authorize_random() {
+    let client = new_client();
+    let (url, csrf_state) = client.authorize_url(CsrfToken::new_random);
+
+    assert_eq!(
+        Url::parse(
+            &format!(
+                "http://example.com/auth?response_type=code&client_id=aaa&state={}",
+                byte_serialize(csrf_state.secret().clone().into_bytes().as_slice())
+                    .collect::<Vec<_>>()
+                    .join("")
+            )
         ).unwrap(),
         url
     );
@@ -57,7 +78,7 @@ fn test_authorize_url_insecure() {
 fn test_authorize_url_implicit() {
     let client = new_client();
 
-    let url = client.authorize_url_implicit(&CsrfToken::new("csrf_token".to_string()));
+    let (url, _) = client.authorize_url_implicit(|| CsrfToken::new("csrf_token".to_string()));
 
     assert_eq!(
         Url::parse(
@@ -89,7 +110,7 @@ fn test_authorize_url_with_param() {
             TokenUrl::new(Url::parse("http://example.com/token").unwrap())
         );
 
-    let url = client.authorize_url(&CsrfToken::new("csrf_token".to_string()));
+    let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token".to_string()));
 
     assert_eq!(
         Url::parse(
@@ -106,7 +127,7 @@ fn test_authorize_url_with_scopes() {
             .add_scope(Scope::new("read".to_string()))
             .add_scope(Scope::new("write".to_string()));
 
-    let url = client.authorize_url(&CsrfToken::new("csrf_token".to_string()));
+    let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token".to_string()));
 
     assert_eq!(
         Url::parse(
@@ -139,7 +160,7 @@ fn test_authorize_url_with_redirect_url() {
         new_client()
             .set_redirect_url(RedirectUrl::new(Url::parse("http://localhost/redirect").unwrap()));
 
-    let url = client.authorize_url(&CsrfToken::new("csrf_token".to_string()));
+    let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token".to_string()));
 
     assert_eq!(
         Url::parse(

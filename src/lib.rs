@@ -46,13 +46,12 @@
 //!         // Set the URL the user will be redirected to after the authorization process.
 //!         .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
 //!
-//! // Generate a new random token for CSRF protection (each time!).
-//! let csrf_state = CsrfToken::new_random();
-//!
 //! // Generate the full authorization URL.
+//! let (auth_url, csrf_token) = client.authorize_url(CsrfToken::new_random);
+//!
 //! // This is the URL you should redirect the user to, in order to trigger the authorization
 //! // process.
-//! println!("Browse to: {}", client.authorize_url(&csrf_state));
+//! println!("Browse to: {}", auth_url);
 //!
 //! // Once the user has been redirected to the redirect URL, you'll have access to the
 //! // authorization code. For security reasons, your code should verify that the `state`
@@ -104,13 +103,17 @@
 //!         TokenUrl::new(Url::parse("http://token")?)
 //!     );
 //!
-//! // Generate a new random token for CSRF protection (each time!).
-//! let csrf_state = CsrfToken::new_random();
-//!
 //! // Generate the full authorization URL.
+//! let (auth_url, csrf_token) = client.authorize_url_implicit(CsrfToken::new_random);
+//!
 //! // This is the URL you should redirect the user to, in order to trigger the authorization
 //! // process.
-//! println!("Browse to: {}", client.authorize_url_implicit(&csrf_state));
+//! println!("Browse to: {}", auth_url);
+//!
+//! // Once the user has been redirected to the redirect URL, you'll have the access code.
+//! // For security reasons, your code should verify that the `state` parameter returned by the
+//! // server matches `csrf_state`.
+//!
 //! # Ok(())
 //! # }
 //! # fn main() {}
@@ -466,6 +469,7 @@ new_secret_type![
     /// Value used for [CSRF]((https://tools.ietf.org/html/rfc6749#section-10.12)) protection
     /// via the `state` parameter.
     ///
+    #[must_use]
     CsrfToken(String)
     impl {
         ///
@@ -624,8 +628,10 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///  attacks. To disable CSRF protections (NOT recommended), use `insecure::authorize_url`
     ///  instead.
     ///
-    pub fn authorize_url(&self, state: &CsrfToken) -> Url {
-        self.authorize_url_impl("code", Some(state), None)
+    pub fn authorize_url<F>(&self, state_fn: F) -> (Url, CsrfToken)
+    where F: Fn() -> CsrfToken {
+        let state = state_fn();
+        (self.authorize_url_impl("code", Some(&state), None), state)
     }
 
     ///
@@ -647,8 +653,10 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///  attacks. To disable CSRF protections (NOT recommended), use
     /// `insecure::authorize_url_implicit` instead.
     ///
-    pub fn authorize_url_implicit(&self, state: &CsrfToken) -> Url {
-        self.authorize_url_impl("token", Some(state), None)
+    pub fn authorize_url_implicit<F>(&self, state_fn: F) -> (Url, CsrfToken)
+    where F: Fn() -> CsrfToken {
+        let state = state_fn();
+        (self.authorize_url_impl("token", Some(&state), None), state)
     }
 
     ///

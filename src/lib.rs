@@ -290,31 +290,60 @@ pub mod prelude {
     }
 }
 
-macro_rules! new_type {
+#[macro_export] macro_rules! new_type {
     (
         $(#[$attr:meta])*
         $name:ident($type:ty)
     ) => {
         new_type![
-            $(#[$attr])*
-            $name($type)
+            $(#[$attr])*,
+            $name($type),
             concat!(
                 "Create a new `",
                 stringify!($name),
                 "` to wrap the given `",
                 stringify!($type),
                 "`."
-            )
+            ),
+            impl {}
         ];
     };
     (
         $(#[$attr:meta])*
         $name:ident($type:ty)
-        $new_doc:expr
+        impl {
+            $($item:tt)*
+        }
+    ) => {
+        new_type![
+            $(#[$attr])*,
+            $name($type),
+            concat!(
+                "Create a new `",
+                stringify!($name),
+                "` to wrap the given `",
+                stringify!($type),
+                "`."
+            ),
+            impl {
+                $($item)*
+            }
+        ];
+    };
+    (
+        $(#[$attr:meta])*,
+        $name:ident($type:ty),
+        $new_doc:expr,
+        impl {
+            $($item:tt)*
+        }
     ) => {
         $(#[$attr])*
         #[derive(Clone, Debug, PartialEq)]
         pub struct $name($type);
+        impl $name {
+            $($item)*
+        }
         impl NewType<$type> for $name {
             #[doc = $new_doc]
             fn new(s: $type) -> Self {
@@ -330,7 +359,7 @@ macro_rules! new_type {
     }
 }
 
-macro_rules! new_secret_type {
+#[macro_export] macro_rules! new_secret_type {
     (
         $(#[$attr:meta])*
         $name:ident($type:ty)

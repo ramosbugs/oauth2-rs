@@ -463,22 +463,43 @@ new_type![
 ];
 
 new_type![
+    #[derive(Deserialize, Serialize)]
     ///
     /// URL of the authorization server's authorization endpoint.
     ///
-    AuthUrl(Url)
+    AuthUrl(
+        #[serde(
+            deserialize_with = "helpers::deserialize_url",
+            serialize_with = "helpers::serialize_url"
+        )]
+        Url
+    )
 ];
 new_type![
+    #[derive(Deserialize, Serialize)]
     ///
     /// URL of the authorization server's token endpoint.
     ///
-    TokenUrl(Url)
+    TokenUrl(
+        #[serde(
+            deserialize_with = "helpers::deserialize_url",
+            serialize_with = "helpers::serialize_url"
+        )]
+        Url
+    )
 ];
 new_type![
+    #[derive(Deserialize, Serialize)]
     ///
     /// URL of the client's redirection endpoint.
     ///
-    RedirectUrl(Url)
+    RedirectUrl(
+        #[serde(
+            deserialize_with = "helpers::deserialize_url",
+            serialize_with = "helpers::serialize_url"
+        )]
+        Url
+    )
 ];
 new_type![
     ///
@@ -1357,6 +1378,7 @@ pub mod insecure {
 ///
 pub mod helpers {
     use serde::{Deserialize, Deserializer, Serializer};
+    use url::Url;
 
     ///
     /// Serde case-insensitive deserializer for an untagged `enum`.
@@ -1480,5 +1502,28 @@ pub mod helpers {
         } else {
             serializer.serialize_none()
         }
+    }
+
+    ///
+    /// Serde string deserializer for a `Url`.
+    ///
+    pub fn deserialize_url<'de, D>(
+        deserializer: D
+    ) -> Result<Url, D::Error>
+    where D: Deserializer<'de> {
+        use serde::de::Error;
+        let url_str = String::deserialize(deserializer)?;
+        Url::parse(url_str.as_ref()).map_err(Error::custom)
+    }
+
+    ///
+    /// Serde string serializer for a `Url`.
+    ///
+    pub fn serialize_url<S>(
+        url: &Url,
+        serializer: S
+    ) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        serializer.serialize_str(url.as_str())
     }
 }

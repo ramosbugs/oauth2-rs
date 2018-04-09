@@ -291,13 +291,20 @@ pub mod prelude {
 }
 
 #[macro_export] macro_rules! new_type {
+    // Convenience pattern without an impl.
     (
         $(#[$attr:meta])*
-        $name:ident($type:ty)
+        $name:ident(
+            $(#[$type_attr:meta])*
+            $type:ty
+        )
     ) => {
         new_type![
-            $(#[$attr])*,
-            $name($type),
+            @new_type $(#[$attr])*,
+            $name(
+                $(#[$type_attr])*
+                $type
+            ),
             concat!(
                 "Create a new `",
                 stringify!($name),
@@ -308,16 +315,23 @@ pub mod prelude {
             impl {}
         ];
     };
+    // Main entry point with an impl.
     (
         $(#[$attr:meta])*
-        $name:ident($type:ty)
+        $name:ident(
+            $(#[$type_attr:meta])*
+            $type:ty
+        )
         impl {
             $($item:tt)*
         }
     ) => {
         new_type![
-            $(#[$attr])*,
-            $name($type),
+            @new_type $(#[$attr])*,
+            $name(
+                $(#[$type_attr])*
+                $type
+            ),
             concat!(
                 "Create a new `",
                 stringify!($name),
@@ -330,9 +344,13 @@ pub mod prelude {
             }
         ];
     };
+    // Actual implementation, after stringifying the #[doc] attr.
     (
-        $(#[$attr:meta])*,
-        $name:ident($type:ty),
+        @new_type $(#[$attr:meta])*,
+        $name:ident(
+            $(#[$type_attr:meta])*
+            $type:ty
+        ),
         $new_doc:expr,
         impl {
             $($item:tt)*
@@ -340,7 +358,10 @@ pub mod prelude {
     ) => {
         $(#[$attr])*
         #[derive(Clone, Debug, PartialEq)]
-        pub struct $name($type);
+        pub struct $name(
+            $(#[$type_attr])*
+            $type
+        );
         impl $name {
             $($item)*
         }

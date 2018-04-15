@@ -23,7 +23,6 @@ use rand::{thread_rng, Rng};
 use std::env;
 use std::net::TcpListener;
 use std::io::{BufRead, BufReader, Write};
-use std::process;
 use url::Url;
 
 fn main() {
@@ -35,10 +34,7 @@ fn main() {
     // Set up the config for the Google OAuth2 process.
     let client =
         BasicClient::new(google_client_id, Some(google_client_secret), auth_url, token_url)
-            .unwrap_or_else(|err| {
-                println!("Error: failed to create client: {}", err);
-                process::exit(1)
-            })
+            .expect("failed to create client")
             // This example is requesting access to the "calendar" features and the user's profile.
             .add_scope("https://www.googleapis.com/auth/calendar")
             .add_scope("https://www.googleapis.com/auth/plus.me")

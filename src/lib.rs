@@ -533,6 +533,7 @@ new_secret_type![
     /// Client password issued to the client during the registration process described by
     /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
     ///
+    #[derive(Deserialize, Serialize)]
     ClientSecret(String)
 ];
 new_secret_type![

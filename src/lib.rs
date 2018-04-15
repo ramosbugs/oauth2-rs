@@ -290,7 +290,7 @@ pub mod prelude {
     }
 }
 
-#[macro_export] macro_rules! new_type {
+macro_rules! new_type {
     // Convenience pattern without an impl.
     (
         $(#[$attr:meta])*
@@ -380,7 +380,7 @@ pub mod prelude {
     }
 }
 
-#[macro_export] macro_rules! new_secret_type {
+macro_rules! new_secret_type {
     (
         $(#[$attr:meta])*
         $name:ident($type:ty)

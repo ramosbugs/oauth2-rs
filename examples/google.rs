@@ -13,14 +13,18 @@
 //! ...and follow the instructions.
 //!
 
-extern crate url;
+extern crate base64;
 extern crate oauth2;
+extern crate rand;
+extern crate url;
 
+use oauth2::basic::BasicClient;
+use rand::{thread_rng, Rng};
 use std::env;
 use std::net::TcpListener;
 use std::io::{BufRead, BufReader, Write};
+use std::process;
 use url::Url;
-use oauth2::Config;
 
 fn main() {
     let google_client_id = env::var("GOOGLE_CLIENT_ID").expect("Missing the GOOGLE_CLIENT_ID environment variable.");
@@ -29,21 +33,27 @@ fn main() {
     let token_url = "https://www.googleapis.com/oauth2/v3/token";
 
     // Set up the config for the Google OAuth2 process.
-    let mut config = Config::new(google_client_id, google_client_secret, auth_url, token_url);
+    let client =
+        BasicClient::new(google_client_id, Some(google_client_secret), auth_url, token_url)
+            .unwrap_or_else(|err| {
+                println!("Error: failed to create client: {}", err);
+                process::exit(1)
+            })
+            // This example is requesting access to the "calendar" features and the user's profile.
+            .add_scope("https://www.googleapis.com/auth/calendar")
+            .add_scope("https://www.googleapis.com/auth/plus.me")
 
-    // This example is requesting access to the "calendar" features and the user's profile.
-    config = config.add_scope("https://www.googleapis.com/auth/calendar");
-    config = config.add_scope("https://www.googleapis.com/auth/plus.me");
+            // This example will be running its own server at localhost:8080.
+            // See below for the server implementation.
+            .set_redirect_url("http://localhost:8080");
 
-    // This example will be running its own server at localhost:8080.
-    // See below for the server implementation.
-    config = config.set_redirect_url("http://localhost:8080");
-
-    // Set the state parameter (optional)
-    config = config.set_state("1234");
+    let mut rng = thread_rng();
+    // Generate a 128-bit random string for CSRF protection (each time!).
+    let random_bytes: Vec<u8> = (0..16).map(|_| rng.gen::<u8>()).collect();
+    let csrf_state = base64::encode(&random_bytes);
 
     // Generate the authorization URL to which we'll redirect the user.
-    let authorize_url = config.authorize_url();
+    let authorize_url = client.authorize_url(csrf_state.clone());
 
     println!("Open this URL in your browser:\n{}\n", authorize_url.to_string());
 
@@ -94,10 +104,10 @@ fn main() {
     };
 
     println!("Google returned the following code:\n{}\n", code);
-    println!("Google returned the following state:\n{}\n", state);
+    println!("Google returned the following state:\n{} (expected `{}`)\n", state, csrf_state);
 
     // Exchange the code with a token.
-    let token = config.exchange_code(code);
+    let token = client.exchange_code(code);
 
     println!("Google returned the following token:\n{:?}\n", token);
 }

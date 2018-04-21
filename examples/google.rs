@@ -59,7 +59,7 @@ fn main() {
 
     // Set up the config for the Google OAuth2 process.
     let client =
-        BasicClient::new(google_client_id, Some(google_client_secret), auth_url, token_url)
+        BasicClient::new(google_client_id, Some(google_client_secret), auth_url, Some(token_url))
             // This example is requesting access to the "calendar" features and the user's profile.
             .add_scope(Scope::new("https://www.googleapis.com/auth/calendar".to_string()))
             .add_scope(Scope::new("https://www.googleapis.com/auth/plus.me".to_string()))

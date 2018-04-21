@@ -37,7 +37,7 @@
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
 //!         AuthUrl::new(Url::parse("http://authorize")?),
-//!         TokenUrl::new(Url::parse("http://token")?)
+//!         Some(TokenUrl::new(Url::parse("http://token")?))
 //!     )
 //!         // Set the desired scopes.
 //!         .add_scope(Scope::new("read".to_string()))
@@ -88,8 +88,7 @@
 //!     ClientSecret,
 //!     CsrfToken,
 //!     RedirectUrl,
-//!     Scope,
-//!     TokenUrl
+//!     Scope
 //! };
 //! use oauth2::basic::BasicClient;
 //! use url::Url;
@@ -100,7 +99,7 @@
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
 //!         AuthUrl::new(Url::parse("http://authorize")?),
-//!         TokenUrl::new(Url::parse("http://token")?)
+//!         None
 //!     );
 //!
 //! // Generate the full authorization URL.
@@ -151,7 +150,7 @@
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
 //!         AuthUrl::new(Url::parse("http://authorize")?),
-//!         TokenUrl::new(Url::parse("http://token")?)
+//!         Some(TokenUrl::new(Url::parse("http://token")?))
 //!     )
 //!         .add_scope(Scope::new("read".to_string()));
 //!
@@ -193,7 +192,7 @@
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
 //!         AuthUrl::new(Url::parse("http://authorize")?),
-//!         TokenUrl::new(Url::parse("http://token")?)
+//!         Some(TokenUrl::new(Url::parse("http://token")?))
 //!     )
 //!         .add_scope(Scope::new("read".to_string()));
 //!
@@ -601,7 +600,7 @@ pub struct Client<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> {
     client_secret: Option<ClientSecret>,
     auth_url: AuthUrl,
     auth_type: AuthType,
-    token_url: TokenUrl,
+    token_url: Option<TokenUrl>,
     scopes: Vec<Scope>,
     redirect_url: Option<RedirectUrl>,
     phantom_tt: PhantomData<TT>,
@@ -627,13 +626,14 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     /// * `token_url` - Token endpoint: used by the client to exchange an authorization grant
     ///   (code) for an access token, typically with client authentication. This URL is used in
     ///   all standard OAuth2 flows except the
-    ///   [Implicit Grant](https://tools.ietf.org/html/rfc6749#section-4.2).
+    ///   [Implicit Grant](https://tools.ietf.org/html/rfc6749#section-4.2). If this value is set
+    ///   to `None`, the `exchange_*` methods will return `Err(RequestTokenError::Other(_))`.
     ///
     pub fn new(
         client_id: ClientId,
         client_secret: Option<ClientSecret>,
         auth_url: AuthUrl,
-        token_url: TokenUrl
+        token_url: Option<TokenUrl>
     ) -> Self {
         Client {
             client_id,
@@ -876,6 +876,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
 
     fn post_request_token<'a, 'b: 'a>(
         &'b self,
+        token_url: &TokenUrl,
         mut params: Vec<(&'b str, &'a str)>
     ) -> Result<RequestTokenResponse, curl::Error> {
         let mut easy = Easy::new();
@@ -906,7 +907,7 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
                 .into_bytes();
         let mut form_slice = &form[..];
 
-        easy.url(&self.token_url.to_string()[..])?;
+        easy.url(&token_url.to_string()[..])?;
 
         // Section 5.1 of RFC 6749 (https://tools.ietf.org/html/rfc6749#section-5.1) only permits
         // JSON responses for this request. Some providers such as GitHub have off-spec behavior
@@ -947,7 +948,17 @@ impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     }
 
     fn request_token(&self, params: Vec<(&str, &str)>) -> Result<T, RequestTokenError<TE>> {
-        let token_response = self.post_request_token(params).map_err(RequestTokenError::Request)?;
+        let token_url =
+            self.token_url.as_ref().ok_or_else(||
+                // Arguably, it could be better to panic in this case. However, there may be
+                // situations where the library user gets the authorization server's configuration
+                // dynamically. In those cases, it would be preferable to return an `Err` rather
+                // than panic. An example situation where this might arise is OpenID Connect
+                // discovery.
+                RequestTokenError::Other("token_url must not be `None`".to_string())
+            )?;
+        let token_response =
+            self.post_request_token(token_url, params).map_err(RequestTokenError::Request)?;
         if token_response.http_status != 200 {
             let reason = String::from_utf8_lossy(token_response.response_body.as_slice());
             if reason.is_empty() {

@@ -18,7 +18,7 @@ fn new_client() -> BasicClient {
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
         AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
-        TokenUrl::new(Url::parse("http://example.com/token").unwrap())
+        Some(TokenUrl::new(Url::parse("http://example.com/token").unwrap()))
     )
 }
 
@@ -27,7 +27,7 @@ fn new_mock_client() -> BasicClient {
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
         AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
-        TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+        Some(TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap()))
     )
 }
 
@@ -107,7 +107,7 @@ fn test_authorize_url_with_param() {
             ClientId::new("aaa".to_string()),
             Some(ClientSecret::new("bbb".to_string())),
             AuthUrl::new(Url::parse("http://example.com/auth?foo=bar").unwrap()),
-            TokenUrl::new(Url::parse("http://example.com/token").unwrap())
+            Some(TokenUrl::new(Url::parse("http://example.com/token").unwrap()))
         );
 
     let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token".to_string()));
@@ -187,7 +187,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
             ClientId::new("aaa".to_string()),
             Some(ClientSecret::new("bbb".to_string())),
             AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
-            TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+            Some(TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap()))
         );
     let token = client.exchange_code(AuthorizationCode::new("ccc".to_string())).unwrap();
 
@@ -609,7 +609,7 @@ fn test_exchange_code_with_invalid_token_type() {
             ClientId::new("aaa".to_string()),
             None,
             AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
-            TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+            Some(TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap()))
         );
 
     let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
@@ -663,7 +663,7 @@ fn test_exchange_code_fails_gracefully_on_transport_error() {
             ClientId::new("aaa".to_string()),
             Some(ClientSecret::new("bbb".to_string())),
             AuthUrl::new(Url::parse("http://auth").unwrap()),
-            TokenUrl::new(Url::parse("http://token").unwrap())
+            Some(TokenUrl::new(Url::parse("http://token").unwrap()))
         );
     let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
 
@@ -774,7 +774,7 @@ fn test_extension_successful_with_minimal_json_response() {
             ClientId::new("aaa".to_string()),
             Some(ClientSecret::new("bbb".to_string())),
             AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
-            TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+            Some(TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap()))
         );
     let token = client.exchange_code(AuthorizationCode::new("ccc".to_string())).unwrap();
 
@@ -818,7 +818,7 @@ fn test_extension_successful_with_complete_json_response() {
             ClientId::new("aaa".to_string()),
             Some(ClientSecret::new("bbb".to_string())),
             AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
-            TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+            Some(TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap()))
         ).set_auth_type(oauth2::AuthType::RequestBody);
     let token = client.exchange_code(AuthorizationCode::new("ccc".to_string())).unwrap();
 
@@ -868,7 +868,7 @@ fn test_extension_with_simple_json_error() {
             ClientId::new("aaa".to_string()),
             Some(ClientSecret::new("bbb".to_string())),
             AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
-            TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap())
+            Some(TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap()))
         );
     let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
 

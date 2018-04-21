@@ -60,7 +60,7 @@ fn main() {
 
     // Set up the config for the Github OAuth2 process.
     let client =
-        BasicClient::new(github_client_id, Some(github_client_secret), auth_url, token_url)
+        BasicClient::new(github_client_id, Some(github_client_secret), auth_url, Some(token_url))
             // This example is requesting access to the user's public repos and email.
             .add_scope(Scope::new("public_repo".to_string()))
             .add_scope(Scope::new("user:email".to_string()))

@@ -207,8 +207,8 @@
 //!
 //! More specific implementations are available as part of the examples:
 //!
-//! - [Google](https://github.com/alexcrichton/oauth2-rs/blob/master/examples/google.rs)
-//! - [Github](https://github.com/alexcrichton/oauth2-rs/blob/master/examples/github.rs)
+//! - [Google](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/google.rs)
+//! - [Github](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/github.rs)
 //!
 
 extern crate base64;

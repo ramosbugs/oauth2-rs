@@ -18,93 +18,136 @@ extern crate oauth2;
 extern crate rand;
 extern crate url;
 
+use oauth2::prelude::*;
+use oauth2::{
+    AuthorizationCode,
+    AuthUrl,
+    ClientId,
+    ClientSecret,
+    CsrfToken,
+    RedirectUrl,
+    Scope,
+    Token,
+    TokenUrl,
+};
 use oauth2::basic::BasicClient;
-use rand::{thread_rng, Rng};
 use std::env;
 use std::net::TcpListener;
 use std::io::{BufRead, BufReader, Write};
 use url::Url;
 
 fn main() {
-    let github_client_id = env::var("GITHUB_CLIENT_ID").expect("Missing the GITHUB_CLIENT_ID environment variable.");
-    let github_client_secret = env::var("GITHUB_CLIENT_SECRET").expect("Missing the GITHUB_CLIENT_SECRET environment variable.");
-    let auth_url = "https://github.com/login/oauth/authorize";
-    let token_url = "https://github.com/login/oauth/access_token";
+    let github_client_id =
+        ClientId::new(
+            env::var("GITHUB_CLIENT_ID")
+                .expect("Missing the GITHUB_CLIENT_ID environment variable.")
+        );
+    let github_client_secret =
+        ClientSecret::new(
+            env::var("GITHUB_CLIENT_SECRET")
+                .expect("Missing the GITHUB_CLIENT_SECRET environment variable.")
+        );
+    let auth_url =
+        AuthUrl::new(
+            Url::parse("https://github.com/login/oauth/authorize")
+                .expect("Invalid authorization endpoint URL")
+        );
+    let token_url =
+        TokenUrl::new(
+            Url::parse("https://github.com/login/oauth/access_token")
+                .expect("Invalid token endpoint URL")
+        );
 
     // Set up the config for the Github OAuth2 process.
     let client =
         BasicClient::new(github_client_id, Some(github_client_secret), auth_url, token_url)
-            .expect("failed to create client")
-
             // This example is requesting access to the user's public repos and email.
-            .add_scope("public_repo")
-            .add_scope("user:email")
+            .add_scope(Scope::new("public_repo".to_string()))
+            .add_scope(Scope::new("user:email".to_string()))
 
             // This example will be running its own server at localhost:8080.
             // See below for the server implementation.
-            .set_redirect_url("http://localhost:8080");
-
-    let mut rng = thread_rng();
-    // Generate a 128-bit random string for CSRF protection (each time!).
-    let random_bytes: Vec<u8> = (0..16).map(|_| rng.gen::<u8>()).collect();
-    let csrf_state = base64::encode(&random_bytes);
+            .set_redirect_url(
+                RedirectUrl::new(
+                    Url::parse("http://localhost:8080")
+                        .expect("Invalid redirect URL")
+                )
+            );
 
     // Generate the authorization URL to which we'll redirect the user.
-    let authorize_url = client.authorize_url(csrf_state.clone());
+    let (authorize_url, csrf_state) = client.authorize_url(CsrfToken::new_random);
 
     println!("Open this URL in your browser:\n{}\n", authorize_url.to_string());
-
-    // These variables will store the code & state retrieved during the authorization process.
-    let mut code = String::new();
-    let mut state = String::new();
 
     // A very naive implementation of the redirect server.
     let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
     for stream in listener.incoming() {
-        match stream {
-            Ok(mut stream) => {
-                {
-                    let mut reader = BufReader::new(&stream);
+        if let Ok(mut stream) = stream {
+            let code;
+            let state;
+            {
+                let mut reader = BufReader::new(&stream);
 
-                    let mut request_line = String::new();
-                    reader.read_line(&mut request_line).unwrap();
+                let mut request_line = String::new();
+                reader.read_line(&mut request_line).unwrap();
 
-                    let redirect_url = request_line.split_whitespace().nth(1).unwrap();
-                    let url = Url::parse(&("http://localhost".to_string() + redirect_url)).unwrap();
+                let redirect_url = request_line.split_whitespace().nth(1).unwrap();
+                let url = Url::parse(&("http://localhost".to_string() + redirect_url)).unwrap();
 
-                    let code_pair = url.query_pairs().find(|pair| {
-                        let &(ref key, _) = pair;
-                        key == "code"
-                    }).unwrap();
+                let code_pair = url.query_pairs().find(|pair| {
+                    let &(ref key, _) = pair;
+                    key == "code"
+                }).unwrap();
 
-                    let (_, value) = code_pair;
-                    code = value.into_owned();
+                let (_, value) = code_pair;
+                code = AuthorizationCode::new(value.into_owned());
 
-                    let state_pair = url.query_pairs().find(|pair| {
-                        let &(ref key, _) = pair;
-                        key == "state"
-                    }).unwrap();
+                let state_pair = url.query_pairs().find(|pair| {
+                    let &(ref key, _) = pair;
+                    key == "state"
+                }).unwrap();
 
-                    let (_, value) = state_pair;
-                    state = value.into_owned();
-                }
-
-                let message = "Go back to your terminal :)";
-                let response = format!("HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}", message.len(), message);
-                stream.write_all(response.as_bytes()).unwrap();
-
-                // The server will terminate itself after collecting the first code.
-                break;
+                let (_, value) = state_pair;
+                state = CsrfToken::new(value.into_owned());
             }
-            Err(_) => {},
+
+            let message = "Go back to your terminal :)";
+            let response =
+                format!("HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}", message.len(), message);
+            stream.write_all(response.as_bytes()).unwrap();
+
+            println!("Github returned the following code:\n{}\n", code.secret());
+            println!(
+                "Github returned the following state:\n{} (expected `{}`)\n",
+                state.secret(),
+                csrf_state.secret()
+            );
+
+            // Exchange the code with a token.
+            let token_res = client.exchange_code(code);
+
+            println!("Github returned the following token:\n{:?}\n", token_res);
+
+            if let Ok(token) = token_res {
+                // NB: Github returns a single comma-separated "scope" parameter instead of multiple
+                // space-separated scopes. Github-specific clients can parse this scope into
+                // multiple scopes by splitting at the commas. Note that it's not safe for the
+                // library to do this by default because RFC 6749 allows scopes to contain commas.
+                let scopes =
+                    if let Some(scopes_vec) = token.scopes() {
+                        scopes_vec
+                            .iter()
+                            .map(|comma_separated| comma_separated.split(","))
+                            .flat_map(|inner_scopes| inner_scopes)
+                            .collect::<Vec<_>>()
+                    } else {
+                        Vec::new()
+                    };
+                println!("Github returned the following scopes:\n{:?}\n", scopes);
+            }
+
+            // The server will terminate itself after collecting the first code.
+            break;
         }
     };
-
-    println!("Github returned the following code:\n{}\n", code);
-    println!("Github returned the following state:\n{} (expected `{}`)\n", state, csrf_state);
-
-    // Exchange the code with a token.
-    let token = client.exchange_code(code);
-
-    println!("Github returned the following token:\n{:?}\n", token);
 }

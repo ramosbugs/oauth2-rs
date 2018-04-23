@@ -206,7 +206,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
         serialized_json
     );
 
-    let deserialized_token = BasicToken::from_json(&serialized_json).unwrap();
+    let deserialized_token = BasicTokenResponse::from_json(&serialized_json).unwrap();
     assert_eq!(token, deserialized_token);
 }
 
@@ -245,7 +245,7 @@ fn test_exchange_code_successful_with_complete_json_response() {
         serialized_json
     );
 
-    let deserialized_token = BasicToken::from_json(&serialized_json).unwrap();
+    let deserialized_token = BasicTokenResponse::from_json(&serialized_json).unwrap();
     assert_eq!(token, deserialized_token);
 }
 
@@ -489,8 +489,8 @@ fn test_exchange_code_with_simple_json_error() {
 
             // Test Debug trait for ErrorResponse
             assert_eq!(
-                "ErrorResponse { _error: invalid_request, \
-                _error_description: Some(\"stuff happened\"), _error_uri: None }",
+                "ErrorResponse { error: invalid_request, \
+                error_description: Some(\"stuff happened\"), error_uri: None }",
                 format!("{:?}", error_response)
             );
             // Test Display trait for ErrorResponse
@@ -527,8 +527,8 @@ fn test_exchange_code_with_simple_json_error() {
 
     // Test Debug trait for RequestTokenError
     assert_eq!(
-        "ServerResponse(ErrorResponse { _error: invalid_request, \
-        _error_description: Some(\"stuff happened\"), _error_uri: None })",
+        "ServerResponse(ErrorResponse { error: invalid_request, \
+        error_description: Some(\"stuff happened\"), error_uri: None })",
         format!("{:?}", token_err)
     );
     // Test Display trait for RequestTokenError
@@ -681,12 +681,13 @@ mod colorful_extension {
     extern crate serde_json;
 
     use oauth2::*;
-    use oauth2::basic::BasicToken;
+    use oauth2::basic::BasicTokenResponse;
     use std::fmt::{Debug, Display, Formatter};
     use std::fmt::Error as FormatterError;
     use std::time::Duration;
 
-    pub type ColorfulClient = Client<ColorfulTokenType, ColorfulToken, ColorfulErrorResponseType>;
+    pub type ColorfulClient =
+        Client<ColorfulTokenType, ColorfulTokenResponse, ColorfulErrorResponseType>;
 
     #[derive(Debug, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all = "lowercase")]
@@ -697,25 +698,27 @@ mod colorful_extension {
     impl TokenType for ColorfulTokenType {}
 
     #[derive(Debug, Deserialize, PartialEq, Serialize)]
-    pub struct ColorfulToken {
+    pub struct ColorfulTokenResponse {
         #[serde(flatten)]
-        _basic_token: BasicToken<ColorfulTokenType>,
+        basic_token_response: BasicTokenResponse<ColorfulTokenType>,
         #[serde(rename = "shape")]
-        _shape: Option<String>,
+        shape: Option<String>,
         #[serde(rename = "height")]
-        _height: u32,
+        height: u32,
     }
-    impl ColorfulToken {
-        pub fn shape(&self) -> Option<&String> { self._shape.as_ref() }
-        pub fn height(&self) -> u32 { self._height }
+    impl ColorfulTokenResponse {
+        pub fn shape(&self) -> Option<&String> { self.shape.as_ref() }
+        pub fn height(&self) -> u32 { self.height }
     }
 
-    impl Token<ColorfulTokenType> for ColorfulToken {
-        fn access_token(&self) -> &AccessToken { &self._basic_token.access_token() }
-        fn token_type(&self) -> &ColorfulTokenType { &self._basic_token.token_type() }
-        fn expires_in(&self) -> Option<Duration> { self._basic_token.expires_in() }
-        fn refresh_token(&self) -> Option<&RefreshToken> { self._basic_token.refresh_token() }
-        fn scopes(&self) -> Option<&Vec<Scope>> { self._basic_token.scopes() }
+    impl TokenResponse<ColorfulTokenType> for ColorfulTokenResponse {
+        fn access_token(&self) -> &AccessToken { &self.basic_token_response.access_token() }
+        fn token_type(&self) -> &ColorfulTokenType { &self.basic_token_response.token_type() }
+        fn expires_in(&self) -> Option<Duration> { self.basic_token_response.expires_in() }
+        fn refresh_token(&self) -> Option<&RefreshToken> {
+            self.basic_token_response.refresh_token()
+        }
+        fn scopes(&self) -> Option<&Vec<Scope>> { self.basic_token_response.scopes() }
 
         fn from_json(data: &str) -> Result<Self, serde_json::error::Error> {
             serde_json::from_str(data)
@@ -795,7 +798,7 @@ fn test_extension_successful_with_minimal_json_response() {
         serialized_json
     );
 
-    let deserialized_token = ColorfulToken::from_json(&serialized_json).unwrap();
+    let deserialized_token = ColorfulTokenResponse::from_json(&serialized_json).unwrap();
     assert_eq!(token, deserialized_token);
 }
 
@@ -844,7 +847,7 @@ fn test_extension_successful_with_complete_json_response() {
         serialized_json
     );
 
-    let deserialized_token = ColorfulToken::from_json(&serialized_json).unwrap();
+    let deserialized_token = ColorfulTokenResponse::from_json(&serialized_json).unwrap();
     assert_eq!(token, deserialized_token);
 }
 
@@ -906,8 +909,8 @@ fn test_extension_with_simple_json_error() {
 
     // Test Debug trait for RequestTokenError
     assert_eq!(
-        "ServerResponse(ErrorResponse { _error: too_light, \
-        _error_description: Some(\"stuff happened\"), _error_uri: Some(\"https://errors\") })",
+        "ServerResponse(ErrorResponse { error: too_light, \
+        error_description: Some(\"stuff happened\"), error_uri: Some(\"https://errors\") })",
         format!("{:?}", token_err)
     );
     // Test Display trait for RequestTokenError

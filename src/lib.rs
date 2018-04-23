@@ -595,7 +595,7 @@ new_secret_type![
 /// Stores the configuration for an OAuth2 client.
 ///
 #[derive(Clone, Debug)]
-pub struct Client<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> {
+pub struct Client<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> {
     client_id: ClientId,
     client_secret: Option<ClientSecret>,
     auth_url: AuthUrl,
@@ -608,7 +608,7 @@ pub struct Client<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> {
     phantom_te: PhantomData<TE>,
 }
 
-impl<TT: TokenType, T: Token<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
+impl<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
     ///
     /// Initializes an OAuth2 client with the fields common to most OAuth2 flows.
     ///
@@ -1033,7 +1033,7 @@ pub trait TokenType : DeserializeOwned + Debug + PartialEq + Serialize {}
 /// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1). This trait is
 /// parameterized by a `TokenType` to support future OAuth2 authentication schemes.
 ///
-pub trait Token<T: TokenType> : Debug + DeserializeOwned + PartialEq + Serialize {
+pub trait TokenResponse<T: TokenType> : Debug + DeserializeOwned + PartialEq + Serialize {
     ///
     /// REQUIRED. The access token issued by the authorization server.
     ///
@@ -1094,15 +1094,12 @@ pub trait ErrorResponseType : Debug + DeserializeOwned + Display + PartialEq + S
 ///
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct ErrorResponse<T: ErrorResponseType> {
-    #[serde(rename = "error")]
     #[serde(bound(deserialize = "T: ErrorResponseType"))]
-    _error: T,
-    #[serde(rename = "error_description")]
+    error: T,
     #[serde(default)]
-    _error_description: Option<String>,
-    #[serde(rename = "error_uri")]
+    error_description: Option<String>,
     #[serde(default)]
-    _error_uri: Option<String>,
+    error_uri: Option<String>,
 }
 
 impl<T: ErrorResponseType> ErrorResponse<T> {
@@ -1110,17 +1107,17 @@ impl<T: ErrorResponseType> ErrorResponse<T> {
     /// REQUIRED. A single ASCII error code deserialized to the generic parameter
     /// `ErrorResponseType`.
     ///
-    pub fn error(&self) -> &T { &self._error }
+    pub fn error(&self) -> &T { &self.error }
     ///
     /// OPTIONAL. Human-readable ASCII text providing additional information, used to assist
     /// the client developer in understanding the error that occurred.
     ///
-    pub fn error_description(&self) -> Option<&String> { self._error_description.as_ref() }
+    pub fn error_description(&self) -> Option<&String> { self.error_description.as_ref() }
     ///
     /// OPTIONAL. A URI identifying a human-readable web page with information about the error,
     /// used to provide the client developer with additional information about the error.
     ///
-    pub fn error_uri(&self) -> Option<&String> { self._error_uri.as_ref() }
+    pub fn error_uri(&self) -> Option<&String> { self.error_uri.as_ref() }
 }
 
 impl<TE: ErrorResponseType> Display for ErrorResponse<TE> {
@@ -1192,7 +1189,7 @@ pub mod basic {
         RefreshToken,
         RequestTokenError,
         Scope,
-        Token,
+        TokenResponse,
         TokenType,
     };
     use super::helpers;
@@ -1201,7 +1198,7 @@ pub mod basic {
     /// Basic OAuth2 client specialization, suitable for most applications.
     ///
     pub type BasicClient =
-        Client<BasicTokenType, BasicToken<BasicTokenType>, BasicErrorResponseType>;
+        Client<BasicTokenType, BasicTokenResponse<BasicTokenType>, BasicErrorResponseType>;
 
     ///
     /// Basic OAuth2 authorization token types.
@@ -1230,30 +1227,26 @@ pub mod basic {
     /// are private and should be accessed via the getters from the `super::Token` trait.
     ///
     #[derive(Debug, Deserialize, PartialEq, Serialize)]
-    pub struct BasicToken<T: TokenType = BasicTokenType> {
-        #[serde(rename = "access_token")]
-        _access_token: AccessToken,
+    pub struct BasicTokenResponse<T: TokenType = BasicTokenType> {
+        access_token: AccessToken,
         #[serde(bound(deserialize = "T: DeserializeOwned"))]
-        #[serde(rename = "token_type")]
         #[serde(deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive")]
-        _token_type: T,
-        #[serde(rename = "expires_in")]
-        _expires_in: Option<u64>,
-        #[serde(rename = "refresh_token")]
-        _refresh_token: Option<RefreshToken>,
+        token_type: T,
+        expires_in: Option<u64>,
+        refresh_token: Option<RefreshToken>,
         #[serde(rename = "scope")]
         #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
         #[serde(serialize_with = "helpers::serialize_space_delimited_vec")]
         #[serde(default)]
-        _scopes: Option<Vec<Scope>>,
+        scopes: Option<Vec<Scope>>,
     }
 
-    impl<T: TokenType> Token<T> for BasicToken<T> {
-        fn access_token(&self) -> &AccessToken { &self._access_token }
-        fn token_type(&self) -> &T { &self._token_type }
-        fn expires_in(&self) -> Option<Duration> { self._expires_in.map(Duration::from_secs) }
-        fn refresh_token(&self) -> Option<&RefreshToken> { self._refresh_token.as_ref() }
-        fn scopes(&self) -> Option<&Vec<Scope>> { self._scopes.as_ref() }
+    impl<T: TokenType> TokenResponse<T> for BasicTokenResponse<T> {
+        fn access_token(&self) -> &AccessToken { &self.access_token }
+        fn token_type(&self) -> &T { &self.token_type }
+        fn expires_in(&self) -> Option<Duration> { self.expires_in.map(Duration::from_secs) }
+        fn refresh_token(&self) -> Option<&RefreshToken> { self.refresh_token.as_ref() }
+        fn scopes(&self) -> Option<&Vec<Scope>> { self.scopes.as_ref() }
 
         fn from_json(data: &str) -> Result<Self, serde_json::error::Error> {
             serde_json::from_str(data)
@@ -1335,7 +1328,7 @@ pub mod insecure {
     use super::{
         Client,
         ErrorResponseType,
-        Token,
+        TokenResponse,
         TokenType,
     };
 
@@ -1351,7 +1344,7 @@ pub mod insecure {
     /// It is highly recommended to use the `Client::authorize_url` function instead.
     ///
     pub fn authorize_url<TT, T, TE>(client: &Client<TT, T, TE>) -> Url
-    where TT: TokenType, T: Token<TT>, TE: ErrorResponseType {
+    where TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType {
         client.authorize_url_impl("code", None, None)
     }
 
@@ -1366,7 +1359,7 @@ pub mod insecure {
     /// It is highly recommended to use the `Client::authorize_url_implicit` function instead.
     ///
     pub fn authorize_url_implicit<TT, T, TE>(client: &Client<TT, T, TE>) -> Url
-    where TT: TokenType, T: Token<TT>, TE: ErrorResponseType {
+    where TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType {
         client.authorize_url_impl("token", None, None)
     }
 }

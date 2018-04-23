@@ -27,7 +27,7 @@ use oauth2::{
     CsrfToken,
     RedirectUrl,
     Scope,
-    Token,
+    TokenResponse,
     TokenUrl,
 };
 use oauth2::basic::BasicClient;

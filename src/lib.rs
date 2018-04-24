@@ -595,7 +595,7 @@ new_secret_type![
 /// Stores the configuration for an OAuth2 client.
 ///
 #[derive(Clone, Debug)]
-pub struct Client<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> {
+pub struct Client<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> {
     client_id: ClientId,
     client_secret: Option<ClientSecret>,
     auth_url: AuthUrl,
@@ -603,12 +603,12 @@ pub struct Client<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> {
     token_url: Option<TokenUrl>,
     scopes: Vec<Scope>,
     redirect_url: Option<RedirectUrl>,
+    phantom_ef: PhantomData<EF>,
     phantom_tt: PhantomData<TT>,
-    phantom_t: PhantomData<T>,
     phantom_te: PhantomData<TE>,
 }
 
-impl<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> Client<TT, T, TE> {
+impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, TE> {
     ///
     /// Initializes an OAuth2 client with the fields common to most OAuth2 flows.
     ///
@@ -643,8 +643,8 @@ impl<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> Client<TT, T, T
             token_url,
             scopes: Vec::new(),
             redirect_url: None,
+            phantom_ef: PhantomData,
             phantom_tt: PhantomData,
-            phantom_t: PhantomData,
             phantom_te: PhantomData,
         }
     }
@@ -805,7 +805,10 @@ impl<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> Client<TT, T, T
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
     ///
-    pub fn exchange_code(&self, code: AuthorizationCode) -> Result<T, RequestTokenError<TE>> {
+    pub fn exchange_code(
+        &self,
+        code: AuthorizationCode
+    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
         // Make Clippy happy since we're intentionally taking ownership.
         let code_owned = code;
         let params = vec![
@@ -825,7 +828,7 @@ impl<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> Client<TT, T, T
         &self,
         username: &ResourceOwnerUsername,
         password: &ResourceOwnerPassword
-    ) -> Result<T, RequestTokenError<TE>> {
+    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
         let params = vec![
             ("grant_type", "password"),
             ("username", username),
@@ -840,7 +843,9 @@ impl<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> Client<TT, T, T
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.4.2
     ///
-    pub fn exchange_client_credentials(&self) -> Result<T, RequestTokenError<TE>> {
+    pub fn exchange_client_credentials(
+        &self
+    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
         // Generate the space-delimited scopes String before initializing params so that it has
         // a long enough lifetime.
         let scopes_opt =
@@ -865,7 +870,7 @@ impl<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> Client<TT, T, T
     ///
     pub fn exchange_refresh_token(
         &self, refresh_token: &RefreshToken
-    ) -> Result<T, RequestTokenError<TE>> {
+    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
         let params: Vec<(&str, &str)> = vec![
             ("grant_type", "refresh_token"),
             ("refresh_token", refresh_token.secret()),
@@ -947,7 +952,9 @@ impl<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> Client<TT, T, T
         })
     }
 
-    fn request_token(&self, params: Vec<(&str, &str)>) -> Result<T, RequestTokenError<TE>> {
+    fn request_token(
+        &self, params: Vec<(&str, &str)>
+    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
         let token_url =
             self.token_url.as_ref().ok_or_else(||
                 // Arguably, it could be better to panic in this case. However, there may be
@@ -1007,7 +1014,7 @@ impl<TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType> Client<TT, T, T
                         )
                     )?;
 
-            T::from_json(&response_body).map_err(RequestTokenError::Parse)
+            TokenResponse::from_json(&response_body).map_err(RequestTokenError::Parse)
         }
     }
 }
@@ -1027,36 +1034,65 @@ struct RequestTokenResponse {
 pub trait TokenType : DeserializeOwned + Debug + PartialEq + Serialize {}
 
 ///
+/// Trait for adding extra fields to the `TokenResponse`.
+///
+pub trait ExtraTokenFields : DeserializeOwned + Debug + PartialEq + Serialize {}
+
+///
+/// Empty (default) extra token fields.
+///
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct EmptyExtraTokenFields {}
+impl ExtraTokenFields for EmptyExtraTokenFields {}
+
+///
 /// Common methods shared by all OAuth2 token implementations.
 ///
-/// The getters in this trait are defined in
-/// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1). This trait is
-/// parameterized by a `TokenType` to support future OAuth2 authentication schemes.
+/// The methods in this struct are defined in
+/// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1).
 ///
-pub trait TokenResponse<T: TokenType> : Debug + DeserializeOwned + PartialEq + Serialize {
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct TokenResponse<EF: ExtraTokenFields, TT: TokenType> {
+    access_token: AccessToken,
+    #[serde(bound = "TT: TokenType")]
+    #[serde(deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive")]
+    token_type: TT,
+    expires_in: Option<u64>,
+    refresh_token: Option<RefreshToken>,
+    #[serde(rename = "scope")]
+    #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
+    #[serde(serialize_with = "helpers::serialize_space_delimited_vec")]
+    #[serde(default)]
+    scopes: Option<Vec<Scope>>,
+
+    #[serde(bound = "EF: ExtraTokenFields")]
+    #[serde(flatten)]
+    extra_fields: EF,
+}
+impl<EF: ExtraTokenFields, TT: TokenType> TokenResponse<EF, TT> {
     ///
     /// REQUIRED. The access token issued by the authorization server.
     ///
-    fn access_token(&self) -> &AccessToken;
+    pub fn access_token(&self) -> &AccessToken { &self.access_token }
     ///
     /// REQUIRED. The type of the token issued as described in
     /// [Section 7.1](https://tools.ietf.org/html/rfc6749#section-7.1).
     /// Value is case insensitive and deserialized to the generic `TokenType` parameter.
     ///
-    fn token_type(&self) -> &T;
+    pub fn token_type(&self) -> &TT { &self.token_type }
     ///
     /// RECOMMENDED. The lifetime in seconds of the access token. For example, the value 3600
     /// denotes that the access token will expire in one hour from the time the response was
     /// generated. If omitted, the authorization server SHOULD provide the expiration time via
     /// other means or document the default value.
     ///
-    fn expires_in(&self) -> Option<Duration>;
+    pub fn expires_in(&self) -> Option<Duration> { self.expires_in.map(Duration::from_secs) }
     ///
     /// OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
     /// authorization grant as described in
     /// [Section 6](https://tools.ietf.org/html/rfc6749#section-6).
     ///
-    fn refresh_token(&self) -> Option<&RefreshToken>;
+    pub fn refresh_token(&self) -> Option<&RefreshToken> { self.refresh_token.as_ref() }
     ///
     /// OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The
     /// scipe of the access token as described by
@@ -1064,14 +1100,21 @@ pub trait TokenResponse<T: TokenType> : Debug + DeserializeOwned + PartialEq + S
     /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
     /// the response, this field is `None`.
     ///
-    fn scopes(&self) -> Option<&Vec<Scope>>;
+    pub fn scopes(&self) -> Option<&Vec<Scope>> { self.scopes.as_ref() }
+
+    ///
+    /// Extra fields defined by client application.
+    ///
+    pub fn extra_fields(&self) -> &EF { &self.extra_fields }
 
     ///
     /// Factory method to deserialize a `Token` from a JSON response.
     ///
     /// # Failures
     /// If parsing fails, returns a `serde_json::error::Error` describing the parse error.
-    fn from_json(data: &str) -> Result<Self, serde_json::error::Error>;
+    pub fn from_json(data: &str) -> Result<Self, serde_json::error::Error> {
+        serde_json::from_str(data)
+    }
 }
 
 
@@ -1094,7 +1137,7 @@ pub trait ErrorResponseType : Debug + DeserializeOwned + Display + PartialEq + S
 ///
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct ErrorResponse<T: ErrorResponseType> {
-    #[serde(bound(deserialize = "T: ErrorResponseType"))]
+    #[serde(bound = "T: ErrorResponseType")]
     error: T,
     #[serde(default)]
     error_description: Option<String>,
@@ -1177,18 +1220,13 @@ pub mod basic {
 
     use std::fmt::Error as FormatterError;
     use std::fmt::{Debug, Display, Formatter};
-    use std::time::Duration;
-
-    use serde::de::DeserializeOwned;
 
     use super::{
-        AccessToken,
         Client,
+        EmptyExtraTokenFields,
         ErrorResponse,
         ErrorResponseType,
-        RefreshToken,
         RequestTokenError,
-        Scope,
         TokenResponse,
         TokenType,
     };
@@ -1197,8 +1235,7 @@ pub mod basic {
     ///
     /// Basic OAuth2 client specialization, suitable for most applications.
     ///
-    pub type BasicClient =
-        Client<BasicTokenType, BasicTokenResponse<BasicTokenType>, BasicErrorResponseType>;
+    pub type BasicClient = Client<EmptyExtraTokenFields, BasicTokenType, BasicErrorResponseType>;
 
     ///
     /// Basic OAuth2 authorization token types.
@@ -1220,38 +1257,9 @@ pub mod basic {
     impl TokenType for BasicTokenType {}
 
     ///
-    /// Basic OAuth2 authorization token.
+    /// Basic OAuth2 token response.
     ///
-    /// The fields in this struct are defined in
-    /// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1). The fields
-    /// are private and should be accessed via the getters from the `super::Token` trait.
-    ///
-    #[derive(Debug, Deserialize, PartialEq, Serialize)]
-    pub struct BasicTokenResponse<T: TokenType = BasicTokenType> {
-        access_token: AccessToken,
-        #[serde(bound(deserialize = "T: DeserializeOwned"))]
-        #[serde(deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive")]
-        token_type: T,
-        expires_in: Option<u64>,
-        refresh_token: Option<RefreshToken>,
-        #[serde(rename = "scope")]
-        #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
-        #[serde(serialize_with = "helpers::serialize_space_delimited_vec")]
-        #[serde(default)]
-        scopes: Option<Vec<Scope>>,
-    }
-
-    impl<T: TokenType> TokenResponse<T> for BasicTokenResponse<T> {
-        fn access_token(&self) -> &AccessToken { &self.access_token }
-        fn token_type(&self) -> &T { &self.token_type }
-        fn expires_in(&self) -> Option<Duration> { self.expires_in.map(Duration::from_secs) }
-        fn refresh_token(&self) -> Option<&RefreshToken> { self.refresh_token.as_ref() }
-        fn scopes(&self) -> Option<&Vec<Scope>> { self.scopes.as_ref() }
-
-        fn from_json(data: &str) -> Result<Self, serde_json::error::Error> {
-            serde_json::from_str(data)
-        }
-    }
+    pub type BasicTokenResponse = TokenResponse<EmptyExtraTokenFields, BasicTokenType>;
 
     ///
     /// Basic access token error types.
@@ -1328,7 +1336,7 @@ pub mod insecure {
     use super::{
         Client,
         ErrorResponseType,
-        TokenResponse,
+        ExtraTokenFields,
         TokenType,
     };
 
@@ -1343,8 +1351,8 @@ pub mod insecure {
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12) attacks.
     /// It is highly recommended to use the `Client::authorize_url` function instead.
     ///
-    pub fn authorize_url<TT, T, TE>(client: &Client<TT, T, TE>) -> Url
-    where TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType {
+    pub fn authorize_url<EF, TT, TE>(client: &Client<EF, TT, TE>) -> Url
+    where EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType {
         client.authorize_url_impl("code", None, None)
     }
 
@@ -1358,8 +1366,8 @@ pub mod insecure {
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12) attacks.
     /// It is highly recommended to use the `Client::authorize_url_implicit` function instead.
     ///
-    pub fn authorize_url_implicit<TT, T, TE>(client: &Client<TT, T, TE>) -> Url
-    where TT: TokenType, T: TokenResponse<TT>, TE: ErrorResponseType {
+    pub fn authorize_url_implicit<EF, TT, TE>(client: &Client<EF, TT, TE>) -> Url
+    where EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType {
         client.authorize_url_impl("token", None, None)
     }
 }

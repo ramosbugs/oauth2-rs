@@ -681,13 +681,10 @@ mod colorful_extension {
     extern crate serde_json;
 
     use oauth2::*;
-    use oauth2::basic::BasicTokenResponse;
     use std::fmt::{Debug, Display, Formatter};
     use std::fmt::Error as FormatterError;
-    use std::time::Duration;
 
-    pub type ColorfulClient =
-        Client<ColorfulTokenType, ColorfulTokenResponse, ColorfulErrorResponseType>;
+    pub type ColorfulClient = Client<ColorfulFields, ColorfulTokenType, ColorfulErrorResponseType>;
 
     #[derive(Debug, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all = "lowercase")]
@@ -698,32 +695,17 @@ mod colorful_extension {
     impl TokenType for ColorfulTokenType {}
 
     #[derive(Debug, Deserialize, PartialEq, Serialize)]
-    pub struct ColorfulTokenResponse {
-        #[serde(flatten)]
-        basic_token_response: BasicTokenResponse<ColorfulTokenType>,
+    pub struct ColorfulFields {
         #[serde(rename = "shape")]
         shape: Option<String>,
         #[serde(rename = "height")]
         height: u32,
     }
-    impl ColorfulTokenResponse {
+    impl ColorfulFields {
         pub fn shape(&self) -> Option<&String> { self.shape.as_ref() }
         pub fn height(&self) -> u32 { self.height }
     }
-
-    impl TokenResponse<ColorfulTokenType> for ColorfulTokenResponse {
-        fn access_token(&self) -> &AccessToken { &self.basic_token_response.access_token() }
-        fn token_type(&self) -> &ColorfulTokenType { &self.basic_token_response.token_type() }
-        fn expires_in(&self) -> Option<Duration> { self.basic_token_response.expires_in() }
-        fn refresh_token(&self) -> Option<&RefreshToken> {
-            self.basic_token_response.refresh_token()
-        }
-        fn scopes(&self) -> Option<&Vec<Scope>> { self.basic_token_response.scopes() }
-
-        fn from_json(data: &str) -> Result<Self, serde_json::error::Error> {
-            serde_json::from_str(data)
-        }
-    }
+    impl ExtraTokenFields for ColorfulFields {}
 
     #[derive(Deserialize, PartialEq, Serialize)]
     #[serde(rename_all="snake_case")]
@@ -758,6 +740,8 @@ mod colorful_extension {
             write!(f, "{}", message)
         }
     }
+
+    pub type ColorfulTokenResponse = TokenResponse<ColorfulFields, ColorfulTokenType>;
 }
 
 #[test]
@@ -787,8 +771,8 @@ fn test_extension_successful_with_minimal_json_response() {
     assert_eq!(ColorfulTokenType::Green, *token.token_type());
     assert_eq!(None, token.expires_in());
     assert_eq!(None, token.refresh_token());
-    assert_eq!(None, token.shape());
-    assert_eq!(10, token.height());
+    assert_eq!(None, token.extra_fields().shape());
+    assert_eq!(10, token.extra_fields().height());
 
     // Ensure that serialization produces an equivalent JSON value.
     let serialized_json = serde_json::to_string(&token).unwrap();
@@ -835,8 +819,8 @@ fn test_extension_successful_with_complete_json_response() {
     );
     assert_eq!(3600, token.expires_in().unwrap().as_secs());
     assert_eq!("foobar", token.refresh_token().clone().unwrap().secret());
-    assert_eq!(Some(&"round".to_string()), token.shape());
-    assert_eq!(12, token.height());
+    assert_eq!(Some(&"round".to_string()), token.extra_fields().shape());
+    assert_eq!(12, token.extra_fields().height());
 
     // Ensure that serialization produces an equivalent JSON value.
     let serialized_json = serde_json::to_string(&token).unwrap();

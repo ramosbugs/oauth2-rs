@@ -701,7 +701,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     ///  instead.
     ///
     pub fn authorize_url<F>(&self, state_fn: F) -> (Url, CsrfToken)
-    where F: Fn() -> CsrfToken {
+    where F: FnOnce() -> CsrfToken {
         let state = state_fn();
         (self.authorize_url_impl("code", Some(&state), None), state)
     }
@@ -726,7 +726,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     /// `insecure::authorize_url_implicit` instead.
     ///
     pub fn authorize_url_implicit<F>(&self, state_fn: F) -> (Url, CsrfToken)
-    where F: Fn() -> CsrfToken {
+    where F: FnOnce() -> CsrfToken {
         let state = state_fn();
         (self.authorize_url_impl("token", Some(&state), None), state)
     }

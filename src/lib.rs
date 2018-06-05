@@ -894,9 +894,15 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
                 }
             }
             AuthType::BasicAuth => {
-                easy.username(&self.client_id)?;
+                // Section 2.3.1 of RFC 6749 requires separately url-encoding the id and secret
+                // before using them as HTTP Basic auth username and password. Note that this is
+                // not standard for ordinary Basic auth, so curl won't do it for us.
+                let encoded_id = easy.url_encode(&self.client_id.as_bytes());
+                easy.username(&encoded_id)?;
+
                 if let Some(ref client_secret) = self.client_secret {
-                    easy.password(client_secret.secret())?;
+                    let encoded_secret = easy.url_encode(client_secret.secret().as_bytes());
+                    easy.password(&encoded_secret)?;
                 }
             }
         }

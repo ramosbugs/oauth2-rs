@@ -31,6 +31,15 @@ fn new_mock_client() -> BasicClient {
     )
 }
 
+fn new_mock_client_with_unsafe_chars() -> BasicClient {
+    BasicClient::new(
+        ClientId::new("aaa/;&".to_string()),
+        Some(ClientSecret::new("bbb/;&".to_string())),
+        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+        Some(TokenUrl::new(Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap()))
+    )
+}
+
 #[test]
 fn test_authorize_url() {
     let client = new_client();
@@ -252,7 +261,8 @@ fn test_exchange_code_successful_with_complete_json_response() {
 #[test]
 fn test_exchange_client_credentials_with_basic_auth() {
     let mock = mock("POST", "/token")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        // base64(urlencode("aaa/;&") + ":" + urlencode("bbb/;&"))
+        .match_header("Authorization", "Basic YWFhJTJGJTNCJTI2OmJiYiUyRiUzQiUyNg==")
         .match_body("grant_type=client_credentials")
         .with_body(
             "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
@@ -260,7 +270,7 @@ fn test_exchange_client_credentials_with_basic_auth() {
         .create();
 
     let client =
-        new_mock_client()
+        new_mock_client_with_unsafe_chars()
             .set_auth_type(oauth2::AuthType::BasicAuth);
     let token = client.exchange_client_credentials().unwrap();
 

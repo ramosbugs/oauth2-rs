@@ -213,7 +213,6 @@
 extern crate base64;
 extern crate curl;
 extern crate failure;
-#[macro_use] extern crate failure_derive;
 extern crate rand;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
@@ -221,13 +220,13 @@ extern crate serde_json;
 extern crate url;
 
 use std::io::Read;
-use std::fmt::{Debug, Display, Formatter};
-use std::fmt::Error as FormatterError;
-use std::marker::PhantomData;
+use std::fmt::{Debug, Display, Error as FormatterError, Formatter};
+use std::marker::{Send, Sync, PhantomData};
 use std::ops::Deref;
 use std::time::Duration;
 
 use curl::easy::Easy;
+use failure::{Backtrace, Fail};
 use rand::{thread_rng, Rng};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -886,6 +885,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     ) -> Result<RequestTokenResponse, curl::Error> {
         let mut easy = Easy::new();
 
+        // FIXME: add support for auth extensions? e.g., client_secret_jwt and private_key_jwt
         match self.auth_type {
             AuthType::RequestBody => {
                 params.push(("client_id", &self.client_id));
@@ -1190,31 +1190,60 @@ impl<TE: ErrorResponseType> Display for ErrorResponse<TE> {
 ///
 /// Error encountered while requesting access token.
 ///
-#[derive(Debug, Fail)]
+#[derive(Debug)]
 pub enum RequestTokenError<T: ErrorResponseType> {
     ///
     /// Error response returned by authorization server. Contains the parsed `ErrorResponse`
     /// returned by the server.
     ///
-    #[fail(display = "Server response: {}", _0)]
     ServerResponse(ErrorResponse<T>),
     ///
     /// An error occurred while sending the request or receiving the response (e.g., network
     /// connectivity failed).
     ///
-    #[fail(display = "Request error: {}", _0)]
-    Request(#[cause] curl::Error),
+    Request(curl::Error),
     ///
     /// Failed to parse server response. Parse errors may occur while parsing either successful
     /// or error responses.
     ///
-    #[fail(display = "Parse error: {}", _0)]
-    Parse(#[cause] serde_json::error::Error),
+    Parse(serde_json::error::Error),
     ///
     /// Some other type of error occurred (e.g., an unexpected server response).
     ///
-    #[fail(display = "Other error: {}", _0)]
     Other(String),
+}
+
+// Due to https://github.com/rust-lang/rust/issues/26925, deriving "Fail" creates an impl that only
+// applies if ErrorResponseType also implements Fail (which it shouldn't). As a workaround, we
+// manually implement Fail and Display below.
+impl<T> Fail for RequestTokenError<T>
+where T: ErrorResponseType + Send + Sync + 'static {
+    fn cause(&self) -> Option<&Fail> {
+        match *self {
+            RequestTokenError::ServerResponse(_) => None,
+            RequestTokenError::Request(ref cause) => Some(cause),
+            RequestTokenError::Parse(ref cause) => Some(cause),
+            RequestTokenError::Other(_) => None,
+        }
+    }
+    fn backtrace(&self) -> Option<&Backtrace> {
+        None
+    }
+}
+impl <T> Display for RequestTokenError<T>
+where T: ErrorResponseType {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match *self {
+            RequestTokenError::ServerResponse(ref err_resp) =>
+                write!(f, "Server returned error response `{}`", err_resp),
+            RequestTokenError::Request(_) =>
+                write!(f, "Request failed"),
+            RequestTokenError::Parse(_) =>
+                write!(f, "Failed to parse server response"),
+            RequestTokenError::Other(ref err_msg) =>
+                write!(f, "Other error: {}", err_msg),
+        }
+    }
 }
 
 ///

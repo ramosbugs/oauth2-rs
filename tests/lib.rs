@@ -543,7 +543,7 @@ fn test_exchange_code_with_simple_json_error() {
     );
     // Test Display trait for RequestTokenError
     assert_eq!(
-        "Server response: invalid_request: stuff happened",
+        "Server returned error response `invalid_request: stuff happened`",
         format!("{}", token_err)
     );
 }
@@ -909,7 +909,7 @@ fn test_extension_with_simple_json_error() {
     );
     // Test Display trait for RequestTokenError
     assert_eq!(
-        "Server response: too_light: stuff happened / See https://errors",
+        "Server returned error response `too_light: stuff happened / See https://errors`",
         format!("{}", token_err)
     );
 }

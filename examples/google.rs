@@ -18,65 +18,59 @@ extern crate oauth2;
 extern crate rand;
 extern crate url;
 
-use oauth2::prelude::*;
-use oauth2::{
-    AuthorizationCode,
-    AuthUrl,
-    ClientId,
-    ClientSecret,
-    CsrfToken,
-    RedirectUrl,
-    Scope,
-    TokenUrl,
-};
 use oauth2::basic::BasicClient;
+use oauth2::prelude::*;
+use oauth2::{AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope,
+             TokenUrl};
 use std::env;
-use std::net::TcpListener;
 use std::io::{BufRead, BufReader, Write};
+use std::net::TcpListener;
 use url::Url;
 
 fn main() {
-    let google_client_id =
-        ClientId::new(
-            env::var("GOOGLE_CLIENT_ID")
-                .expect("Missing the GOOGLE_CLIENT_ID environment variable.")
-        );
-    let google_client_secret =
-        ClientSecret::new(
-            env::var("GOOGLE_CLIENT_SECRET")
-                .expect("Missing the GOOGLE_CLIENT_SECRET environment variable.")
-        );
-    let auth_url =
-        AuthUrl::new(
-            Url::parse("https://accounts.google.com/o/oauth2/v2/auth")
-                .expect("Invalid authorization endpoint URL")
-        );
-    let token_url =
-        TokenUrl::new(
-            Url::parse("https://www.googleapis.com/oauth2/v3/token")
-                .expect("Invalid token endpoint URL")
-        );
+    let google_client_id = ClientId::new(
+        env::var("GOOGLE_CLIENT_ID").expect("Missing the GOOGLE_CLIENT_ID environment variable."),
+    );
+    let google_client_secret = ClientSecret::new(
+        env::var("GOOGLE_CLIENT_SECRET")
+            .expect("Missing the GOOGLE_CLIENT_SECRET environment variable."),
+    );
+    let auth_url = AuthUrl::new(
+        Url::parse("https://accounts.google.com/o/oauth2/v2/auth")
+            .expect("Invalid authorization endpoint URL"),
+    );
+    let token_url = TokenUrl::new(
+        Url::parse("https://www.googleapis.com/oauth2/v3/token")
+            .expect("Invalid token endpoint URL"),
+    );
 
     // Set up the config for the Google OAuth2 process.
-    let client =
-        BasicClient::new(google_client_id, Some(google_client_secret), auth_url, Some(token_url))
-            // This example is requesting access to the "calendar" features and the user's profile.
-            .add_scope(Scope::new("https://www.googleapis.com/auth/calendar".to_string()))
-            .add_scope(Scope::new("https://www.googleapis.com/auth/plus.me".to_string()))
+    let client = BasicClient::new(
+            google_client_id,
+            Some(google_client_secret),
+            auth_url,
+            Some(token_url)
+        )
+        // This example is requesting access to the "calendar" features and the user's profile.
+        .add_scope(Scope::new("https://www.googleapis.com/auth/calendar".to_string()))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/plus.me".to_string()))
 
-            // This example will be running its own server at localhost:8080.
-            // See below for the server implementation.
-            .set_redirect_url(
-                RedirectUrl::new(
-                    Url::parse("http://localhost:8080")
-                        .expect("Invalid redirect URL")
-                )
-            );
+        // This example will be running its own server at localhost:8080.
+        // See below for the server implementation.
+        .set_redirect_url(
+            RedirectUrl::new(
+                Url::parse("http://localhost:8080")
+                    .expect("Invalid redirect URL")
+            )
+        );
 
     // Generate the authorization URL to which we'll redirect the user.
     let (authorize_url, csrf_state) = client.authorize_url(CsrfToken::new_random);
 
-    println!("Open this URL in your browser:\n{}\n", authorize_url.to_string());
+    println!(
+        "Open this URL in your browser:\n{}\n",
+        authorize_url.to_string()
+    );
 
     // A very naive implementation of the redirect server.
     let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
@@ -93,26 +87,33 @@ fn main() {
                 let redirect_url = request_line.split_whitespace().nth(1).unwrap();
                 let url = Url::parse(&("http://localhost".to_string() + redirect_url)).unwrap();
 
-                let code_pair = url.query_pairs().find(|pair| {
-                    let &(ref key, _) = pair;
-                    key == "code"
-                }).unwrap();
+                let code_pair = url.query_pairs()
+                    .find(|pair| {
+                        let &(ref key, _) = pair;
+                        key == "code"
+                    })
+                    .unwrap();
 
                 let (_, value) = code_pair;
                 code = AuthorizationCode::new(value.into_owned());
 
-                let state_pair = url.query_pairs().find(|pair| {
-                    let &(ref key, _) = pair;
-                    key == "state"
-                }).unwrap();
+                let state_pair = url.query_pairs()
+                    .find(|pair| {
+                        let &(ref key, _) = pair;
+                        key == "state"
+                    })
+                    .unwrap();
 
                 let (_, value) = state_pair;
                 state = CsrfToken::new(value.into_owned());
             }
 
             let message = "Go back to your terminal :)";
-            let response =
-                format!("HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}", message.len(), message);
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}",
+                message.len(),
+                message
+            );
             stream.write_all(response.as_bytes()).unwrap();
 
             println!("Google returned the following code:\n{}\n", code.secret());
@@ -130,5 +131,5 @@ fn main() {
             // The server will terminate itself after collecting the first code.
             break;
         }
-    };
+    }
 }

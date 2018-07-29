@@ -73,7 +73,7 @@
 //! understand the security implications of this flow before using it. In most cases, the
 //! Authorization Code Grant flow is preferable to the Implicit Grant flow.
 //!
-//! ## Example: 
+//! ## Example:
 //!
 //! ```
 //! extern crate base64;
@@ -169,7 +169,7 @@
 //! You can ask for a *client credentials* access token by calling the
 //! `Client::exchange_client_credentials` method.
 //!
-//! ## Example: 
+//! ## Example:
 //!
 //! ```
 //! extern crate oauth2;
@@ -1249,7 +1249,7 @@ where T: ErrorResponseType {
 ///
 /// Basic OAuth2 implementation with no extensions
 /// ([RFC 6749](https://tools.ietf.org/html/rfc6749)).
-/// 
+///
 pub mod basic {
     extern crate serde_json;
 

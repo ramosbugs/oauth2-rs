@@ -1047,7 +1047,7 @@ pub trait ExtraTokenFields : DeserializeOwned + Debug + PartialEq + Serialize {}
 ///
 /// Empty (default) extra token fields.
 ///
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct EmptyExtraTokenFields {}
 impl ExtraTokenFields for EmptyExtraTokenFields {}
 
@@ -1275,7 +1275,7 @@ pub mod basic {
     ///
     /// Basic OAuth2 authorization token types.
     ///
-    #[derive(Debug, Deserialize, PartialEq, Serialize)]
+    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all = "lowercase")]
     pub enum BasicTokenType {
         ///
@@ -1302,7 +1302,7 @@ pub mod basic {
     /// These error types are defined in
     /// [Section 5.2 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.2).
     ///
-    #[derive(Deserialize, PartialEq, Serialize)]
+    #[derive(Clone, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all="snake_case")]
     pub enum BasicErrorResponseType {
         ///

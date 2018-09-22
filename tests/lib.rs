@@ -216,8 +216,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
     // Ensure that serialization produces an equivalent JSON value.
     let serialized_json = serde_json::to_string(&token).unwrap();
     assert_eq!(
-        "{\"access_token\":\"12/34\",\"token_type\":\"bearer\",\"expires_in\":null,\
-         \"refresh_token\":null,\"scope\":null}"
+        "{\"access_token\":\"12/34\",\"token_type\":\"bearer\"}"
             .to_string(),
         serialized_json
     );
@@ -560,8 +559,7 @@ fn test_exchange_code_with_simple_json_error() {
             // Ensure that serialization produces an equivalent JSON value.
             let serialized_json = serde_json::to_string(&error_response).unwrap();
             assert_eq!(
-                "{\"error\":\"invalid_request\",\"error_description\":\"stuff happened\",\
-                 \"error_uri\":null}"
+                "{\"error\":\"invalid_request\",\"error_description\":\"stuff happened\"}"
                     .to_string(),
                 serialized_json
             );
@@ -751,6 +749,7 @@ mod colorful_extension {
     #[derive(Debug, Deserialize, PartialEq, Serialize)]
     pub struct ColorfulFields {
         #[serde(rename = "shape")]
+        #[serde(skip_serializing_if = "Option::is_none")]
         shape: Option<String>,
         #[serde(rename = "height")]
         height: u32,
@@ -838,9 +837,7 @@ fn test_extension_successful_with_minimal_json_response() {
     // Ensure that serialization produces an equivalent JSON value.
     let serialized_json = serde_json::to_string(&token).unwrap();
     assert_eq!(
-        "{\"access_token\":\"12/34\",\"token_type\":\"green\",\"expires_in\":null,\
-         \"refresh_token\":null,\"scope\":null,\"shape\":null,\"height\":10}"
-            .to_string(),
+        "{\"access_token\":\"12/34\",\"token_type\":\"green\",\"height\":10}".to_string(),
         serialized_json
     );
 

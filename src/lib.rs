@@ -1063,11 +1063,14 @@ pub struct TokenResponse<EF: ExtraTokenFields, TT: TokenType> {
     #[serde(bound = "TT: TokenType")]
     #[serde(deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive")]
     token_type: TT,
+    #[serde(skip_serializing_if = "Option::is_none")]
     expires_in: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     refresh_token: Option<RefreshToken>,
     #[serde(rename = "scope")]
     #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
     #[serde(serialize_with = "helpers::serialize_space_delimited_vec")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     scopes: Option<Vec<Scope>>,
 
@@ -1146,8 +1149,10 @@ pub struct ErrorResponse<T: ErrorResponseType> {
     #[serde(bound = "T: ErrorResponseType")]
     error: T,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     error_description: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     error_uri: Option<String>,
 }
 

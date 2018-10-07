@@ -4,6 +4,7 @@ rust:
   - beta
   - nightly
 sudo: false
+cache: cargo
 branches:
   only:
     - master

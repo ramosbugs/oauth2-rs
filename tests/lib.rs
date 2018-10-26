@@ -5,6 +5,7 @@ extern crate url;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate tokio;
 
 use mockito::{mock, SERVER_URL};
 use url::Url;
@@ -202,8 +203,9 @@ fn test_exchange_code_successful_with_minimal_json_response() {
             Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
         )),
     );
-    let token = client
-        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+            client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+        )
         .unwrap();
 
     mock.assert();
@@ -238,8 +240,9 @@ fn test_exchange_code_successful_with_complete_json_response() {
         .create();
 
     let client = new_mock_client().set_auth_type(oauth2::AuthType::RequestBody);
-    let token = client
-        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+            client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+        )
         .unwrap();
 
     mock.assert();
@@ -281,7 +284,10 @@ fn test_exchange_client_credentials_with_basic_auth() {
         .create();
 
     let client = new_mock_client_with_unsafe_chars().set_auth_type(oauth2::AuthType::BasicAuth);
-    let token = client.exchange_client_credentials().unwrap();
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+            client.exchange_client_credentials()
+        )
+        .unwrap();
 
     mock.assert();
 
@@ -316,7 +322,10 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
         .set_auth_type(oauth2::AuthType::RequestBody)
         .add_scope(Scope::new("read".to_string()))
         .add_scope(Scope::new("write".to_string()));
-    let token = client.exchange_client_credentials().unwrap();
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+            client.exchange_client_credentials()
+        )
+        .unwrap();
 
     mock.assert();
 
@@ -345,8 +354,9 @@ fn test_exchange_refresh_token_with_basic_auth() {
         .create();
 
     let client = new_mock_client().set_auth_type(oauth2::AuthType::BasicAuth);
-    let token = client
-        .exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+            client.exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
+        )
         .unwrap();
 
     mock.assert();
@@ -378,8 +388,9 @@ fn test_exchange_refresh_token_with_json_response() {
         .create();
 
     let client = new_mock_client();
-    let token = client
-        .exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+            client.exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
+        )
         .unwrap();
 
     mock.assert();
@@ -410,10 +421,12 @@ fn test_exchange_password_with_json_response() {
         .create();
 
     let client = new_mock_client();
-    let token = client
-        .exchange_password(
-            &ResourceOwnerUsername::new("user".to_string()),
-            &ResourceOwnerPassword::new("pass".to_string()),
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+        client
+            .exchange_password(
+                &ResourceOwnerUsername::new("user".to_string()),
+                &ResourceOwnerPassword::new("pass".to_string()),
+            )
         )
         .unwrap();
 
@@ -451,8 +464,10 @@ fn test_exchange_code_successful_with_redirect_url() {
             Url::parse("http://redirect/here").unwrap(),
         ));
 
-    let token = client
-        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+    let token =
+        ::tokio::runtime::Runtime::new().unwrap().block_on(
+            client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+        )
         .unwrap();
 
     mock.assert();
@@ -489,8 +504,9 @@ fn test_exchange_code_successful_with_basic_auth() {
             Url::parse("http://redirect/here").unwrap(),
         ));
 
-    let token = client
-        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+            client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+        )
         .unwrap();
 
     mock.assert();
@@ -520,7 +536,9 @@ fn test_exchange_code_with_simple_json_error() {
         .create();
 
     let client = new_mock_client();
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+        client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+    );
 
     mock.assert();
 
@@ -595,7 +613,9 @@ fn test_exchange_code_with_json_parse_error() {
         .create();
 
     let client = new_mock_client();
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+        client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+    );
 
     mock.assert();
 
@@ -622,7 +642,9 @@ fn test_exchange_code_with_unexpected_content_type() {
         .create();
 
     let client = new_mock_client();
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+        client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+    );
 
     mock.assert();
 
@@ -659,7 +681,9 @@ fn test_exchange_code_with_invalid_token_type() {
         )),
     );
 
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+        client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+    );
 
     mock.assert();
 
@@ -687,7 +711,9 @@ fn test_exchange_code_with_400_status_code() {
         .create();
 
     let client = new_mock_client();
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+        client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+    );
 
     mock.assert();
 
@@ -717,7 +743,9 @@ fn test_exchange_code_fails_gracefully_on_transport_error() {
         AuthUrl::new(Url::parse("http://auth").unwrap()),
         Some(TokenUrl::new(Url::parse("http://token").unwrap())),
     );
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+        client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+    );
 
     assert!(token.is_err());
 
@@ -821,8 +849,9 @@ fn test_extension_successful_with_minimal_json_response() {
             Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
         )),
     );
-    let token = client
-        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+            client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+        )
         .unwrap();
 
     mock.assert();
@@ -868,8 +897,9 @@ fn test_extension_successful_with_complete_json_response() {
             Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
         )),
     ).set_auth_type(oauth2::AuthType::RequestBody);
-    let token = client
-        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+            client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+        )
         .unwrap();
 
     mock.assert();
@@ -924,7 +954,9 @@ fn test_extension_with_simple_json_error() {
             Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
         )),
     );
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
+    let token = ::tokio::runtime::Runtime::new().unwrap().block_on(
+        client.exchange_code(AuthorizationCode::new("ccc".to_string()))
+    );
 
     mock.assert();
 

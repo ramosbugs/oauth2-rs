@@ -8,7 +8,8 @@ repository = "https://github.com/ramosbugs/oauth2-rs"
 
 [dependencies]
 base64 = "0.9"
-curl = "0.4.0"
+reqwest = "0.9"
+futures = "0.1"
 failure = "0.1"
 rand = "0.4"
 serde = "1.0"
@@ -18,3 +19,4 @@ url = "1.0"
 
 [dev-dependencies]
 mockito = "0.8.2"
+tokio = "0.1"

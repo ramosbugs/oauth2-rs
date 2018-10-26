@@ -211,7 +211,8 @@
 //!
 
 extern crate base64;
-extern crate curl;
+extern crate futures;
+extern crate reqwest;
 extern crate failure;
 extern crate rand;
 extern crate serde;
@@ -219,13 +220,12 @@ extern crate serde;
 extern crate serde_json;
 extern crate url;
 
-use std::io::Read;
 use std::fmt::{Debug, Display, Error as FormatterError, Formatter};
 use std::marker::{Send, Sync, PhantomData};
 use std::ops::Deref;
 use std::time::Duration;
 
-use curl::easy::Easy;
+use futures::prelude::*;
 use failure::{Backtrace, Fail};
 use rand::{thread_rng, Rng};
 use serde::Serialize;
@@ -607,7 +607,7 @@ pub struct Client<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> {
     phantom_te: PhantomData<TE>,
 }
 
-impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, TE> {
+impl<EF: ExtraTokenFields + Send + 'static, TT: TokenType + Send + 'static, TE: ErrorResponseType + Send + 'static> Client<EF, TT, TE> {
     ///
     /// Initializes an OAuth2 client with the fields common to most OAuth2 flows.
     ///
@@ -807,7 +807,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     pub fn exchange_code(
         &self,
         code: AuthorizationCode
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    ) -> impl Future<Item = TokenResponse<EF, TT>, Error = RequestTokenError<TE>> + Send + 'static {
         // Make Clippy happy since we're intentionally taking ownership.
         let code_owned = code;
         let params = vec![
@@ -827,7 +827,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
         &self,
         username: &ResourceOwnerUsername,
         password: &ResourceOwnerPassword
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    ) -> impl Future<Item = TokenResponse<EF, TT>, Error = RequestTokenError<TE>> + Send + 'static {
         let params = vec![
             ("grant_type", "password"),
             ("username", username),
@@ -844,7 +844,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     ///
     pub fn exchange_client_credentials(
         &self
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    ) -> impl Future<Item = TokenResponse<EF, TT>, Error = RequestTokenError<TE>> + Send + 'static {
         // Generate the space-delimited scopes String before initializing params so that it has
         // a long enough lifetime.
         let scopes_opt =
@@ -869,7 +869,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     ///
     pub fn exchange_refresh_token(
         &self, refresh_token: &RefreshToken
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    ) -> impl Future<Item = TokenResponse<EF, TT>, Error = RequestTokenError<TE>> + Send + 'static {
         let params: Vec<(&str, &str)> = vec![
             ("grant_type", "refresh_token"),
             ("refresh_token", refresh_token.secret()),
@@ -882,8 +882,8 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
         &'b self,
         token_url: &TokenUrl,
         mut params: Vec<(&'b str, &'a str)>
-    ) -> Result<RequestTokenResponse, curl::Error> {
-        let mut easy = Easy::new();
+    ) -> impl Future<Item = RequestTokenResponse, Error = reqwest::Error> + Send + 'static {
+        let mut req_builder = ::reqwest::async::Client::new().post(&token_url.to_string()[..]);
 
         // FIXME: add support for auth extensions? e.g., client_secret_jwt and private_key_jwt
         match self.auth_type {
@@ -897,13 +897,12 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
                 // Section 2.3.1 of RFC 6749 requires separately url-encoding the id and secret
                 // before using them as HTTP Basic auth username and password. Note that this is
                 // not standard for ordinary Basic auth, so curl won't do it for us.
-                let encoded_id = easy.url_encode(&self.client_id.as_bytes());
-                easy.username(&encoded_id)?;
-
-                if let Some(ref client_secret) = self.client_secret {
-                    let encoded_secret = easy.url_encode(client_secret.secret().as_bytes());
-                    easy.password(&encoded_secret)?;
-                }
+                let username = self.client_id.as_str();
+                let password = match &self.client_secret {
+                    None => None,
+                    Some(ref o) => Some(o.secret().as_str()),
+                };
+                req_builder = req_builder.basic_auth(username, password);
             }
         }
 
@@ -911,117 +910,99 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
             params.push(("redirect_uri", redirect_url.as_str()));
         }
 
-        let form =
-            url::form_urlencoded::Serializer::new(String::new())
-                .extend_pairs(params)
-                .finish()
-                .into_bytes();
-        let mut form_slice = &form[..];
-
-        easy.url(&token_url.to_string()[..])?;
+        req_builder = req_builder.form(&params);
 
         // Section 5.1 of RFC 6749 (https://tools.ietf.org/html/rfc6749#section-5.1) only permits
         // JSON responses for this request. Some providers such as GitHub have off-spec behavior
         // and not only support different response formats, but have non-JSON defaults. Explicitly
         // request JSON here.
-        let mut headers = curl::easy::List::new();
-        let accept_header = format!("Accept: {}", CONTENT_TYPE_JSON);
-        headers.append(&accept_header)?;
-        easy.http_headers(headers)?;
+        req_builder = req_builder.header(reqwest::header::ACCEPT, CONTENT_TYPE_JSON);
 
-        easy.post(true)?;
-        easy.post_field_size(form.len() as u64)?;
-
-        let mut data = Vec::new();
-        {
-            let mut transfer = easy.transfer();
-
-            transfer.read_function(|buf| {
-                Ok(form_slice.read(buf).unwrap_or(0))
-            })?;
-
-            transfer.write_function(|new_data| {
-                data.extend_from_slice(new_data);
-                Ok(new_data.len())
-            })?;
-
-            transfer.perform()?;
-        }
-
-        let http_status = easy.response_code()?;
-        let content_type = easy.content_type()?;
-
-        Ok(RequestTokenResponse{
-            http_status,
-            content_type: content_type.map(|s| s.to_string()),
-            response_body: data,
+        req_builder.send().and_then(|res| {
+            let http_status = res.status().as_u16() as u32;
+            let content_type = res
+                .headers()
+                .get(::reqwest::header::CONTENT_TYPE)
+                .map(|o| o.to_str().unwrap().to_string());
+            res.into_body().concat2().and_then(move |body| {
+                ::futures::future::ok(RequestTokenResponse {
+                    http_status,
+                    content_type,
+                    response_body: body.to_vec(),
+                })
+            })
         })
     }
 
     fn request_token(
         &self, params: Vec<(&str, &str)>
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
-        let token_url =
-            self.token_url.as_ref().ok_or_else(||
-                // Arguably, it could be better to panic in this case. However, there may be
-                // situations where the library user gets the authorization server's configuration
-                // dynamically. In those cases, it would be preferable to return an `Err` rather
-                // than panic. An example situation where this might arise is OpenID Connect
-                // discovery.
-                RequestTokenError::Other("token_url must not be `None`".to_string())
-            )?;
-        let token_response =
-            self.post_request_token(token_url, params).map_err(RequestTokenError::Request)?;
-        if token_response.http_status != 200 {
-            let reason = String::from_utf8_lossy(token_response.response_body.as_slice());
-            if reason.is_empty() {
-                return Err(
-                    RequestTokenError::Other("Server returned empty error response".to_string())
-                );
-            } else {
-                let error = match serde_json::from_str::<ErrorResponse<TE>>(&reason) {
-                    Ok(error) => RequestTokenError::ServerResponse(error),
-                    Err(error) => RequestTokenError::Parse(error),
-                };
-                return Err(error);
-            }
+    ) -> impl Future<Item = TokenResponse<EF, TT>, Error = RequestTokenError<TE>> + Send + 'static {
+        if let None = self.token_url {
+            // Arguably, it could be better to panic in this case. However, there may be
+            // situations where the library user gets the authorization server's configuration
+            // dynamically. In those cases, it would be preferable to return an `Err` rather
+            // than panic. An example situation where this might arise is OpenID Connect
+            // discovery.
+            return futures::future::Either::A(::futures::future::err(RequestTokenError::Other(
+                "token_url must not be `None`".to_string(),
+            )));
         }
-
-        // Validate that the response Content-Type is JSON.
-        token_response
-            .content_type
-            .map_or(Ok(()), |content_type|
-                // Section 3.1.1.1 of RFC 7231 indicates that media types are case insensitive and
-                // may be followed by optional whitespace and/or a parameter (e.g., charset).
-                // See https://tools.ietf.org/html/rfc7231#section-3.1.1.1.
-                if !content_type.to_lowercase().starts_with(CONTENT_TYPE_JSON) {
-                    Err(
-                        RequestTokenError::Other(
-                            format!(
-                                "Unexpected response Content-Type: `{}`, should be `{}`",
-                                content_type,
-                                CONTENT_TYPE_JSON
-                            )
-                        )
-                    )
-                } else {
-                    Ok(())
+        let token_url = self.token_url.as_ref().unwrap();
+        let fut = self.post_request_token(token_url, params).map_err(RequestTokenError::Request)
+        .and_then(|token_response|{
+            Ok(()).and_then(|()| -> Result<_, _> {
+                if token_response.http_status != 200 {
+                    let reason = String::from_utf8_lossy(token_response.response_body.as_slice());
+                    if reason.is_empty() {
+                        return Err(
+                            RequestTokenError::Other("Server returned empty error response".to_string())
+                        );
+                    } else {
+                        let error = match serde_json::from_str::<ErrorResponse<TE>>(&reason) {
+                            Ok(error) => RequestTokenError::ServerResponse(error),
+                            Err(error) => RequestTokenError::Parse(error),
+                        };
+                        return Err(error);
+                    }
                 }
-            )?;
 
-        if token_response.response_body.is_empty() {
-            Err(RequestTokenError::Other("Server returned empty response body".to_string()))
-        } else {
-            let response_body =
-                String::from_utf8(token_response.response_body)
-                    .map_err(|parse_error|
-                        RequestTokenError::Other(
-                            format!("Couldn't parse response as UTF-8: {}", parse_error)
-                        )
+                // Validate that the response Content-Type is JSON.
+                token_response
+                    .content_type
+                    .map_or(Ok(()), |content_type|
+                        // Section 3.1.1.1 of RFC 7231 indicates that media types are case insensitive and
+                        // may be followed by optional whitespace and/or a parameter (e.g., charset).
+                        // See https://tools.ietf.org/html/rfc7231#section-3.1.1.1.
+                        if !content_type.to_lowercase().starts_with(CONTENT_TYPE_JSON) {
+                            Err(
+                                RequestTokenError::Other(
+                                    format!(
+                                        "Unexpected response Content-Type: `{}`, should be `{}`",
+                                        content_type,
+                                        CONTENT_TYPE_JSON
+                                    )
+                                )
+                            )
+                        } else {
+                            Ok(())
+                        }
                     )?;
 
-            TokenResponse::from_json(&response_body).map_err(RequestTokenError::Parse)
-        }
+                if token_response.response_body.is_empty() {
+                    Err(RequestTokenError::Other("Server returned empty response body".to_string()))
+                } else {
+                    let response_body =
+                        String::from_utf8(token_response.response_body)
+                            .map_err(|parse_error|
+                                RequestTokenError::Other(
+                                    format!("Couldn't parse response as UTF-8: {}", parse_error)
+                                )
+                            )?;
+                    TokenResponse::from_json(&response_body).map_err(RequestTokenError::Parse)
+                }
+            }).into_future()
+        });
+        return futures::future::Either::B(fut);
     }
 }
 
@@ -1206,7 +1187,7 @@ pub enum RequestTokenError<T: ErrorResponseType> {
     /// An error occurred while sending the request or receiving the response (e.g., network
     /// connectivity failed).
     ///
-    Request(curl::Error),
+    Request(reqwest::Error),
     ///
     /// Failed to parse server response. Parse errors may occur while parsing either successful
     /// or error responses.
@@ -1392,7 +1373,7 @@ pub mod insecure {
     /// It is highly recommended to use the `Client::authorize_url` function instead.
     ///
     pub fn authorize_url<EF, TT, TE>(client: &Client<EF, TT, TE>) -> Url
-    where EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType {
+    where EF: ExtraTokenFields + Send + 'static, TT: TokenType + Send + 'static, TE: ErrorResponseType + Send + 'static {
         client.authorize_url_impl("code", None, None)
     }
 
@@ -1407,7 +1388,7 @@ pub mod insecure {
     /// It is highly recommended to use the `Client::authorize_url_implicit` function instead.
     ///
     pub fn authorize_url_implicit<EF, TT, TE>(client: &Client<EF, TT, TE>) -> Url
-    where EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType {
+    where EF: ExtraTokenFields + Send + 'static, TT: TokenType + Send + 'static, TE: ErrorResponseType + Send + 'static {
         client.authorize_url_impl("token", None, None)
     }
 }

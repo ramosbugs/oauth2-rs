@@ -17,6 +17,7 @@ extern crate base64;
 extern crate oauth2;
 extern crate rand;
 extern crate url;
+extern crate tokio;
 
 use oauth2::basic::BasicClient;
 use oauth2::prelude::*;
@@ -123,7 +124,7 @@ fn main() {
             );
 
             // Exchange the code with a token.
-            let token_res = client.exchange_code(code);
+            let token_res = ::tokio::runtime::Runtime::new().unwrap().block_on(client.exchange_code(code));
 
             println!("Github returned the following token:\n{:?}\n", token_res);
 

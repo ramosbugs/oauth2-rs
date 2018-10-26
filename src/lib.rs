@@ -225,6 +225,7 @@ use std::marker::{Send, Sync, PhantomData};
 use std::ops::Deref;
 use std::time::Duration;
 
+use url::percent_encoding::{utf8_percent_encode, EncodeSet};
 use futures::prelude::*;
 use failure::{Backtrace, Fail};
 use rand::{thread_rng, Rng};
@@ -235,6 +236,24 @@ use url::Url;
 use prelude::*;
 
 const CONTENT_TYPE_JSON: &str = "application/json";
+
+#[derive(Clone)]
+/// This struct is used to maintain the strict URI encoding standard as proposed by RFC 3986
+struct StrictEncodeSet;
+
+impl EncodeSet for StrictEncodeSet {
+    #[inline]
+    fn contains(&self, byte: u8) -> bool {
+        let upper = byte >= 0x41 && byte <= 0x5a;
+        let lower = byte >= 0x61 && byte <= 0x7a;
+        let numeric = byte >= 0x30 && byte <= 0x39;
+        let hyphen = byte == 0x2d;
+        let underscore = byte == 0x5f;
+        let tilde = byte == 0x7e;
+        let period = byte == 0x2e;
+        !(upper || lower || numeric || hyphen || underscore || tilde || period)
+    }
+}
 
 ///
 /// Indicates whether requests to the authorization server should use basic authentication or
@@ -897,10 +916,12 @@ impl<EF: ExtraTokenFields + Send + 'static, TT: TokenType + Send + 'static, TE: 
                 // Section 2.3.1 of RFC 6749 requires separately url-encoding the id and secret
                 // before using them as HTTP Basic auth username and password. Note that this is
                 // not standard for ordinary Basic auth, so curl won't do it for us.
-                let username = self.client_id.as_str();
+                let username = utf8_percent_encode(self.client_id.as_str(), StrictEncodeSet);
                 let password = match &self.client_secret {
                     None => None,
-                    Some(ref o) => Some(o.secret().as_str()),
+                    Some(ref o) => Some(
+                        utf8_percent_encode(o.secret().as_str(), StrictEncodeSet)
+                    ),
                 };
                 req_builder = req_builder.basic_auth(username, password);
             }

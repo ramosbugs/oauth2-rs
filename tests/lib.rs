@@ -188,7 +188,7 @@ fn test_authorize_url_with_redirect_url() {
 fn test_exchange_code_successful_with_minimal_json_response() {
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_header("Authorization", "basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body("grant_type=authorization_code&code=ccc")
         // Ensure that token_type is case insensitive.
         .with_body("{\"access_token\": \"12/34\", \"token_type\": \"BEARER\"}")
@@ -276,7 +276,7 @@ fn test_exchange_code_successful_with_complete_json_response() {
 fn test_exchange_client_credentials_with_basic_auth() {
     let mock = mock("POST", "/token")
         // base64(urlencode("aaa/;&") + ":" + urlencode("bbb/;&"))
-        .match_header("Authorization", "Basic YWFhJTJGJTNCJTI2OmJiYiUyRiUzQiUyNg==")
+        .match_header("Authorization", "basic YWFhJTJGJTNCJTI2OmJiYiUyRiUzQiUyNg==")
         .match_body("grant_type=client_credentials")
         .with_body(
             "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
@@ -346,7 +346,7 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
 fn test_exchange_refresh_token_with_basic_auth() {
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_header("Authorization", "basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body("grant_type=refresh_token&refresh_token=ccc")
         .with_body(
             "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
@@ -378,7 +378,7 @@ fn test_exchange_refresh_token_with_basic_auth() {
 fn test_exchange_refresh_token_with_json_response() {
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_header("Authorization", "basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body("grant_type=refresh_token&refresh_token=ccc")
         // Ensure we can handle (ignore) charsets
         .with_header("content-type", "application/json; charset=\"utf-8\"")
@@ -412,7 +412,7 @@ fn test_exchange_refresh_token_with_json_response() {
 fn test_exchange_password_with_json_response() {
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_header("Authorization", "basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body("grant_type=password&username=user&password=pass")
         .with_header("content-type", "application/json")
         .with_body(
@@ -489,7 +489,7 @@ fn test_exchange_code_successful_with_redirect_url() {
 fn test_exchange_code_successful_with_basic_auth() {
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_header("Authorization", "basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body(
             "grant_type=authorization_code&code=ccc&redirect_uri=http%3A%2F%2Fredirect%2Fhere"
         )
@@ -528,7 +528,7 @@ fn test_exchange_code_successful_with_basic_auth() {
 fn test_exchange_code_with_simple_json_error() {
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_header("Authorization", "basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body("grant_type=authorization_code&code=ccc")
         .with_status(400)
         .with_header("content-type", "application/json")
@@ -665,7 +665,7 @@ fn test_exchange_code_with_unexpected_content_type() {
 fn test_exchange_code_with_invalid_token_type() {
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOg==") // base64("aaa:")
+        .match_header("Authorization", "basic YWFhOg==") // base64("aaa:")
         .match_body("grant_type=authorization_code&code=ccc")
         .with_header("content-type", "application/json")
         // "magic" is not a recognized token type.
@@ -703,7 +703,7 @@ fn test_exchange_code_with_400_status_code() {
     let body = r#"{"error":"invalid_request","error_description":"Expired code."}"#;
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_header("Authorization", "basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body("grant_type=authorization_code&code=ccc")
         .with_header("content-type", "application/json")
         .with_body(body)
@@ -835,7 +835,7 @@ fn test_extension_successful_with_minimal_json_response() {
 
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_header("Authorization", "basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body("grant_type=authorization_code&code=ccc")
         .with_header("content-type", "application/json")
         .with_body("{\"access_token\": \"12/34\", \"token_type\": \"green\", \"height\": 10}")
@@ -937,7 +937,7 @@ fn test_extension_with_simple_json_error() {
 
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_header("Authorization", "basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body("grant_type=authorization_code&code=ccc")
         .with_status(400)
         .with_header("content-type", "application/json")

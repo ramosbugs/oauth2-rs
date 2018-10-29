@@ -621,6 +621,7 @@ pub struct Client<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> {
     token_url: Option<TokenUrl>,
     scopes: Vec<Scope>,
     redirect_url: Option<RedirectUrl>,
+    http_client: ::reqwest::async::Client,
     phantom_ef: PhantomData<EF>,
     phantom_tt: PhantomData<TT>,
     phantom_te: PhantomData<TE>,
@@ -661,6 +662,7 @@ impl<EF: ExtraTokenFields + Send + 'static, TT: TokenType + Send + 'static, TE: 
             token_url,
             scopes: Vec::new(),
             redirect_url: None,
+            http_client: ::reqwest::async::Client::new(),
             phantom_ef: PhantomData,
             phantom_tt: PhantomData,
             phantom_te: PhantomData,
@@ -902,7 +904,7 @@ impl<EF: ExtraTokenFields + Send + 'static, TT: TokenType + Send + 'static, TE: 
         token_url: &TokenUrl,
         mut params: Vec<(&'b str, &'a str)>
     ) -> impl Future<Item = RequestTokenResponse, Error = reqwest::Error> + Send + 'static {
-        let mut req_builder = ::reqwest::async::Client::new().post(&token_url.to_string()[..]);
+        let mut req_builder = self.http_client.post(&token_url.to_string()[..]);
 
         // FIXME: add support for auth extensions? e.g., client_secret_jwt and private_key_jwt
         match self.auth_type {

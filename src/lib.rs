@@ -212,12 +212,13 @@
 
 extern crate base64;
 extern crate futures;
-extern crate reqwest;
 extern crate failure;
 extern crate rand;
+extern crate reqwest;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
+extern crate tokio;
 extern crate url;
 
 use std::fmt::{Debug, Display, Error as FormatterError, Formatter};
@@ -225,12 +226,12 @@ use std::marker::{Send, Sync, PhantomData};
 use std::ops::Deref;
 use std::time::Duration;
 
-use url::percent_encoding::{utf8_percent_encode, EncodeSet};
 use futures::prelude::*;
 use failure::{Backtrace, Fail};
 use rand::{thread_rng, Rng};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use url::percent_encoding::{utf8_percent_encode, EncodeSet};
 use url::Url;
 
 use prelude::*;
@@ -253,6 +254,15 @@ impl EncodeSet for StrictEncodeSet {
         let period = byte == 0x2e;
         !(upper || lower || numeric || hyphen || underscore || tilde || period)
     }
+}
+
+/// wrapper of tokio_current_thread block_on
+fn block_on<F>(future: F) -> Result<F::Item, F::Error>
+where
+    F: Future,
+{
+    let mut r = ::tokio::runtime::current_thread::Runtime::new().expect("failed to start runtime on current thread");
+    r.block_on(future)
 }
 
 ///
@@ -828,6 +838,14 @@ impl<EF: ExtraTokenFields + Send + 'static, TT: TokenType + Send + 'static, TE: 
     pub fn exchange_code(
         &self,
         code: AuthorizationCode
+    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+        block_on(self.exchange_code_async(code))
+    }
+
+    /// async edition
+    pub fn exchange_code_async(
+        &self,
+        code: AuthorizationCode
     ) -> impl Future<Item = TokenResponse<EF, TT>, Error = RequestTokenError<TE>> + Send + 'static {
         // Make Clippy happy since we're intentionally taking ownership.
         let code_owned = code;
@@ -848,6 +866,15 @@ impl<EF: ExtraTokenFields + Send + 'static, TT: TokenType + Send + 'static, TE: 
         &self,
         username: &ResourceOwnerUsername,
         password: &ResourceOwnerPassword
+    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+        block_on(self.exchange_password_async(username, password))
+    }
+
+    /// async edition
+    pub fn exchange_password_async(
+        &self,
+        username: &ResourceOwnerUsername,
+        password: &ResourceOwnerPassword
     ) -> impl Future<Item = TokenResponse<EF, TT>, Error = RequestTokenError<TE>> + Send + 'static {
         let params = vec![
             ("grant_type", "password"),
@@ -864,6 +891,13 @@ impl<EF: ExtraTokenFields + Send + 'static, TT: TokenType + Send + 'static, TE: 
     /// See https://tools.ietf.org/html/rfc6749#section-4.4.2
     ///
     pub fn exchange_client_credentials(
+        &self
+    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+        block_on(self.exchange_client_credentials_async())
+    }
+
+    /// async edition
+    pub fn exchange_client_credentials_async(
         &self
     ) -> impl Future<Item = TokenResponse<EF, TT>, Error = RequestTokenError<TE>> + Send + 'static {
         // Generate the space-delimited scopes String before initializing params so that it has
@@ -889,6 +923,13 @@ impl<EF: ExtraTokenFields + Send + 'static, TT: TokenType + Send + 'static, TE: 
     /// See https://tools.ietf.org/html/rfc6749#section-6
     ///
     pub fn exchange_refresh_token(
+        &self, refresh_token: &RefreshToken
+    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+        block_on(self.exchange_refresh_token_async(refresh_token))
+    }
+
+    /// async edition
+    pub fn exchange_refresh_token_async(
         &self, refresh_token: &RefreshToken
     ) -> impl Future<Item = TokenResponse<EF, TT>, Error = RequestTokenError<TE>> + Send + 'static {
         let params: Vec<(&str, &str)> = vec![
@@ -1021,6 +1062,7 @@ impl<EF: ExtraTokenFields + Send + 'static, TT: TokenType + Send + 'static, TE: 
                                     format!("Couldn't parse response as UTF-8: {}", parse_error)
                                 )
                             )?;
+
                     TokenResponse::from_json(&response_body).map_err(RequestTokenError::Parse)
                 }
             }).into_future()

@@ -217,6 +217,7 @@ extern crate rand;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
+extern crate sha2;
 extern crate url;
 
 use std::io::Read;
@@ -230,6 +231,7 @@ use failure::{Backtrace, Fail};
 use rand::{thread_rng, Rng};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use sha2::{Digest, Sha256};
 use url::Url;
 
 use prelude::*;
@@ -563,6 +565,49 @@ new_secret_type![
 ];
 new_secret_type![
     ///
+    /// Code Verifier used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection via the
+    /// `code_verifier` parameter. The value must have a minimum length of 43 characters and a
+    /// maximum length of 128 characters.  Each character must be ASCII alphanumeric or one of
+    /// the characters "-" / "." / "_" / "~".
+    ///
+    CodeVerifierS256(String)
+    impl {
+        ///
+        /// Generate a new random, base64-encoded code verifier.
+        ///
+        pub fn new_random() -> Self {
+            CodeVerifierS256::new_random_len(32)
+        }
+        ///
+        /// Generate a new random, base64-encoded code verifier.
+        ///
+        /// # Arguments
+        ///
+        /// * `num_bytes` - Number of random bytes to generate, prior to base64-encoding.
+        ///   The value must be in the range 32 to 96 inclusive in order to generate a verifier
+        ///   with a suitable length.
+        ///
+        pub fn new_random_len(num_bytes: u32) -> Self {
+            // The RFC specifies that the code verifier must have "a minimum length of 43
+            // characters and a maximum length of 128 characters".
+            // This implies 32-96 octets of random data to be base64 encoded.
+            assert!(num_bytes >= 32 && num_bytes <= 96);
+            let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
+            let code = base64::encode_config(&random_bytes, base64::URL_SAFE_NO_PAD);
+            assert!(code.len() >=43 && code.len() <= 128);
+            CodeVerifierS256::new(code)
+        }
+        ///
+        /// Return the code challenge for the code verifier.
+        ///
+        pub fn code_challenge(&self) -> String {
+            let digest = Sha256::digest(self.secret().as_bytes());
+            base64::encode_config(&digest, base64::URL_SAFE_NO_PAD)
+        }
+    }
+];
+new_secret_type![
+    ///
     /// Authorization code returned from the authorization endpoint.
     ///
     AuthorizationCode(String)
@@ -686,9 +731,9 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     ///
     /// # Arguments
     ///
-    /// * `state` - An opaque value used by the client to maintain state between the request and
-    ///   callback. The authorization server includes this value when redirecting the user-agent
-    ///   back to the client.
+    /// * `state_fn` - A function that returns an opaque value used by the client to maintain state
+    ///   between the request and callback. The authorization server includes this value when
+    ///   redirecting the user-agent back to the client.
     ///
     /// # Security Warning
     ///
@@ -711,9 +756,9 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     ///
     /// # Arguments
     ///
-    /// * `state` - An opaque value used by the client to maintain state between the request and
-    ///   callback. The authorization server includes this value when redirecting the user-agent
-    ///   back to the client.
+    /// * `state_fn` - A function that returns an opaque value used by the client to maintain state
+    ///   between the request and callback. The authorization server includes this value when
+    ///   redirecting the user-agent back to the client.
     ///
     /// # Security Warning
     ///

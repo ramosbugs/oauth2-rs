@@ -864,6 +864,31 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     }
 
     ///
+    /// Exchanges a code produced by a successful authorization process with an access token.
+    ///
+    /// Acquires ownership of the `code` because authorization codes may only be used to retrieve
+    /// an access token from the authorization server.
+    ///
+    /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
+    ///
+    pub fn exchange_code_extension(
+        &self,
+        code: AuthorizationCode,
+        extra_params: &[(&str, &str)]
+    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+        // Make Clippy happy since we're intentionally taking ownership.
+        let code_owned = code;
+        let mut params = vec![
+            ("grant_type", "authorization_code"),
+            ("code", code_owned.secret())
+        ];
+
+        params.extend(extra_params.iter().cloned());
+
+        self.request_token(params)
+    }
+
+    ///
     /// Requests an access token for the *password* grant type.
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.3.2

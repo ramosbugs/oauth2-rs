@@ -567,6 +567,50 @@ fn test_exchange_code_successful_with_basic_auth() {
 }
 
 #[test]
+fn test_exchange_code_successful_with_extension() {
+    let mock = mock("POST", "/token")
+        .match_header("Accept", "application/json")
+        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_body(
+            "grant_type=authorization_code&code=ccc\
+            &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\
+            &redirect_uri=http%3A%2F%2Fredirect%2Fhere"
+        )
+        .with_body(
+            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
+        )
+        .create();
+
+    let client = new_mock_client()
+        .set_auth_type(oauth2::AuthType::BasicAuth)
+        .set_redirect_url(RedirectUrl::new(
+            Url::parse("http://redirect/here").unwrap(),
+        ));
+
+    let params: Vec<(&str, &str)> = vec![
+        ("code_verifier", "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
+    ];
+
+    let token = client
+        .exchange_code_extension(AuthorizationCode::new("ccc".to_string()), &params)
+        .unwrap();
+
+    mock.assert();
+
+    assert_eq!("12/34", token.access_token().secret());
+    assert_eq!(BasicTokenType::Bearer, *token.token_type());
+    assert_eq!(
+        Some(&vec![
+            Scope::new("read".to_string()),
+            Scope::new("write".to_string()),
+        ]),
+        token.scopes()
+    );
+    assert_eq!(None, token.expires_in());
+    assert_eq!(None, token.refresh_token());
+}
+
+#[test]
 fn test_exchange_code_with_simple_json_error() {
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")

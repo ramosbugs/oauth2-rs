@@ -828,11 +828,24 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
         username: &ResourceOwnerUsername,
         password: &ResourceOwnerPassword
     ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
-        let params = vec![
+        // Generate the space-delimited scopes String before initializing params so that it has
+        // a long enough lifetime.
+        let scopes_opt =
+            if !self.scopes.is_empty() {
+                Some(self.scopes.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" "))
+            } else {
+                None
+            };
+
+        let mut params = vec![
             ("grant_type", "password"),
             ("username", username),
             ("password", password.secret()),
         ];
+
+        if let Some(ref scopes) = scopes_opt {
+            params.push(("scope", scopes));
+        }
 
         self.request_token(params)
     }

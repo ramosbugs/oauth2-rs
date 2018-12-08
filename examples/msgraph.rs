@@ -30,7 +30,7 @@ extern crate url;
 use oauth2::basic::BasicClient;
 use oauth2::prelude::*;
 use oauth2::{
-    AuthType, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CodeVerifierS256, CsrfToken,
+    AuthType, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeVerifierS256,
     RedirectUrl, ResponseType, Scope, TokenUrl
 };
 use std::env;
@@ -78,23 +78,18 @@ fn main() {
             )
         );
 
-    let csrf_state = CsrfToken::new_random();
-
     // Microsoft Graph supports Proof Key for Code Exchange (PKCE - https://oauth.net/2/pkce/).
     // Create a PKCE code verifier and SHA-256 encode it as a code challenge.
-    let code_verifier = CodeVerifierS256::new_random();
-    let code_challenge = code_verifier.code_challenge();
-
-    // Send the PKCE code challenge in the authorization request
-    let params: Vec<(&str, &str)> = vec![
-        ("state", csrf_state.secret()),
-        ("code_challenge_method", "S256"),
-        ("code_challenge", &code_challenge)
-    ];
+    let code_verifier = PkceCodeVerifierS256::new_random();
 
     // Generate the authorization URL to which we'll redirect the user.
-    let authorize_url
-        = client.authorize_url_extension(&ResponseType::new("code".to_string()), &params);
+    let (authorize_url, csrf_state) =
+        client.authorize_url_extension(
+            &ResponseType::new("code".to_string()),
+            CsrfToken::new_random,
+            // Send the PKCE code challenge in the authorization request
+            &code_verifier.authorize_url_params(),
+        );
 
     println!(
         "Open this URL in your browser:\n{}\n",

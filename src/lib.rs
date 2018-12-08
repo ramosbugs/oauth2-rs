@@ -220,6 +220,7 @@ extern crate serde_json;
 extern crate sha2;
 extern crate url;
 
+use std::convert::Into;
 use std::io::Read;
 use std::fmt::{Debug, Display, Error as FormatterError, Formatter};
 use std::marker::{Send, Sync, PhantomData};
@@ -377,6 +378,11 @@ macro_rules! new_type {
                 &self.0
             }
         }
+        impl Into<$type> for $name {
+            fn into(self) -> $type {
+                self.0
+            }
+        }
     }
 }
 
@@ -527,6 +533,22 @@ new_type![
 impl AsRef<str> for Scope {
     fn as_ref(&self) -> &str { self }
 }
+new_type![
+    ///
+    /// Code Challenge used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection via the
+    /// `code_challenge` parameter.
+    ///
+    #[derive(Deserialize, Serialize)]
+    PkceCodeChallengeS256(String)
+];
+new_type![
+    ///
+    /// Code Challenge Method used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection
+    /// via the `code_challenge_method` parameter.
+    ///
+    #[derive(Deserialize, Serialize)]
+    PkceCodeChallengeMethod(String)
+];
 
 new_secret_type![
     ///
@@ -570,13 +592,14 @@ new_secret_type![
     /// maximum length of 128 characters.  Each character must be ASCII alphanumeric or one of
     /// the characters "-" / "." / "_" / "~".
     ///
-    CodeVerifierS256(String)
+    #[derive(Deserialize, Serialize)]
+    PkceCodeVerifierS256(String)
     impl {
         ///
         /// Generate a new random, base64-encoded code verifier.
         ///
         pub fn new_random() -> Self {
-            CodeVerifierS256::new_random_len(32)
+            PkceCodeVerifierS256::new_random_len(32)
         }
         ///
         /// Generate a new random, base64-encoded code verifier.
@@ -595,14 +618,34 @@ new_secret_type![
             let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
             let code = base64::encode_config(&random_bytes, base64::URL_SAFE_NO_PAD);
             assert!(code.len() >=43 && code.len() <= 128);
-            CodeVerifierS256::new(code)
+            PkceCodeVerifierS256::new(code)
         }
         ///
         /// Return the code challenge for the code verifier.
         ///
-        pub fn code_challenge(&self) -> String {
+        pub fn code_challenge(&self) -> PkceCodeChallengeS256 {
             let digest = Sha256::digest(self.secret().as_bytes());
-            base64::encode_config(&digest, base64::URL_SAFE_NO_PAD)
+            PkceCodeChallengeS256::new(base64::encode_config(&digest, base64::URL_SAFE_NO_PAD))
+        }
+
+        ///
+        /// Return the code challenge method for this code verifier.
+        ///
+        pub fn code_challenge_method() -> PkceCodeChallengeMethod {
+            PkceCodeChallengeMethod::new("S256".to_string())
+        }
+
+        ///
+        /// Return the extension params used for authorize_url.
+        ///
+        pub fn authorize_url_params(&self) -> Vec<(&'static str, String)> {
+            vec![
+                (
+                    "code_challenge_method",
+                    PkceCodeVerifierS256::code_challenge_method().into(),
+                ),
+                ("code_challenge", self.code_challenge().into()),
+            ]
         }
     }
 ];
@@ -747,7 +790,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     pub fn authorize_url<F>(&self, state_fn: F) -> (Url, CsrfToken)
     where F: FnOnce() -> CsrfToken {
         let state = state_fn();
-        (self.authorize_url_impl("code", Some(&state), None), state)
+        (self.authorize_url_impl::<&str>("code", Some(&state), None), state)
     }
 
     ///
@@ -772,7 +815,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     pub fn authorize_url_implicit<F>(&self, state_fn: F) -> (Url, CsrfToken)
     where F: FnOnce() -> CsrfToken {
         let state = state_fn();
-        (self.authorize_url_impl("token", Some(&state), None), state)
+        (self.authorize_url_impl::<&str>("token", Some(&state), None), state)
     }
 
     ///
@@ -784,32 +827,45 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     /// * `response_type` - The response type this client expects from the authorization endpoint.
     ///   For `"code"` or `"token"` response types, instead use the `authorize_url` or
     ///   `authorize_url_implicit` functions, respectively.
+    /// * `state_fn` - A function that returns an opaque value used by the client to maintain state
+    ///   between the request and callback. The authorization server includes this value when
+    ///   redirecting the user-agent back to the client.
     /// * `extra_params` - Additional parameters as required by the applicable OAuth2 extension(s).
     ///   Callers should NOT specify any of the following parameters: `response_type`, `client_id`,
     ///   `redirect_uri`, or `scope`.
     ///
     /// # Security Warning
     ///
+    /// Callers should use a fresh, unpredictable `state` for each authorization request and verify
+    /// that this value matches the `state` parameter passed by the authorization server to the
+    /// redirect URI. Doing so mitigates
+    /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12)
+    ///  attacks.
+    ///
     /// Callers should follow the security recommendations for any OAuth2 extensions used with
     /// this function, which are beyond the scope of
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
-    pub fn authorize_url_extension(
+    pub fn authorize_url_extension<F, T>(
         &self,
         response_type: &ResponseType,
-        extra_params: &[(&str, &str)]
-    ) -> Url {
-        self.authorize_url_impl(response_type, None, Some(extra_params))
+        state_fn: F,
+        extra_params: &[(&str, T)]
+    ) -> (Url, CsrfToken)
+    where F: FnOnce() -> CsrfToken, T: AsRef<str> + Clone {
+        let state = state_fn();
+        (self.authorize_url_impl(response_type, Some(&state), Some(extra_params)), state)
     }
 
-    fn authorize_url_impl(
+    fn authorize_url_impl<T>(
         &self,
         response_type: &str,
         state_opt: Option<&CsrfToken>,
-        extra_params_opt: Option<&[(&str, &str)]>
-    ) -> Url {
+        extra_params_opt: Option<&[(&str, T)]>
+    ) -> Url
+    where T: AsRef<str> + Clone {
         let scopes = self.scopes.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" ");
 
-        let mut pairs: Vec<(&str, &str) > = vec![
+        let mut pairs: Vec<(&str, &str)> = vec![
             ("response_type", response_type),
             ("client_id", &self.client_id),
         ];
@@ -853,14 +909,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
         &self,
         code: AuthorizationCode
     ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
-        // Make Clippy happy since we're intentionally taking ownership.
-        let code_owned = code;
-        let params = vec![
-            ("grant_type", "authorization_code"),
-            ("code", code_owned.secret())
-        ];
-
-        self.request_token(params)
+        self.exchange_code_extension::<&str>(code, &[])
     }
 
     ///
@@ -871,19 +920,24 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
     ///
-    pub fn exchange_code_extension(
+    pub fn exchange_code_extension<T>(
         &self,
         code: AuthorizationCode,
-        extra_params: &[(&str, &str)]
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+        extra_params: &[(&str, T)]
+    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>>
+    where T: AsRef<str> + Clone {
         // Make Clippy happy since we're intentionally taking ownership.
         let code_owned = code;
-        let mut params = vec![
+        let mut params: Vec<(&str, &str)> = vec![
             ("grant_type", "authorization_code"),
             ("code", code_owned.secret())
         ];
 
-        params.extend(extra_params.iter().cloned());
+        params.extend_from_slice(
+            &extra_params
+                .iter()
+                .map(|&(k, ref v)| { (k, v.as_ref()) }).collect::<Vec<(&str, &str)>>()
+        );
 
         self.request_token(params)
     }
@@ -1458,7 +1512,7 @@ pub mod insecure {
     ///
     pub fn authorize_url<EF, TT, TE>(client: &Client<EF, TT, TE>) -> Url
     where EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType {
-        client.authorize_url_impl("code", None, None)
+        client.authorize_url_impl::<&str>("code", None, None)
     }
 
     ///
@@ -1473,7 +1527,7 @@ pub mod insecure {
     ///
     pub fn authorize_url_implicit<EF, TT, TE>(client: &Client<EF, TT, TE>) -> Url
     where EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType {
-        client.authorize_url_impl("token", None, None)
+        client.authorize_url_impl::<&str>("token", None, None)
     }
 }
 

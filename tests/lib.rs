@@ -50,34 +50,36 @@ fn new_mock_client_with_unsafe_chars() -> BasicClient {
 #[test]
 #[should_panic]
 fn test_code_verifier_too_short() {
-    CodeVerifierS256::new_random_len(31);
+    PkceCodeVerifierS256::new_random_len(31);
 }
 
 #[test]
 #[should_panic]
 fn test_code_verifier_too_long() {
-    CodeVerifierS256::new_random_len(97);
+    PkceCodeVerifierS256::new_random_len(97);
 }
 
 #[test]
 fn test_code_verifier_min() {
-    let code_verifier = CodeVerifierS256::new_random_len(32);
+    let code_verifier = PkceCodeVerifierS256::new_random_len(32);
     assert!(code_verifier.secret().len() == 43);
 }
 
 #[test]
 fn test_code_verifier_max() {
-    let code_verifier = CodeVerifierS256::new_random_len(96);
+    let code_verifier = PkceCodeVerifierS256::new_random_len(96);
     assert!(code_verifier.secret().len() == 128);
 }
 
 #[test]
 fn test_code_verifier_challenge() {
     // Example from https://tools.ietf.org/html/rfc7636#appendix-B
-    let code_verifier = CodeVerifierS256::new(
+    let code_verifier = PkceCodeVerifierS256::new(
         "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string()
     );
-    assert!(code_verifier.code_challenge() == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
+    assert!(
+        code_verifier.code_challenge().as_str() == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+    );
 }
 
 #[test]
@@ -124,18 +126,25 @@ fn test_authorize_url_insecure() {
 fn test_authorize_url_pkce() {
     // Example from https://tools.ietf.org/html/rfc7636#appendix-B
     let client = new_client();
-    let verifier = CodeVerifierS256::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string());
+    let verifier =
+        PkceCodeVerifierS256::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string());
     let challenge = verifier.code_challenge();
     let params = vec![
         ("code_challenge_method", "S256"),
         ("code_challenge", &challenge)
     ];
-    let url = client.authorize_url_extension(&ResponseType::new("code".to_string()), &params);
+    let (url, _) =
+        client.authorize_url_extension(
+            &ResponseType::new("code".to_string()),
+            || CsrfToken::new("csrf_token".to_string()),
+            &params
+        );
     assert_eq!(
         Url::parse(
             concat!(
                 "http://example.com/auth",
                 "?response_type=code&client_id=aaa",
+                "&state=csrf_token",
                 "&code_challenge_method=S256",
                 "&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
             )
@@ -211,14 +220,17 @@ fn test_authorize_url_with_scopes() {
 fn test_authorize_url_with_extension_response_type() {
     let client = new_client();
 
-    let url = client.authorize_url_extension(
+    let (url, _) = client.authorize_url_extension(
         &ResponseType::new("code token".to_string()),
+        || CsrfToken::new("csrf_token".to_string()),
         &vec![("foo", "bar")],
     );
 
     assert_eq!(
-        Url::parse("http://example.com/auth?response_type=code+token&client_id=aaa&foo=bar")
-            .unwrap(),
+        Url::parse(
+            "http://example.com/auth?response_type=code+token&client_id=aaa&state=csrf_token\
+             &foo=bar"
+        ).unwrap(),
         url
     );
 }

@@ -128,16 +128,11 @@ fn test_authorize_url_pkce() {
     let client = new_client();
     let verifier =
         PkceCodeVerifierS256::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string());
-    let challenge = verifier.code_challenge();
-    let params = vec![
-        ("code_challenge_method", "S256"),
-        ("code_challenge", &challenge)
-    ];
     let (url, _) =
         client.authorize_url_extension(
             &ResponseType::new("code".to_string()),
             || CsrfToken::new("csrf_token".to_string()),
-            &params
+            &verifier.authorize_url_params(),
         );
     assert_eq!(
         Url::parse(

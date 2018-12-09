@@ -48,6 +48,41 @@ fn new_mock_client_with_unsafe_chars() -> BasicClient {
 }
 
 #[test]
+#[should_panic]
+fn test_code_verifier_too_short() {
+    PkceCodeVerifierS256::new_random_len(31);
+}
+
+#[test]
+#[should_panic]
+fn test_code_verifier_too_long() {
+    PkceCodeVerifierS256::new_random_len(97);
+}
+
+#[test]
+fn test_code_verifier_min() {
+    let code_verifier = PkceCodeVerifierS256::new_random_len(32);
+    assert!(code_verifier.secret().len() == 43);
+}
+
+#[test]
+fn test_code_verifier_max() {
+    let code_verifier = PkceCodeVerifierS256::new_random_len(96);
+    assert!(code_verifier.secret().len() == 128);
+}
+
+#[test]
+fn test_code_verifier_challenge() {
+    // Example from https://tools.ietf.org/html/rfc7636#appendix-B
+    let code_verifier = PkceCodeVerifierS256::new(
+        "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string()
+    );
+    assert!(
+        code_verifier.code_challenge().as_str() == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+    );
+}
+
+#[test]
 fn test_authorize_url() {
     let client = new_client();
     let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token".to_string()));
@@ -83,6 +118,32 @@ fn test_authorize_url_insecure() {
 
     assert_eq!(
         Url::parse("http://example.com/auth?response_type=code&client_id=aaa").unwrap(),
+        url
+    );
+}
+
+#[test]
+fn test_authorize_url_pkce() {
+    // Example from https://tools.ietf.org/html/rfc7636#appendix-B
+    let client = new_client();
+    let verifier =
+        PkceCodeVerifierS256::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string());
+    let (url, _) =
+        client.authorize_url_extension(
+            &ResponseType::new("code".to_string()),
+            || CsrfToken::new("csrf_token".to_string()),
+            &verifier.authorize_url_params(),
+        );
+    assert_eq!(
+        Url::parse(
+            concat!(
+                "http://example.com/auth",
+                "?response_type=code&client_id=aaa",
+                "&state=csrf_token",
+                "&code_challenge_method=S256",
+                "&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+            )
+        ).unwrap(),
         url
     );
 }
@@ -154,14 +215,17 @@ fn test_authorize_url_with_scopes() {
 fn test_authorize_url_with_extension_response_type() {
     let client = new_client();
 
-    let url = client.authorize_url_extension(
+    let (url, _) = client.authorize_url_extension(
         &ResponseType::new("code token".to_string()),
+        || CsrfToken::new("csrf_token".to_string()),
         &vec![("foo", "bar")],
     );
 
     assert_eq!(
-        Url::parse("http://example.com/auth?response_type=code+token&client_id=aaa&foo=bar")
-            .unwrap(),
+        Url::parse(
+            "http://example.com/auth?response_type=code+token&client_id=aaa&state=csrf_token\
+             &foo=bar"
+        ).unwrap(),
         url
     );
 }
@@ -491,6 +555,50 @@ fn test_exchange_code_successful_with_basic_auth() {
 
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .unwrap();
+
+    mock.assert();
+
+    assert_eq!("12/34", token.access_token().secret());
+    assert_eq!(BasicTokenType::Bearer, *token.token_type());
+    assert_eq!(
+        Some(&vec![
+            Scope::new("read".to_string()),
+            Scope::new("write".to_string()),
+        ]),
+        token.scopes()
+    );
+    assert_eq!(None, token.expires_in());
+    assert_eq!(None, token.refresh_token());
+}
+
+#[test]
+fn test_exchange_code_successful_with_extension() {
+    let mock = mock("POST", "/token")
+        .match_header("Accept", "application/json")
+        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_body(
+            "grant_type=authorization_code&code=ccc\
+            &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\
+            &redirect_uri=http%3A%2F%2Fredirect%2Fhere"
+        )
+        .with_body(
+            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
+        )
+        .create();
+
+    let client = new_mock_client()
+        .set_auth_type(oauth2::AuthType::BasicAuth)
+        .set_redirect_url(RedirectUrl::new(
+            Url::parse("http://redirect/here").unwrap(),
+        ));
+
+    let params: Vec<(&str, &str)> = vec![
+        ("code_verifier", "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
+    ];
+
+    let token = client
+        .exchange_code_extension(AuthorizationCode::new("ccc".to_string()), &params)
         .unwrap();
 
     mock.assert();

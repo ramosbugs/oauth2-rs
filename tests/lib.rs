@@ -466,14 +466,16 @@ fn test_exchange_password_with_json_response() {
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
         .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=password&username=user&password=pass")
+        .match_body("grant_type=password&username=user&password=pass&scope=read+write")
         .with_header("content-type", "application/json")
         .with_body(
             "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
         )
         .create();
 
-    let client = new_mock_client();
+    let client = new_mock_client()
+        .add_scope(Scope::new("read".to_string()))
+        .add_scope(Scope::new("write".to_string()));
     let token = client
         .exchange_password(
             &ResourceOwnerUsername::new("user".to_string()),

@@ -564,6 +564,7 @@ new_secret_type![
     /// via the `state` parameter.
     ///
     #[must_use]
+    #[derive(Deserialize, Serialize)]
     CsrfToken(String)
     impl {
         ///
@@ -653,6 +654,7 @@ new_secret_type![
     ///
     /// Authorization code returned from the authorization endpoint.
     ///
+    #[derive(Deserialize, Serialize)]
     AuthorizationCode(String)
 ];
 new_secret_type![

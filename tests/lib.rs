@@ -7,8 +7,8 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use mockito::{mock, SERVER_URL};
-use url::Url;
 use url::form_urlencoded::byte_serialize;
+use url::Url;
 
 use oauth2::basic::*;
 use oauth2::prelude::*;
@@ -74,9 +74,8 @@ fn test_code_verifier_max() {
 #[test]
 fn test_code_verifier_challenge() {
     // Example from https://tools.ietf.org/html/rfc7636#appendix-B
-    let code_verifier = PkceCodeVerifierS256::new(
-        "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string()
-    );
+    let code_verifier =
+        PkceCodeVerifierS256::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string());
     assert!(
         code_verifier.code_challenge().as_str() == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
     );
@@ -105,7 +104,8 @@ fn test_authorize_random() {
             byte_serialize(csrf_state.secret().clone().into_bytes().as_slice())
                 .collect::<Vec<_>>()
                 .join("")
-        )).unwrap(),
+        ))
+        .unwrap(),
         url
     );
 }
@@ -128,22 +128,20 @@ fn test_authorize_url_pkce() {
     let client = new_client();
     let verifier =
         PkceCodeVerifierS256::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string());
-    let (url, _) =
-        client.authorize_url_extension(
-            &ResponseType::new("code".to_string()),
-            || CsrfToken::new("csrf_token".to_string()),
-            &verifier.authorize_url_params(),
-        );
+    let (url, _) = client.authorize_url_extension(
+        &ResponseType::new("code".to_string()),
+        || CsrfToken::new("csrf_token".to_string()),
+        &verifier.authorize_url_params(),
+    );
     assert_eq!(
-        Url::parse(
-            concat!(
-                "http://example.com/auth",
-                "?response_type=code&client_id=aaa",
-                "&state=csrf_token",
-                "&code_challenge_method=S256",
-                "&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
-            )
-        ).unwrap(),
+        Url::parse(concat!(
+            "http://example.com/auth",
+            "?response_type=code&client_id=aaa",
+            "&state=csrf_token",
+            "&code_challenge_method=S256",
+            "&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        ))
+        .unwrap(),
         url
     );
 }
@@ -189,7 +187,8 @@ fn test_authorize_url_with_param() {
     assert_eq!(
         Url::parse(
             "http://example.com/auth?foo=bar&response_type=code&client_id=aaa&state=csrf_token"
-        ).unwrap(),
+        )
+        .unwrap(),
         url
     );
 }
@@ -206,7 +205,8 @@ fn test_authorize_url_with_scopes() {
         Url::parse(
             "http://example.com/auth?response_type=code&client_id=aaa&scope=read+write&\
              state=csrf_token"
-        ).unwrap(),
+        )
+        .unwrap(),
         url
     );
 }
@@ -225,7 +225,8 @@ fn test_authorize_url_with_extension_response_type() {
         Url::parse(
             "http://example.com/auth?response_type=code+token&client_id=aaa&state=csrf_token\
              &foo=bar"
-        ).unwrap(),
+        )
+        .unwrap(),
         url
     );
 }
@@ -242,7 +243,8 @@ fn test_authorize_url_with_redirect_url() {
         Url::parse(
             "http://example.com/auth?response_type=code&client_id=aaa&redirect_uri=http\
              %3A%2F%2Flocalhost%2Fredirect&state=csrf_token"
-        ).unwrap(),
+        )
+        .unwrap(),
         url
     );
 }
@@ -280,8 +282,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
     // Ensure that serialization produces an equivalent JSON value.
     let serialized_json = serde_json::to_string(&token).unwrap();
     assert_eq!(
-        "{\"access_token\":\"12/34\",\"token_type\":\"bearer\"}"
-            .to_string(),
+        "{\"access_token\":\"12/34\",\"token_type\":\"bearer\"}".to_string(),
         serialized_json
     );
 
@@ -337,10 +338,13 @@ fn test_exchange_code_successful_with_complete_json_response() {
 fn test_exchange_client_credentials_with_basic_auth() {
     let mock = mock("POST", "/token")
         // base64(urlencode("aaa/;&") + ":" + urlencode("bbb/;&"))
-        .match_header("Authorization", "Basic YWFhJTJGJTNCJTI2OmJiYiUyRiUzQiUyNg==")
+        .match_header(
+            "Authorization",
+            "Basic YWFhJTJGJTNCJTI2OmJiYiUyRiUzQiUyNg==",
+        )
         .match_body("grant_type=client_credentials")
         .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
+            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
         )
         .create();
 
@@ -367,12 +371,12 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
     let mock = mock("POST", "/token")
         .match_header("Accept", "application/json")
         .match_body(
-            "grant_type=client_credentials&scope=read+write&client_id=aaa&client_secret=bbb"
+            "grant_type=client_credentials&scope=read+write&client_id=aaa&client_secret=bbb",
         )
         // Ensure we parse headers case insensitively.
         .with_header("content-TYPE", "APPLICATION/jSoN")
         .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
+            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
         )
         .create();
 
@@ -404,7 +408,7 @@ fn test_exchange_refresh_token_with_basic_auth() {
         .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body("grant_type=refresh_token&refresh_token=ccc")
         .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
+            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
         )
         .create();
 
@@ -437,7 +441,7 @@ fn test_exchange_refresh_token_with_json_response() {
         // Ensure we can handle (ignore) charsets
         .with_header("content-type", "application/json; charset=\"utf-8\"")
         .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
+            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
         )
         .create();
 
@@ -469,7 +473,7 @@ fn test_exchange_password_with_json_response() {
         .match_body("grant_type=password&username=user&password=pass&scope=read+write")
         .with_header("content-type", "application/json")
         .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
+            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
         )
         .create();
 
@@ -542,10 +546,10 @@ fn test_exchange_code_successful_with_basic_auth() {
         .match_header("Accept", "application/json")
         .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body(
-            "grant_type=authorization_code&code=ccc&redirect_uri=http%3A%2F%2Fredirect%2Fhere"
+            "grant_type=authorization_code&code=ccc&redirect_uri=http%3A%2F%2Fredirect%2Fhere",
         )
         .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
+            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
         )
         .create();
 
@@ -581,11 +585,11 @@ fn test_exchange_code_successful_with_extension() {
         .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
         .match_body(
             "grant_type=authorization_code&code=ccc\
-            &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\
-            &redirect_uri=http%3A%2F%2Fredirect%2Fhere"
+             &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\
+             &redirect_uri=http%3A%2F%2Fredirect%2Fhere",
         )
         .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}"
+            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
         )
         .create();
 
@@ -595,9 +599,10 @@ fn test_exchange_code_successful_with_extension() {
             Url::parse("http://redirect/here").unwrap(),
         ));
 
-    let params: Vec<(&str, &str)> = vec![
-        ("code_verifier", "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")
-    ];
+    let params: Vec<(&str, &str)> = vec![(
+        "code_verifier",
+        "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+    )];
 
     let token = client
         .exchange_code_extension(AuthorizationCode::new("ccc".to_string()), &params)
@@ -977,7 +982,8 @@ fn test_extension_successful_with_complete_json_response() {
         Some(TokenUrl::new(
             Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
         )),
-    ).set_auth_type(oauth2::AuthType::RequestBody);
+    )
+    .set_auth_type(oauth2::AuthType::RequestBody);
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .unwrap();
@@ -1023,7 +1029,8 @@ fn test_extension_with_simple_json_error() {
         .with_header("content-type", "application/json")
         .with_body(
             "{\"error\": \"too_light\", \"error_description\": \"stuff happened\", \
-              \"error_uri\": \"https://errors\"}")
+             \"error_uri\": \"https://errors\"}",
+        )
         .create();
 
     let client = ColorfulClient::new(
@@ -1065,7 +1072,7 @@ fn test_extension_with_simple_json_error() {
             let deserialized_error = serde_json::from_str::<
                 oauth2::ErrorResponse<ColorfulErrorResponseType>,
             >(&serialized_json)
-                .unwrap();
+            .unwrap();
             assert_eq!(error_response, &deserialized_error);
         }
         other => panic!("Unexpected error: {:?}", other),

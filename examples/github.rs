@@ -20,8 +20,9 @@ extern crate url;
 
 use oauth2::basic::BasicClient;
 use oauth2::prelude::*;
-use oauth2::{AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope,
-             TokenUrl};
+use oauth2::{
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope, TokenUrl,
+};
 use std::env;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
@@ -46,22 +47,19 @@ fn main() {
 
     // Set up the config for the Github OAuth2 process.
     let client = BasicClient::new(
-            github_client_id,
-            Some(github_client_secret),
-            auth_url, Some(token_url)
-        )
-        // This example is requesting access to the user's public repos and email.
-        .add_scope(Scope::new("public_repo".to_string()))
-        .add_scope(Scope::new("user:email".to_string()))
-
-        // This example will be running its own server at localhost:8080.
-        // See below for the server implementation.
-        .set_redirect_url(
-            RedirectUrl::new(
-                Url::parse("http://localhost:8080")
-                    .expect("Invalid redirect URL")
-            )
-        );
+        github_client_id,
+        Some(github_client_secret),
+        auth_url,
+        Some(token_url),
+    )
+    // This example is requesting access to the user's public repos and email.
+    .add_scope(Scope::new("public_repo".to_string()))
+    .add_scope(Scope::new("user:email".to_string()))
+    // This example will be running its own server at localhost:8080.
+    // See below for the server implementation.
+    .set_redirect_url(RedirectUrl::new(
+        Url::parse("http://localhost:8080").expect("Invalid redirect URL"),
+    ));
 
     // Generate the authorization URL to which we'll redirect the user.
     let (authorize_url, csrf_state) = client.authorize_url(CsrfToken::new_random);
@@ -86,7 +84,8 @@ fn main() {
                 let redirect_url = request_line.split_whitespace().nth(1).unwrap();
                 let url = Url::parse(&("http://localhost".to_string() + redirect_url)).unwrap();
 
-                let code_pair = url.query_pairs()
+                let code_pair = url
+                    .query_pairs()
                     .find(|pair| {
                         let &(ref key, _) = pair;
                         key == "code"
@@ -96,7 +95,8 @@ fn main() {
                 let (_, value) = code_pair;
                 code = AuthorizationCode::new(value.into_owned());
 
-                let state_pair = url.query_pairs()
+                let state_pair = url
+                    .query_pairs()
                     .find(|pair| {
                         let &(ref key, _) = pair;
                         key == "state"

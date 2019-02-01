@@ -853,7 +853,7 @@ mod colorful_extension {
 
     pub type ColorfulClient = Client<ColorfulFields, ColorfulTokenType, ColorfulErrorResponseType>;
 
-    #[derive(Debug, Deserialize, PartialEq, Serialize)]
+    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all = "lowercase")]
     pub enum ColorfulTokenType {
         Green,
@@ -861,7 +861,7 @@ mod colorful_extension {
     }
     impl TokenType for ColorfulTokenType {}
 
-    #[derive(Debug, Deserialize, PartialEq, Serialize)]
+    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
     pub struct ColorfulFields {
         #[serde(rename = "shape")]
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -879,7 +879,7 @@ mod colorful_extension {
     }
     impl ExtraTokenFields for ColorfulFields {}
 
-    #[derive(Deserialize, PartialEq, Serialize)]
+    #[derive(Clone, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all = "snake_case")]
     pub enum ColorfulErrorResponseType {
         TooDark,

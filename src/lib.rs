@@ -1188,12 +1188,12 @@ struct RequestTokenResponse {
 ///
 /// Trait for OAuth2 access tokens.
 ///
-pub trait TokenType: DeserializeOwned + Debug + PartialEq + Serialize {}
+pub trait TokenType: Clone + DeserializeOwned + Debug + PartialEq + Serialize {}
 
 ///
 /// Trait for adding extra fields to the `TokenResponse`.
 ///
-pub trait ExtraTokenFields: DeserializeOwned + Debug + PartialEq + Serialize {}
+pub trait ExtraTokenFields: Clone + DeserializeOwned + Debug + PartialEq + Serialize {}
 
 ///
 /// Empty (default) extra token fields.
@@ -1208,7 +1208,7 @@ impl ExtraTokenFields for EmptyExtraTokenFields {}
 /// The methods in this struct are defined in
 /// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1).
 ///
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct TokenResponse<EF: ExtraTokenFields, TT: TokenType> {
     access_token: AccessToken,
     #[serde(bound = "TT: TokenType")]
@@ -1297,7 +1297,7 @@ impl<EF: ExtraTokenFields, TT: TokenType> TokenResponse<EF, TT> {
 /// (RFC 6749 or an extension).
 ///
 pub trait ErrorResponseType:
-    Debug + DeserializeOwned + Display + PartialEq + Send + Serialize + Sync
+    Clone + Debug + DeserializeOwned + Display + PartialEq + Send + Serialize + Sync
 {
 }
 
@@ -1309,7 +1309,7 @@ pub trait ErrorResponseType:
 /// trait is parameterized by a `ErrorResponseType` to support error types specific to future OAuth2
 /// authentication schemes and extensions.
 ///
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ErrorResponse<T: ErrorResponseType> {
     #[serde(bound = "T: ErrorResponseType")]
     error: T,

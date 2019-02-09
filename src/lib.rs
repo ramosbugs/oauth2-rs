@@ -569,7 +569,7 @@ new_secret_type![
         ///
         pub fn new_random_len(num_bytes: u32) -> Self {
             let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
-            CsrfToken::new(base64::encode(&random_bytes))
+            CsrfToken::new(base64::encode_config(&random_bytes, base64::URL_SAFE_NO_PAD))
         }
     }
 ];

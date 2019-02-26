@@ -717,7 +717,7 @@ fn test_exchange_code_with_json_parse_error() {
     assert!(token.is_err());
 
     match token.err().unwrap() {
-        RequestTokenError::Parse(json_err) => {
+        RequestTokenError::Parse(json_err, _) => {
             assert_eq!(1, json_err.line());
             assert_eq!(1, json_err.column());
             assert_eq!(serde_json::error::Category::Syntax, json_err.classify());
@@ -780,7 +780,7 @@ fn test_exchange_code_with_invalid_token_type() {
 
     assert!(token.is_err());
     match token.err().unwrap() {
-        RequestTokenError::Parse(json_err) => {
+        RequestTokenError::Parse(json_err, _) => {
             assert_eq!(1, json_err.line());
             assert_eq!(48, json_err.column());
             assert_eq!(serde_json::error::Category::Data, json_err.classify());

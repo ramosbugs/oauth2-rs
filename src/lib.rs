@@ -1122,15 +1122,15 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
             .post_request_token(token_url, params)
             .map_err(RequestTokenError::Request)?;
         if token_response.http_status != 200 {
-            let reason = String::from_utf8_lossy(token_response.response_body.as_slice());
+            let reason = token_response.response_body.as_slice();
             if reason.is_empty() {
                 return Err(RequestTokenError::Other(
                     "Server returned empty error response".to_string(),
                 ));
             } else {
-                let error = match serde_json::from_str::<ErrorResponse<TE>>(&reason) {
+                let error = match serde_json::from_slice::<ErrorResponse<TE>>(reason) {
                     Ok(error) => RequestTokenError::ServerResponse(error),
-                    Err(error) => RequestTokenError::Parse(error),
+                    Err(error) => RequestTokenError::Parse(error, reason.to_vec()),
                 };
                 return Err(error);
             }
@@ -1163,15 +1163,9 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
                 "Server returned empty response body".to_string(),
             ))
         } else {
-            let response_body =
-                String::from_utf8(token_response.response_body).map_err(|parse_error| {
-                    RequestTokenError::Other(format!(
-                        "Couldn't parse response as UTF-8: {}",
-                        parse_error
-                    ))
-                })?;
-
-            TokenResponse::from_json(&response_body).map_err(RequestTokenError::Parse)
+            let response_body = token_response.response_body.as_slice();
+            serde_json::from_slice(response_body)
+                .map_err(|e| RequestTokenError::Parse(e, response_body.to_vec()))
         }
     }
 }
@@ -1385,7 +1379,7 @@ pub enum RequestTokenError<T: ErrorResponseType + Send + Sync + 'static> {
     /// or error responses.
     ///
     #[fail(display = "Failed to parse server response")]
-    Parse(#[cause] serde_json::error::Error),
+    Parse(#[cause] serde_json::error::Error, Vec<u8>),
     ///
     /// Some other type of error occurred (e.g., an unexpected server response).
     ///

@@ -6,7 +6,7 @@ extern crate url;
 extern crate serde_derive;
 extern crate serde_json;
 
-use mockito::{mock, SERVER_URL};
+use mockito::{mock, server_url};
 use url::form_urlencoded::byte_serialize;
 use url::Url;
 
@@ -31,7 +31,7 @@ fn new_mock_client() -> BasicClient {
         Some(ClientSecret::new("bbb".to_string())),
         AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
+            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
         )),
     )
 }
@@ -42,7 +42,7 @@ fn new_mock_client_with_unsafe_chars() -> BasicClient {
         Some(ClientSecret::new("bbb/;&".to_string())),
         AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
+            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
         )),
     )
 }
@@ -265,7 +265,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
         Some(ClientSecret::new("bbb".to_string())),
         AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
+            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
         )),
     );
     let token = client
@@ -770,7 +770,7 @@ fn test_exchange_code_with_invalid_token_type() {
         None,
         AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
+            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
         )),
     );
 
@@ -933,7 +933,7 @@ fn test_extension_successful_with_minimal_json_response() {
         Some(ClientSecret::new("bbb".to_string())),
         AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
+            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
         )),
     );
     let token = client
@@ -980,7 +980,7 @@ fn test_extension_successful_with_complete_json_response() {
         Some(ClientSecret::new("bbb".to_string())),
         AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
+            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
         )),
     )
     .set_auth_type(oauth2::AuthType::RequestBody);
@@ -1038,7 +1038,7 @@ fn test_extension_with_simple_json_error() {
         Some(ClientSecret::new("bbb".to_string())),
         AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(SERVER_URL.to_string() + "/token")).unwrap(),
+            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
         )),
     );
     let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));

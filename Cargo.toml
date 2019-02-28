@@ -19,4 +19,4 @@ sha2 = "0.7"
 url = "1.0"
 
 [dev-dependencies]
-mockito = "0.8.2"
+mockito = "0.16.0"

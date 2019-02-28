@@ -662,7 +662,7 @@ ResourceOwnerPassword(String)];
 /// Stores the configuration for an OAuth2 client.
 ///
 #[derive(Clone, Debug)]
-pub struct Client<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> {
+pub struct Client<EF: ExtraTokenFields, TT: TokenType, SF: ScopeField, TE: ErrorResponseType> {
     client_id: ClientId,
     client_secret: Option<ClientSecret>,
     auth_url: AuthUrl,
@@ -672,10 +672,13 @@ pub struct Client<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> {
     redirect_url: Option<RedirectUrl>,
     phantom_ef: PhantomData<EF>,
     phantom_tt: PhantomData<TT>,
+    phantom_sf: PhantomData<SF>,
     phantom_te: PhantomData<TE>,
 }
 
-impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, TE> {
+impl<EF: ExtraTokenFields, TT: TokenType, SF: ScopeField, TE: ErrorResponseType>
+    Client<EF, TT, SF, TE>
+{
     ///
     /// Initializes an OAuth2 client with the fields common to most OAuth2 flows.
     ///
@@ -712,6 +715,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
             redirect_url: None,
             phantom_ef: PhantomData,
             phantom_tt: PhantomData,
+            phantom_sf: PhantomData,
             phantom_te: PhantomData,
         }
     }
@@ -909,7 +913,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     pub fn exchange_code(
         &self,
         code: AuthorizationCode,
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    ) -> Result<TokenResponse<EF, TT, SF>, RequestTokenError<TE>> {
         self.exchange_code_extension::<&str>(code, &[])
     }
 
@@ -925,7 +929,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
         &self,
         code: AuthorizationCode,
         extra_params: &[(&str, T)],
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>>
+    ) -> Result<TokenResponse<EF, TT, SF>, RequestTokenError<TE>>
     where
         T: AsRef<str> + Clone,
     {
@@ -955,7 +959,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
         &self,
         username: &ResourceOwnerUsername,
         password: &ResourceOwnerPassword,
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    ) -> Result<TokenResponse<EF, TT, SF>, RequestTokenError<TE>> {
         // Generate the space-delimited scopes String before initializing params so that it has
         // a long enough lifetime.
         let scopes_opt = if !self.scopes.is_empty() {
@@ -990,7 +994,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     ///
     pub fn exchange_client_credentials(
         &self,
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    ) -> Result<TokenResponse<EF, TT, SF>, RequestTokenError<TE>> {
         // Generate the space-delimited scopes String before initializing params so that it has
         // a long enough lifetime.
         let scopes_opt = if !self.scopes.is_empty() {
@@ -1021,7 +1025,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     pub fn exchange_refresh_token(
         &self,
         refresh_token: &RefreshToken,
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    ) -> Result<TokenResponse<EF, TT, SF>, RequestTokenError<TE>> {
         let params: Vec<(&str, &str)> = vec![
             ("grant_type", "refresh_token"),
             ("refresh_token", refresh_token.secret()),
@@ -1110,7 +1114,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     fn request_token(
         &self,
         params: Vec<(&str, &str)>,
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    ) -> Result<TokenResponse<EF, TT, SF>, RequestTokenError<TE>> {
         let token_url = self.token_url.as_ref().ok_or_else(||
                 // Arguably, it could be better to panic in this case. However, there may be
                 // situations where the library user gets the authorization server's configuration
@@ -1170,6 +1174,27 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     }
 }
 
+impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType>
+    Client<EF, TT, StringScopeField, TE>
+{
+    /// Convert this client into one that uses a list-separated scope field.
+    pub fn with_list_scope(self) -> Client<EF, TT, ListScopeField, TE> {
+        Client {
+            client_id: self.client_id,
+            client_secret: self.client_secret,
+            auth_url: self.auth_url,
+            auth_type: self.auth_type,
+            token_url: self.token_url,
+            scopes: self.scopes,
+            redirect_url: self.redirect_url,
+            phantom_ef: self.phantom_ef,
+            phantom_tt: self.phantom_tt,
+            phantom_te: self.phantom_te,
+            phantom_sf: PhantomData,
+        }
+    }
+}
+
 ///
 /// Private struct returned by `post_request_token`.
 ///
@@ -1196,14 +1221,172 @@ pub trait ExtraTokenFields: Clone + DeserializeOwned + Debug + PartialEq + Seria
 pub struct EmptyExtraTokenFields {}
 impl ExtraTokenFields for EmptyExtraTokenFields {}
 
+/// Trait for implementing a scope field in TokenResponse.
+pub trait ScopeField:
+    Clone + Debug + DeserializeOwned + PartialEq + Serialize + Default + AsRef<Vec<Scope>>
+{
+}
+
+/// The default, standards-compliant scope field which uses a space-separated string.
+///
+/// This type takes a JSON string and splits at each space character into a `Vec<String>` .
+///
+/// # Example
+///
+/// ```
+/// # #[macro_use] extern crate serde_derive;
+/// use oauth2::{prelude::NewType, Scope, StringScopeField};
+///
+/// #[derive(Debug, PartialEq, Serialize, Deserialize)]
+/// struct Token {
+///     scope: StringScopeField,
+/// }
+///
+/// # fn main() -> Result<(), Box<std::error::Error>> {
+/// let token = Token {
+///     scope: StringScopeField(vec![
+///         Scope::new(String::from("foo")),
+///         Scope::new(String::from("bar")),
+///         Scope::new(String::from("baz")),
+///     ]),
+/// };
+///
+/// let expected = "{\"scope\":\"foo bar baz\"}";
+/// assert_eq!(expected, serde_json::to_string(&token)?);
+/// assert_eq!(token, serde_json::from_str(expected)?);
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct StringScopeField(pub Vec<Scope>);
+
+impl AsRef<Vec<Scope>> for StringScopeField {
+    fn as_ref(&self) -> &Vec<Scope> {
+        &self.0
+    }
+}
+
+impl ScopeField for StringScopeField {}
+
+impl<'de> serde::Deserialize<'de> for StringScopeField {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        use serde_json::Value;
+
+        if let Some(space_delimited) = Option::<String>::deserialize(deserializer)? {
+            let entries = space_delimited
+                .split(' ')
+                .map(|s| Value::String(s.to_string()))
+                .collect();
+            Vec::<Scope>::deserialize(Value::Array(entries))
+                .map(StringScopeField)
+                .map_err(Error::custom)
+        } else {
+            // If the JSON value is null, use the default value.
+            Ok(StringScopeField(Default::default()))
+        }
+    }
+}
+
+impl serde::Serialize for StringScopeField {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let space_delimited = self
+            .0
+            .iter()
+            .map(|s| s.as_ref())
+            .collect::<Vec<_>>()
+            .join(" ");
+        serializer.serialize_str(&space_delimited)
+    }
+}
+
+/// List-based scope fields.
+///
+/// This is a non-standard representation for the `scope` field in the token response which is implemented by certain
+/// non-compliant OAuth 2.0 implementations (like Twitch).
+///
+/// You use this implementation by specifying it as you are constructing the client.
+///
+/// # Example
+///
+/// ```
+/// # #[macro_use] extern crate serde_derive;
+/// use oauth2::{prelude::NewType, Scope, ListScopeField};
+///
+/// #[derive(Debug, PartialEq, Serialize, Deserialize)]
+/// struct Token {
+///     scope: ListScopeField,
+/// }
+///
+/// # fn main() -> Result<(), Box<std::error::Error>> {
+/// let token = Token {
+///     scope: ListScopeField(vec![
+///         Scope::new(String::from("foo")),
+///         Scope::new(String::from("bar")),
+///         Scope::new(String::from("baz")),
+///     ]),
+/// };
+///
+/// let expected = "{\"scope\":[\"foo\",\"bar\",\"baz\"]}";
+/// assert_eq!(expected, serde_json::to_string(&token)?);
+/// assert_eq!(token, serde_json::from_str(expected)?);
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ListScopeField(pub Vec<Scope>);
+
+impl AsRef<Vec<Scope>> for ListScopeField {
+    fn as_ref(&self) -> &Vec<Scope> {
+        &self.0
+    }
+}
+
+impl ScopeField for ListScopeField {}
+
+impl<'de> serde::Deserialize<'de> for ListScopeField {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        use serde_json::Value;
+
+        if let Some(space_delimited) = Option::<Vec<String>>::deserialize(deserializer)? {
+            let entries = space_delimited.into_iter().map(Value::String).collect();
+            Vec::<Scope>::deserialize(Value::Array(entries))
+                .map(ListScopeField)
+                .map_err(Error::custom)
+        } else {
+            // If the JSON value is null, use the default value.
+            Ok(ListScopeField(Default::default()))
+        }
+    }
+}
+
+impl serde::Serialize for ListScopeField {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        Vec::<Scope>::serialize(&self.0, serializer)
+    }
+}
+
 ///
 /// Common methods shared by all OAuth2 token implementations.
 ///
 /// The methods in this struct are defined in
 /// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1).
 ///
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct TokenResponse<EF: ExtraTokenFields, TT: TokenType> {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TokenResponse<EF: ExtraTokenFields, TT: TokenType, SF: ScopeField> {
     access_token: AccessToken,
     #[serde(bound = "TT: TokenType")]
     #[serde(deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive")]
@@ -1212,18 +1395,18 @@ pub struct TokenResponse<EF: ExtraTokenFields, TT: TokenType> {
     expires_in: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     refresh_token: Option<RefreshToken>,
+    #[serde(bound = "SF: ScopeField")]
     #[serde(rename = "scope")]
-    #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
-    #[serde(serialize_with = "helpers::serialize_space_delimited_vec")]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    scopes: Option<Vec<Scope>>,
+    scopes: Option<SF>,
 
     #[serde(bound = "EF: ExtraTokenFields")]
     #[serde(flatten)]
     extra_fields: EF,
 }
-impl<EF: ExtraTokenFields, TT: TokenType> TokenResponse<EF, TT> {
+
+impl<EF: ExtraTokenFields, TT: TokenType, SF: ScopeField> TokenResponse<EF, TT, SF> {
     ///
     /// REQUIRED. The access token issued by the authorization server.
     ///
@@ -1263,7 +1446,7 @@ impl<EF: ExtraTokenFields, TT: TokenType> TokenResponse<EF, TT> {
     /// the response, this field is `None`.
     ///
     pub fn scopes(&self) -> Option<&Vec<Scope>> {
-        self.scopes.as_ref()
+        self.scopes.as_ref().map(|s| s.as_ref())
     }
 
     ///
@@ -1400,13 +1583,14 @@ pub mod basic {
     use super::helpers;
     use super::{
         Client, EmptyExtraTokenFields, ErrorResponse, ErrorResponseType, RequestTokenError,
-        TokenResponse, TokenType,
+        StringScopeField, TokenResponse, TokenType,
     };
 
     ///
     /// Basic OAuth2 client specialization, suitable for most applications.
     ///
-    pub type BasicClient = Client<EmptyExtraTokenFields, BasicTokenType, BasicErrorResponseType>;
+    pub type BasicClient =
+        Client<EmptyExtraTokenFields, BasicTokenType, StringScopeField, BasicErrorResponseType>;
 
     ///
     /// Basic OAuth2 authorization token types.
@@ -1430,7 +1614,8 @@ pub mod basic {
     ///
     /// Basic OAuth2 token response.
     ///
-    pub type BasicTokenResponse = TokenResponse<EmptyExtraTokenFields, BasicTokenType>;
+    pub type BasicTokenResponse =
+        TokenResponse<EmptyExtraTokenFields, BasicTokenType, StringScopeField>;
 
     ///
     /// Basic access token error types.
@@ -1504,7 +1689,7 @@ pub mod basic {
 pub mod insecure {
     use url::Url;
 
-    use super::{Client, ErrorResponseType, ExtraTokenFields, TokenType};
+    use super::{Client, ErrorResponseType, ExtraTokenFields, ScopeField, TokenType};
 
     ///
     /// Produces the full authorization URL used by the
@@ -1517,11 +1702,12 @@ pub mod insecure {
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12) attacks.
     /// It is highly recommended to use the `Client::authorize_url` function instead.
     ///
-    pub fn authorize_url<EF, TT, TE>(client: &Client<EF, TT, TE>) -> Url
+    pub fn authorize_url<EF, TT, SF, TE>(client: &Client<EF, TT, SF, TE>) -> Url
     where
         EF: ExtraTokenFields,
         TT: TokenType,
         TE: ErrorResponseType,
+        SF: ScopeField,
     {
         client.authorize_url_impl::<&str>("code", None, None)
     }
@@ -1536,11 +1722,12 @@ pub mod insecure {
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12) attacks.
     /// It is highly recommended to use the `Client::authorize_url_implicit` function instead.
     ///
-    pub fn authorize_url_implicit<EF, TT, TE>(client: &Client<EF, TT, TE>) -> Url
+    pub fn authorize_url_implicit<EF, TT, SF, TE>(client: &Client<EF, TT, SF, TE>) -> Url
     where
         EF: ExtraTokenFields,
         TT: TokenType,
         TE: ErrorResponseType,
+        SF: ScopeField,
     {
         client.authorize_url_impl::<&str>("token", None, None)
     }
@@ -1608,84 +1795,6 @@ pub mod helpers {
             String::deserialize(deserializer)?.to_lowercase(),
         ))
         .map_err(Error::custom)
-    }
-
-    ///
-    /// Serde space-delimited string deserializer for a `Vec<String>`.
-    ///
-    /// This function splits a JSON string at each space character into a `Vec<String>` .
-    ///
-    /// # Example
-    ///
-    /// In example below, the JSON value `{"items": "foo bar baz"}` would deserialize to:
-    ///
-    /// ```
-    /// # struct GroceryBasket {
-    /// #     items: Vec<String>,
-    /// # }
-    /// # fn main() {
-    /// GroceryBasket {
-    ///     items: vec!["foo".to_string(), "bar".to_string(), "baz".to_string()]
-    /// };
-    /// # }
-    /// ```
-    ///
-    /// Note: this example does not compile automatically due to
-    /// [Rust issue #29286](https://github.com/rust-lang/rust/issues/29286).
-    ///
-    /// ```
-    /// # /*
-    /// use serde::Deserialize;
-    ///
-    /// #[derive(Deserialize)]
-    /// struct GroceryBasket {
-    ///     #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
-    ///     items: Vec<String>,
-    /// }
-    /// # */
-    /// ```
-    ///
-    pub fn deserialize_space_delimited_vec<'de, T, D>(deserializer: D) -> Result<T, D::Error>
-    where
-        T: Default + Deserialize<'de>,
-        D: Deserializer<'de>,
-    {
-        use serde::de::Error;
-        use serde_json::Value;
-        if let Some(space_delimited) = Option::<String>::deserialize(deserializer)? {
-            let entries = space_delimited
-                .split(' ')
-                .map(|s| Value::String(s.to_string()))
-                .collect();
-            T::deserialize(Value::Array(entries)).map_err(Error::custom)
-        } else {
-            // If the JSON value is null, use the default value.
-            Ok(T::default())
-        }
-    }
-
-    ///
-    /// Serde space-delimited string serializer for an `Option<Vec<String>>`.
-    ///
-    /// This function serializes a string vector into a single space-delimited string.
-    /// If `string_vec_opt` is `None`, the function serializes it as `None` (e.g., `null`
-    /// in the case of JSON serialization).
-    ///
-    pub fn serialize_space_delimited_vec<T, S>(
-        vec_opt: &Option<Vec<T>>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
-    where
-        T: AsRef<str>,
-        S: Serializer,
-    {
-        if let Some(ref vec) = *vec_opt {
-            let space_delimited = vec.iter().map(|s| s.as_ref()).collect::<Vec<_>>().join(" ");
-
-            serializer.serialize_str(&space_delimited)
-        } else {
-            serializer.serialize_none()
-        }
     }
 
     ///

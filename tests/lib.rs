@@ -851,7 +851,8 @@ mod colorful_extension {
     use std::fmt::Error as FormatterError;
     use std::fmt::{Debug, Display, Formatter};
 
-    pub type ColorfulClient = Client<ColorfulFields, ColorfulTokenType, ColorfulErrorResponseType>;
+    pub type ColorfulClient =
+        Client<ColorfulFields, ColorfulTokenType, StringScopeField, ColorfulErrorResponseType>;
 
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all = "lowercase")]
@@ -913,7 +914,8 @@ mod colorful_extension {
         }
     }
 
-    pub type ColorfulTokenResponse = TokenResponse<ColorfulFields, ColorfulTokenType>;
+    pub type ColorfulTokenResponse =
+        TokenResponse<ColorfulFields, ColorfulTokenType, StringScopeField>;
 }
 
 #[test]

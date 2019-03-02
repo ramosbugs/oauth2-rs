@@ -1030,10 +1030,33 @@ where
         &self,
         refresh_token: &RefreshToken,
     ) -> Result<TR, RequestTokenError<TE>> {
-        let params: Vec<(&str, &str)> = vec![
+        self.exchange_refresh_token_extension::<&str>(refresh_token, &[])
+    }
+
+    ///
+    /// Exchanges a refresh token for an access token
+    ///
+    /// See https://tools.ietf.org/html/rfc6749#section-6
+    ///
+    pub fn exchange_refresh_token_extension<T>(
+        &self,
+        refresh_token: &RefreshToken,
+        extra_params: &[(&str, T)],
+    ) -> Result<TR, RequestTokenError<TE>>
+    where
+        T: AsRef<str> + Clone,
+    {
+        let mut params: Vec<(&str, &str)> = vec![
             ("grant_type", "refresh_token"),
             ("refresh_token", refresh_token.secret()),
         ];
+
+        params.extend_from_slice(
+            &extra_params
+                .iter()
+                .map(|&(k, ref v)| (k, v.as_ref()))
+                .collect::<Vec<(&str, &str)>>(),
+        );
 
         self.request_token(params)
     }

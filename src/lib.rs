@@ -679,7 +679,7 @@ where
     scopes: Vec<Scope>,
     redirect_url: Option<RedirectUrl>,
     phantom_te: PhantomData<TE>,
-    phantom_ef: PhantomData<TR>,
+    phantom_tr: PhantomData<TR>,
     phantom_tt: PhantomData<TT>,
 }
 
@@ -723,9 +723,9 @@ where
             token_url,
             scopes: Vec::new(),
             redirect_url: None,
-            phantom_ef: PhantomData,
-            phantom_tt: PhantomData,
             phantom_te: PhantomData,
+            phantom_tr: PhantomData,
+            phantom_tt: PhantomData,
         }
     }
 

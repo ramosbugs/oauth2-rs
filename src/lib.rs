@@ -24,6 +24,7 @@
 //!     CsrfToken,
 //!     RedirectUrl,
 //!     Scope,
+//!     TokenResponse,
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
@@ -139,6 +140,7 @@
 //!     ResourceOwnerPassword,
 //!     ResourceOwnerUsername,
 //!     Scope,
+//!     TokenResponse,
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
@@ -181,6 +183,7 @@
 //!     ClientId,
 //!     ClientSecret,
 //!     Scope,
+//!     TokenResponse,
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
@@ -662,7 +665,12 @@ ResourceOwnerPassword(String)];
 /// Stores the configuration for an OAuth2 client.
 ///
 #[derive(Clone, Debug)]
-pub struct Client<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> {
+pub struct Client<TE, TR, TT>
+where
+    TE: ErrorResponseType,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
     client_id: ClientId,
     client_secret: Option<ClientSecret>,
     auth_url: AuthUrl,
@@ -670,12 +678,17 @@ pub struct Client<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> {
     token_url: Option<TokenUrl>,
     scopes: Vec<Scope>,
     redirect_url: Option<RedirectUrl>,
-    phantom_ef: PhantomData<EF>,
-    phantom_tt: PhantomData<TT>,
     phantom_te: PhantomData<TE>,
+    phantom_ef: PhantomData<TR>,
+    phantom_tt: PhantomData<TT>,
 }
 
-impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, TE> {
+impl<TE, TR, TT> Client<TE, TR, TT>
+where
+    TE: ErrorResponseType,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
     ///
     /// Initializes an OAuth2 client with the fields common to most OAuth2 flows.
     ///
@@ -906,10 +919,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
     ///
-    pub fn exchange_code(
-        &self,
-        code: AuthorizationCode,
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    pub fn exchange_code(&self, code: AuthorizationCode) -> Result<TR, RequestTokenError<TE>> {
         self.exchange_code_extension::<&str>(code, &[])
     }
 
@@ -925,7 +935,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
         &self,
         code: AuthorizationCode,
         extra_params: &[(&str, T)],
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>>
+    ) -> Result<TR, RequestTokenError<TE>>
     where
         T: AsRef<str> + Clone,
     {
@@ -955,7 +965,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
         &self,
         username: &ResourceOwnerUsername,
         password: &ResourceOwnerPassword,
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    ) -> Result<TR, RequestTokenError<TE>> {
         // Generate the space-delimited scopes String before initializing params so that it has
         // a long enough lifetime.
         let scopes_opt = if !self.scopes.is_empty() {
@@ -988,9 +998,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     ///
     /// See https://tools.ietf.org/html/rfc6749#section-4.4.2
     ///
-    pub fn exchange_client_credentials(
-        &self,
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    pub fn exchange_client_credentials(&self) -> Result<TR, RequestTokenError<TE>> {
         // Generate the space-delimited scopes String before initializing params so that it has
         // a long enough lifetime.
         let scopes_opt = if !self.scopes.is_empty() {
@@ -1021,7 +1029,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
     pub fn exchange_refresh_token(
         &self,
         refresh_token: &RefreshToken,
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    ) -> Result<TR, RequestTokenError<TE>> {
         let params: Vec<(&str, &str)> = vec![
             ("grant_type", "refresh_token"),
             ("refresh_token", refresh_token.secret()),
@@ -1107,10 +1115,7 @@ impl<EF: ExtraTokenFields, TT: TokenType, TE: ErrorResponseType> Client<EF, TT, 
         })
     }
 
-    fn request_token(
-        &self,
-        params: Vec<(&str, &str)>,
-    ) -> Result<TokenResponse<EF, TT>, RequestTokenError<TE>> {
+    fn request_token(&self, params: Vec<(&str, &str)>) -> Result<TR, RequestTokenError<TE>> {
         let token_url = self.token_url.as_ref().ok_or_else(||
                 // Arguably, it could be better to panic in this case. However, there may be
                 // situations where the library user gets the authorization server's configuration
@@ -1199,11 +1204,57 @@ impl ExtraTokenFields for EmptyExtraTokenFields {}
 ///
 /// Common methods shared by all OAuth2 token implementations.
 ///
-/// The methods in this struct are defined in
-/// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1).
+/// The methods in this trait are defined in
+/// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1). This trait exists
+/// separately from the `StandardTokenResponse` struct to support customization by clients,
+/// such as supporting interoperability with non-standards-complaint OAuth2 providers.
+///
+pub trait TokenResponse<TT>: Clone + Debug + DeserializeOwned + PartialEq + Serialize
+where
+    TT: TokenType,
+{
+    ///
+    /// REQUIRED. The access token issued by the authorization server.
+    ///
+    fn access_token(&self) -> &AccessToken;
+    ///
+    /// REQUIRED. The type of the token issued as described in
+    /// [Section 7.1](https://tools.ietf.org/html/rfc6749#section-7.1).
+    /// Value is case insensitive and deserialized to the generic `TokenType` parameter.
+    ///
+    fn token_type(&self) -> &TT;
+    ///
+    /// RECOMMENDED. The lifetime in seconds of the access token. For example, the value 3600
+    /// denotes that the access token will expire in one hour from the time the response was
+    /// generated. If omitted, the authorization server SHOULD provide the expiration time via
+    /// other means or document the default value.
+    ///
+    fn expires_in(&self) -> Option<Duration>;
+    ///
+    /// OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
+    /// authorization grant as described in
+    /// [Section 6](https://tools.ietf.org/html/rfc6749#section-6).
+    ///
+    fn refresh_token(&self) -> Option<&RefreshToken>;
+    ///
+    /// OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The
+    /// scipe of the access token as described by
+    /// [Section 3.3](https://tools.ietf.org/html/rfc6749#section-3.3). If included in the response,
+    /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
+    /// the response, this field is `None`.
+    ///
+    fn scopes(&self) -> Option<&Vec<Scope>>;
+}
+
+///
+/// Standard OAuth2 token response.
+///
+/// This struct includes the fields defined in
+/// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1), as well as
+/// extensions defined by the `EF` type parameter.
 ///
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct TokenResponse<EF: ExtraTokenFields, TT: TokenType> {
+pub struct StandardTokenResponse<EF: ExtraTokenFields, TT: TokenType> {
     access_token: AccessToken,
     #[serde(bound = "TT: TokenType")]
     #[serde(deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive")]
@@ -1223,11 +1274,29 @@ pub struct TokenResponse<EF: ExtraTokenFields, TT: TokenType> {
     #[serde(flatten)]
     extra_fields: EF,
 }
-impl<EF: ExtraTokenFields, TT: TokenType> TokenResponse<EF, TT> {
+
+impl<EF, TT> StandardTokenResponse<EF, TT>
+where
+    EF: ExtraTokenFields,
+    TT: TokenType,
+{
+    ///
+    /// Extra fields defined by client application.
+    ///
+    pub fn extra_fields(&self) -> &EF {
+        &self.extra_fields
+    }
+}
+
+impl<EF, TT> TokenResponse<TT> for StandardTokenResponse<EF, TT>
+where
+    EF: ExtraTokenFields,
+    TT: TokenType,
+{
     ///
     /// REQUIRED. The access token issued by the authorization server.
     ///
-    pub fn access_token(&self) -> &AccessToken {
+    fn access_token(&self) -> &AccessToken {
         &self.access_token
     }
     ///
@@ -1235,7 +1304,7 @@ impl<EF: ExtraTokenFields, TT: TokenType> TokenResponse<EF, TT> {
     /// [Section 7.1](https://tools.ietf.org/html/rfc6749#section-7.1).
     /// Value is case insensitive and deserialized to the generic `TokenType` parameter.
     ///
-    pub fn token_type(&self) -> &TT {
+    fn token_type(&self) -> &TT {
         &self.token_type
     }
     ///
@@ -1244,7 +1313,7 @@ impl<EF: ExtraTokenFields, TT: TokenType> TokenResponse<EF, TT> {
     /// generated. If omitted, the authorization server SHOULD provide the expiration time via
     /// other means or document the default value.
     ///
-    pub fn expires_in(&self) -> Option<Duration> {
+    fn expires_in(&self) -> Option<Duration> {
         self.expires_in.map(Duration::from_secs)
     }
     ///
@@ -1252,7 +1321,7 @@ impl<EF: ExtraTokenFields, TT: TokenType> TokenResponse<EF, TT> {
     /// authorization grant as described in
     /// [Section 6](https://tools.ietf.org/html/rfc6749#section-6).
     ///
-    pub fn refresh_token(&self) -> Option<&RefreshToken> {
+    fn refresh_token(&self) -> Option<&RefreshToken> {
         self.refresh_token.as_ref()
     }
     ///
@@ -1262,24 +1331,8 @@ impl<EF: ExtraTokenFields, TT: TokenType> TokenResponse<EF, TT> {
     /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
     /// the response, this field is `None`.
     ///
-    pub fn scopes(&self) -> Option<&Vec<Scope>> {
+    fn scopes(&self) -> Option<&Vec<Scope>> {
         self.scopes.as_ref()
-    }
-
-    ///
-    /// Extra fields defined by client application.
-    ///
-    pub fn extra_fields(&self) -> &EF {
-        &self.extra_fields
-    }
-
-    ///
-    /// Factory method to deserialize a `Token` from a JSON response.
-    ///
-    /// # Failures
-    /// If parsing fails, returns a `serde_json::error::Error` describing the parse error.
-    pub fn from_json(data: &str) -> Result<Self, serde_json::error::Error> {
-        serde_json::from_str(data)
     }
 }
 
@@ -1400,13 +1453,13 @@ pub mod basic {
     use super::helpers;
     use super::{
         Client, EmptyExtraTokenFields, ErrorResponse, ErrorResponseType, RequestTokenError,
-        TokenResponse, TokenType,
+        StandardTokenResponse, TokenType,
     };
 
     ///
     /// Basic OAuth2 client specialization, suitable for most applications.
     ///
-    pub type BasicClient = Client<EmptyExtraTokenFields, BasicTokenType, BasicErrorResponseType>;
+    pub type BasicClient = Client<BasicErrorResponseType, BasicTokenResponse, BasicTokenType>;
 
     ///
     /// Basic OAuth2 authorization token types.
@@ -1430,7 +1483,7 @@ pub mod basic {
     ///
     /// Basic OAuth2 token response.
     ///
-    pub type BasicTokenResponse = TokenResponse<EmptyExtraTokenFields, BasicTokenType>;
+    pub type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>;
 
     ///
     /// Basic access token error types.
@@ -1504,7 +1557,7 @@ pub mod basic {
 pub mod insecure {
     use url::Url;
 
-    use super::{Client, ErrorResponseType, ExtraTokenFields, TokenType};
+    use super::{Client, ErrorResponseType, TokenResponse, TokenType};
 
     ///
     /// Produces the full authorization URL used by the
@@ -1517,11 +1570,11 @@ pub mod insecure {
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12) attacks.
     /// It is highly recommended to use the `Client::authorize_url` function instead.
     ///
-    pub fn authorize_url<EF, TT, TE>(client: &Client<EF, TT, TE>) -> Url
+    pub fn authorize_url<TE, TR, TT>(client: &Client<TE, TR, TT>) -> Url
     where
-        EF: ExtraTokenFields,
-        TT: TokenType,
         TE: ErrorResponseType,
+        TR: TokenResponse<TT>,
+        TT: TokenType,
     {
         client.authorize_url_impl::<&str>("code", None, None)
     }
@@ -1536,11 +1589,11 @@ pub mod insecure {
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12) attacks.
     /// It is highly recommended to use the `Client::authorize_url_implicit` function instead.
     ///
-    pub fn authorize_url_implicit<EF, TT, TE>(client: &Client<EF, TT, TE>) -> Url
+    pub fn authorize_url_implicit<TE, TR, TT>(client: &Client<TE, TR, TT>) -> Url
     where
-        EF: ExtraTokenFields,
-        TT: TokenType,
         TE: ErrorResponseType,
+        TR: TokenResponse<TT>,
+        TT: TokenType,
     {
         client.authorize_url_impl::<&str>("token", None, None)
     }

@@ -286,7 +286,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
         serialized_json
     );
 
-    let deserialized_token = BasicTokenResponse::from_json(&serialized_json).unwrap();
+    let deserialized_token = serde_json::from_str::<BasicTokenResponse>(&serialized_json).unwrap();
     assert_eq!(token, deserialized_token);
 }
 
@@ -330,7 +330,7 @@ fn test_exchange_code_successful_with_complete_json_response() {
         serialized_json
     );
 
-    let deserialized_token = BasicTokenResponse::from_json(&serialized_json).unwrap();
+    let deserialized_token = serde_json::from_str::<BasicTokenResponse>(&serialized_json).unwrap();
     assert_eq!(token, deserialized_token);
 }
 
@@ -851,7 +851,11 @@ mod colorful_extension {
     use std::fmt::Error as FormatterError;
     use std::fmt::{Debug, Display, Formatter};
 
-    pub type ColorfulClient = Client<ColorfulFields, ColorfulTokenType, ColorfulErrorResponseType>;
+    pub type ColorfulClient = Client<
+        ColorfulErrorResponseType,
+        StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
+        ColorfulTokenType,
+    >;
 
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
     #[serde(rename_all = "lowercase")]
@@ -913,7 +917,7 @@ mod colorful_extension {
         }
     }
 
-    pub type ColorfulTokenResponse = TokenResponse<ColorfulFields, ColorfulTokenType>;
+    pub type ColorfulTokenResponse = StandardTokenResponse<ColorfulFields, ColorfulTokenType>;
 }
 
 #[test]
@@ -956,7 +960,8 @@ fn test_extension_successful_with_minimal_json_response() {
         serialized_json
     );
 
-    let deserialized_token = ColorfulTokenResponse::from_json(&serialized_json).unwrap();
+    let deserialized_token =
+        serde_json::from_str::<ColorfulTokenResponse>(&serialized_json).unwrap();
     assert_eq!(token, deserialized_token);
 }
 
@@ -1013,7 +1018,8 @@ fn test_extension_successful_with_complete_json_response() {
         serialized_json
     );
 
-    let deserialized_token = ColorfulTokenResponse::from_json(&serialized_json).unwrap();
+    let deserialized_token =
+        serde_json::from_str::<ColorfulTokenResponse>(&serialized_json).unwrap();
     assert_eq!(token, deserialized_token);
 }
 

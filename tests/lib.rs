@@ -914,9 +914,9 @@ mod colorful_extension {
     pub struct ColorfulFields {
         #[serde(rename = "shape")]
         #[serde(skip_serializing_if = "Option::is_none")]
-        shape: Option<String>,
+        pub shape: Option<String>,
         #[serde(rename = "height")]
-        height: u32,
+        pub height: u32,
     }
     impl ColorfulFields {
         pub fn shape(&self) -> Option<&String> {
@@ -1139,6 +1139,60 @@ fn test_extension_with_simple_json_error() {
     assert_eq!(
         "Server returned error response `too_light: stuff happened / See https://errors`",
         format!("{}", token_err)
+    );
+}
+
+#[test]
+fn test_extension_serializer() {
+    use colorful_extension::{ColorfulFields, ColorfulTokenResponse, ColorfulTokenType};
+    let mut token_response = ColorfulTokenResponse::new(
+        AccessToken::new("mysecret".to_string()),
+        ColorfulTokenType::Red,
+        ColorfulFields {
+            shape: Some("circle".to_string()),
+            height: 10,
+        },
+    );
+    token_response.set_expires_in(Some(3600));
+    token_response.set_refresh_token(Some(RefreshToken::new("myothersecret".to_string())));
+    let serialized = serde_json::to_string(&token_response).unwrap();
+    assert_eq!(
+        "{\
+         \"access_token\":\"mysecret\",\
+         \"token_type\":\"red\",\
+         \"expires_in\":3600,\
+         \"refresh_token\":\"myothersecret\",\
+         \"shape\":\"circle\",\
+         \"height\":10\
+         }",
+        serialized,
+    );
+}
+
+#[test]
+fn test_error_response_serializer() {
+    assert_eq!(
+        "{\"error\":\"unauthorized_client\"}",
+        serde_json::to_string(&BasicErrorResponse::new(
+            BasicErrorResponseType::UnauthorizedClient,
+            None,
+            None,
+        ))
+        .unwrap(),
+    );
+
+    assert_eq!(
+        "{\
+         \"error\":\"invalid_client\",\
+         \"error_description\":\"Invalid client_id\",\
+         \"error_uri\":\"https://example.com/errors/invalid_client\"\
+         }",
+        serde_json::to_string(&BasicErrorResponse::new(
+            BasicErrorResponseType::InvalidClient,
+            Some("Invalid client_id".to_string()),
+            Some("https://example.com/errors/invalid_client".to_string()),
+        ))
+        .unwrap(),
     );
 }
 

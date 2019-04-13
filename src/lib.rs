@@ -1304,10 +1304,66 @@ where
     TT: TokenType,
 {
     ///
-    /// Extra fields defined by client application.
+    /// Instantiate a new OAuth2 token response.
+    ///
+    pub fn new(access_token: AccessToken, token_type: TT, extra_fields: EF) -> Self {
+        Self {
+            access_token,
+            token_type,
+            expires_in: None,
+            refresh_token: None,
+            scopes: None,
+            extra_fields,
+        }
+    }
+
+    ///
+    /// Set the `access_token` field.
+    ///
+    pub fn set_access_token(&mut self, access_token: AccessToken) {
+        self.access_token = access_token;
+    }
+
+    ///
+    /// Set the `token_type` field.
+    ///
+    pub fn set_token_type(&mut self, token_type: TT) {
+        self.token_type = token_type;
+    }
+
+    ///
+    /// Set the `expires_in` field.
+    ///
+    pub fn set_expires_in(&mut self, expires_in: Option<u64>) {
+        self.expires_in = expires_in;
+    }
+
+    ///
+    /// Set the `refresh_token` field.
+    ///
+    pub fn set_refresh_token(&mut self, refresh_token: Option<RefreshToken>) {
+        self.refresh_token = refresh_token;
+    }
+
+    ///
+    /// Set the `scopes` field.
+    ///
+    pub fn set_scopes(&mut self, scopes: Option<Vec<Scope>>) {
+        self.scopes = scopes;
+    }
+
+    ///
+    /// Extra fields defined by the client application.
     ///
     pub fn extra_fields(&self) -> &EF {
         &self.extra_fields
+    }
+
+    ///
+    /// Set the extra fields defined by the client application.
+    ///
+    pub fn set_extra_fields(&mut self, extra_fields: EF) {
+        self.extra_fields = extra_fields;
     }
 }
 
@@ -1393,6 +1449,30 @@ pub struct ErrorResponse<T: ErrorResponseType> {
 
 impl<T: ErrorResponseType> ErrorResponse<T> {
     ///
+    /// Instantiate a new `ErrorResponse`.
+    ///
+    /// # Arguments
+    ///
+    /// * `error` - REQUIRED. A single ASCII error code deserialized to the generic parameter.
+    ///   `ErrorResponseType`.
+    /// * `error_description` - OPTIONAL. Human-readable ASCII text providing additional
+    ///   information, used to assist the client developer in understanding the error that
+    ///   occurred. Values for this parameter MUST NOT include characters outside the set
+    ///   `%x20-21 / %x23-5B / %x5D-7E`.
+    /// * `error_uri` - OPTIONAL. A URI identifying a human-readable web page with information
+    ///   about the error used to provide the client developer with additional information about
+    ///   the error. Values for the "error_uri" parameter MUST conform to the URI-reference
+    ///   syntax and thus MUST NOT include characters outside the set `%x21 / %x23-5B / %x5D-7E`.
+    ///
+    pub fn new(error: T, error_description: Option<String>, error_uri: Option<String>) -> Self {
+        Self {
+            error,
+            error_description,
+            error_uri,
+        }
+    }
+
+    ///
     /// REQUIRED. A single ASCII error code deserialized to the generic parameter
     /// `ErrorResponseType`.
     ///
@@ -1401,7 +1481,8 @@ impl<T: ErrorResponseType> ErrorResponse<T> {
     }
     ///
     /// OPTIONAL. Human-readable ASCII text providing additional information, used to assist
-    /// the client developer in understanding the error that occurred.
+    /// the client developer in understanding the error that occurred. Values for this
+    /// parameter MUST NOT include characters outside the set `%x20-21 / %x23-5B / %x5D-7E`.
     ///
     pub fn error_description(&self) -> Option<&String> {
         self.error_description.as_ref()
@@ -1409,6 +1490,8 @@ impl<T: ErrorResponseType> ErrorResponse<T> {
     ///
     /// OPTIONAL. A URI identifying a human-readable web page with information about the error,
     /// used to provide the client developer with additional information about the error.
+    /// Values for the "error_uri" parameter MUST conform to the URI-reference syntax and
+    /// thus MUST NOT include characters outside the set `%x21 / %x23-5B / %x5D-7E`.
     ///
     pub fn error_uri(&self) -> Option<&String> {
         self.error_uri.as_ref()

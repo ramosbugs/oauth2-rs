@@ -10,10 +10,13 @@ branches:
     - master
     - devel/2.0.0
     - support/1.x
+before_script:
+  - cargo install --force cargo-audit
 script:
   - cargo test -- --test-threads=1
   - cargo test --example google
   - cargo test --example github
+  - cargo audit
 notifications:
   email:
     on_success: never

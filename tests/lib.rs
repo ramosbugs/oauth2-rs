@@ -701,7 +701,7 @@ fn test_exchange_code_with_simple_json_error() {
 
             // Test Debug trait for ErrorResponse
             assert_eq!(
-                "ErrorResponse { error: invalid_request, \
+                "StandardErrorResponse { error: invalid_request, \
                  error_description: Some(\"stuff happened\"), error_uri: None }",
                 format!("{:?}", error_response)
             );
@@ -733,7 +733,7 @@ fn test_exchange_code_with_simple_json_error() {
 
     // Test Debug trait for RequestTokenError
     assert_eq!(
-        "ServerResponse(ErrorResponse { error: invalid_request, \
+        "ServerResponse(StandardErrorResponse { error: invalid_request, \
          error_description: Some(\"stuff happened\"), error_uri: None })",
         format!("{:?}", token_err)
     );
@@ -897,7 +897,7 @@ mod colorful_extension {
     use std::fmt::{Debug, Display, Formatter};
 
     pub type ColorfulClient = Client<
-        ColorfulErrorResponseType,
+        StandardErrorResponse<ColorfulErrorResponseType>,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
     >;
@@ -1121,7 +1121,7 @@ fn test_extension_with_simple_json_error() {
             );
 
             let deserialized_error = serde_json::from_str::<
-                oauth2::ErrorResponse<ColorfulErrorResponseType>,
+                oauth2::StandardErrorResponse<ColorfulErrorResponseType>,
             >(&serialized_json)
             .unwrap();
             assert_eq!(error_response, &deserialized_error);
@@ -1131,7 +1131,7 @@ fn test_extension_with_simple_json_error() {
 
     // Test Debug trait for RequestTokenError
     assert_eq!(
-        "ServerResponse(ErrorResponse { error: too_light, \
+        "ServerResponse(StandardErrorResponse { error: too_light, \
          error_description: Some(\"stuff happened\"), error_uri: Some(\"https://errors\") })",
         format!("{:?}", token_err)
     );
@@ -1140,6 +1140,73 @@ fn test_extension_with_simple_json_error() {
         "Server returned error response `too_light: stuff happened / See https://errors`",
         format!("{}", token_err)
     );
+}
+
+mod custom_errors {
+    use std::fmt::Error as FormatterError;
+    use std::fmt::{Display, Formatter};
+
+    extern crate serde_json;
+
+    use oauth2::*;
+    use colorful_extension::*;
+
+
+    #[derive(Serialize, Deserialize, Debug)]
+    pub struct CustomErrorResponse {
+        pub custom_error: String
+    }
+
+    impl Display for CustomErrorResponse {
+        fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
+            write!(f, "Custom Error from server")
+        }
+    }
+
+    impl ErrorResponse for CustomErrorResponse {}
+
+    pub type CustomErrorClient = Client<
+        CustomErrorResponse,
+        StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
+        ColorfulTokenType,
+    >;
+
+}
+
+#[test]
+fn test_extension_with_custom_json_error() {
+    use custom_errors::*;
+
+    let mock = mock("POST", "/token")
+        .match_header("Accept", "application/json")
+        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
+        .match_body("grant_type=authorization_code&code=ccc")
+        .with_status(400)
+        .with_header("content-type", "application/json")
+        .with_body(
+            "{\"custom_error\": \"non-compliant oauth implementation ;-)\"}",
+        )
+        .create();
+
+    let client = CustomErrorClient::new(
+        ClientId::new("aaa".to_string()),
+        Some(ClientSecret::new("bbb".to_string())),
+        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+        Some(TokenUrl::new(
+            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
+        )),
+    );
+
+    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
+
+    mock.assert();
+
+    assert!(token.is_err());
+
+    match token.err().unwrap() {
+        RequestTokenError::ServerResponse(e) => assert_eq!("non-compliant oauth implementation ;-)", e.custom_error),
+        e => panic!("failed to correctly parse custom server error, got {:?}", e)
+    };
 }
 
 #[test]

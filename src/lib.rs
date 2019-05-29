@@ -695,7 +695,7 @@ new_secret_type![
 #[derive(Clone, Debug)]
 pub struct Client<TE, TR, TT>
 where
-    TE: ErrorResponseType,
+    TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
@@ -713,7 +713,7 @@ where
 
 impl<TE, TR, TT> Client<TE, TR, TT>
 where
-    TE: ErrorResponseType,
+    TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
@@ -1184,7 +1184,7 @@ where
                     "Server returned empty error response".to_string(),
                 ));
             } else {
-                let error = match serde_json::from_slice::<ErrorResponse<TE>>(reason) {
+                let error = match serde_json::from_slice::<TE>(reason) {
                     Ok(error) => RequestTokenError::ServerResponse(error),
                     Err(error) => RequestTokenError::Parse(error, reason.to_vec()),
                 };
@@ -1444,6 +1444,15 @@ where
 }
 
 ///
+/// Server Error Response
+///
+/// This trait exists separately from the `StandardErrorResponse` struct
+/// to support customization by clients, such as supporting interoperability with
+/// non-standards-complaint OAuth2 providers
+///
+pub trait ErrorResponse: Debug + DeserializeOwned + Display + Send + Serialize + Sync {}
+
+///
 /// Error types enum.
 ///
 /// NOTE: The implementation of the `Display` trait must return the `snake_case` representation of
@@ -1464,7 +1473,7 @@ pub trait ErrorResponseType:
 /// authentication schemes and extensions.
 ///
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct ErrorResponse<T: ErrorResponseType> {
+pub struct StandardErrorResponse<T: ErrorResponseType> {
     #[serde(bound = "T: ErrorResponseType")]
     error: T,
     #[serde(default)]
@@ -1475,7 +1484,7 @@ pub struct ErrorResponse<T: ErrorResponseType> {
     error_uri: Option<String>,
 }
 
-impl<T: ErrorResponseType> ErrorResponse<T> {
+impl<T: ErrorResponseType> StandardErrorResponse<T> {
     ///
     /// Instantiate a new `ErrorResponse`.
     ///
@@ -1526,7 +1535,9 @@ impl<T: ErrorResponseType> ErrorResponse<T> {
     }
 }
 
-impl<TE: ErrorResponseType> Display for ErrorResponse<TE> {
+impl<T: ErrorResponseType + 'static> ErrorResponse for StandardErrorResponse<T> {}
+
+impl<TE: ErrorResponseType> Display for StandardErrorResponse<TE> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
         let mut formatted = self.error().to_string();
 
@@ -1548,13 +1559,13 @@ impl<TE: ErrorResponseType> Display for ErrorResponse<TE> {
 /// Error encountered while requesting access token.
 ///
 #[derive(Debug, Fail)]
-pub enum RequestTokenError<T: ErrorResponseType + Send + Sync + 'static> {
+pub enum RequestTokenError<T: ErrorResponse + 'static> {
     ///
     /// Error response returned by authorization server. Contains the parsed `ErrorResponse`
     /// returned by the server.
     ///
     #[fail(display = "Server returned error response `{}`", _0)]
-    ServerResponse(ErrorResponse<T>),
+    ServerResponse(T),
     ///
     /// An error occurred while sending the request or receiving the response (e.g., network
     /// connectivity failed).
@@ -1586,14 +1597,14 @@ pub mod basic {
 
     use super::helpers;
     use super::{
-        Client, EmptyExtraTokenFields, ErrorResponse, ErrorResponseType, RequestTokenError,
+        Client, EmptyExtraTokenFields, ErrorResponseType, RequestTokenError, StandardErrorResponse,
         StandardTokenResponse, TokenType,
     };
 
     ///
     /// Basic OAuth2 client specialization, suitable for most applications.
     ///
-    pub type BasicClient = Client<BasicErrorResponseType, BasicTokenResponse, BasicTokenType>;
+    pub type BasicClient = Client<BasicErrorResponse, BasicTokenResponse, BasicTokenType>;
 
     ///
     /// Basic OAuth2 authorization token types.
@@ -1677,7 +1688,7 @@ pub mod basic {
     ///
     /// Error response specialization for basic OAuth2 implementation.
     ///
-    pub type BasicErrorResponse = ErrorResponse<BasicErrorResponseType>;
+    pub type BasicErrorResponse = StandardErrorResponse<BasicErrorResponseType>;
 
     ///
     /// Token error specialization for basic OAuth2 implementation.
@@ -1691,7 +1702,7 @@ pub mod basic {
 pub mod insecure {
     use url::Url;
 
-    use super::{Client, ErrorResponseType, TokenResponse, TokenType};
+    use super::{Client, ErrorResponse, TokenResponse, TokenType};
 
     ///
     /// Produces the full authorization URL used by the
@@ -1706,7 +1717,7 @@ pub mod insecure {
     ///
     pub fn authorize_url<TE, TR, TT>(client: &Client<TE, TR, TT>) -> Url
     where
-        TE: ErrorResponseType,
+        TE: ErrorResponse,
         TR: TokenResponse<TT>,
         TT: TokenType,
     {
@@ -1725,7 +1736,7 @@ pub mod insecure {
     ///
     pub fn authorize_url_implicit<TE, TR, TT>(client: &Client<TE, TR, TT>) -> Url
     where
-        TE: ErrorResponseType,
+        TE: ErrorResponse,
         TR: TokenResponse<TT>,
         TT: TokenType,
     {

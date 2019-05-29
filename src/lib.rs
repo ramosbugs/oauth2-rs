@@ -467,87 +467,107 @@ macro_rules! new_secret_type {
     };
 }
 
-new_type![///
-/// Client identifier issued to the client during the registration process described by
-/// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
-///
-#[derive(Deserialize, Serialize)]
-ClientId(String)];
+new_type![
+    ///
+    /// Client identifier issued to the client during the registration process described by
+    /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
+    ///
+    #[derive(Deserialize, Serialize)]
+    ClientId(String)
+];
 
-new_type![#[derive(Deserialize, Serialize)]
-///
-/// URL of the authorization server's authorization endpoint.
-///
-AuthUrl(
-    #[serde(
-        deserialize_with = "helpers::deserialize_url",
-        serialize_with = "helpers::serialize_url"
-    )]
-    Url
-)];
-new_type![#[derive(Deserialize, Serialize)]
-///
-/// URL of the authorization server's token endpoint.
-///
-TokenUrl(
-    #[serde(
-        deserialize_with = "helpers::deserialize_url",
-        serialize_with = "helpers::serialize_url"
-    )]
-    Url
-)];
-new_type![#[derive(Deserialize, Serialize)]
-///
-/// URL of the client's redirection endpoint.
-///
-RedirectUrl(
-    #[serde(
-        deserialize_with = "helpers::deserialize_url",
-        serialize_with = "helpers::serialize_url"
-    )]
-    Url
-)];
-new_type![///
-/// Authorization endpoint response (grant) type defined in
-/// [Section 3.1.1](https://tools.ietf.org/html/rfc6749#section-3.1.1).
-///
-#[derive(Deserialize, Serialize)]
-ResponseType(String)];
-new_type![///
-/// Resource owner's username used directly as an authorization grant to obtain an access
-/// token.
-///
-ResourceOwnerUsername(String)];
+new_type![
+    #[derive(Deserialize, Serialize)]
+    ///
+    /// URL of the authorization server's authorization endpoint.
+    ///
+    AuthUrl(
+        #[serde(
+            deserialize_with = "helpers::deserialize_url",
+            serialize_with = "helpers::serialize_url"
+        )]
+        Url
+    )
+];
+new_type![
+    #[derive(Deserialize, Serialize)]
+    ///
+    /// URL of the authorization server's token endpoint.
+    ///
+    TokenUrl(
+        #[serde(
+            deserialize_with = "helpers::deserialize_url",
+            serialize_with = "helpers::serialize_url"
+        )]
+        Url
+    )
+];
+new_type![
+    #[derive(Deserialize, Serialize)]
+    ///
+    /// URL of the client's redirection endpoint.
+    ///
+    RedirectUrl(
+        #[serde(
+            deserialize_with = "helpers::deserialize_url",
+            serialize_with = "helpers::serialize_url"
+        )]
+        Url
+    )
+];
+new_type![
+    ///
+    /// Authorization endpoint response (grant) type defined in
+    /// [Section 3.1.1](https://tools.ietf.org/html/rfc6749#section-3.1.1).
+    ///
+    #[derive(Deserialize, Serialize)]
+    ResponseType(String)
+];
+new_type![
+    ///
+    /// Resource owner's username used directly as an authorization grant to obtain an access
+    /// token.
+    ///
+    ResourceOwnerUsername(String)
+];
 
-new_type![///
-/// Access token scope, as defined by the authorization server.
-///
-#[derive(Deserialize, Serialize)]
-Scope(String)];
+new_type![
+    ///
+    /// Access token scope, as defined by the authorization server.
+    ///
+    #[derive(Deserialize, Serialize)]
+    Scope(String)
+];
 impl AsRef<str> for Scope {
     fn as_ref(&self) -> &str {
         self
     }
 }
-new_type![///
-/// Code Challenge used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection via the
-/// `code_challenge` parameter.
-///
-#[derive(Deserialize, Serialize)]
-PkceCodeChallengeS256(String)];
-new_type![///
-/// Code Challenge Method used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection
-/// via the `code_challenge_method` parameter.
-///
-#[derive(Deserialize, Serialize)]
-PkceCodeChallengeMethod(String)];
+new_type![
+    ///
+    /// Code Challenge used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection via the
+    /// `code_challenge` parameter.
+    ///
+    #[derive(Deserialize, Serialize)]
+    PkceCodeChallengeS256(String)
+];
+new_type![
+    ///
+    /// Code Challenge Method used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection
+    /// via the `code_challenge_method` parameter.
+    ///
+    #[derive(Deserialize, Serialize)]
+    PkceCodeChallengeMethod(String)
+];
 
-new_secret_type![///
-/// Client password issued to the client during the registration process described by
-/// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
-///
-#[derive(Deserialize, Serialize)]
-ClientSecret(String)];
+new_secret_type![
+    ///
+    /// Client password issued to the client during the registration process described by
+    /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
+    ///
+    #[derive(Deserialize, Serialize)]
+    ClientSecret(String)
+];
 new_secret_type![
     ///
     /// Value used for [CSRF]((https://tools.ietf.org/html/rfc6749#section-10.12)) protection
@@ -640,26 +660,34 @@ new_secret_type![
         }
     }
 ];
-new_secret_type![///
-/// Authorization code returned from the authorization endpoint.
-///
-#[derive(Deserialize, Serialize)]
-AuthorizationCode(String)];
-new_secret_type![///
-/// Refresh token used to obtain a new access token (if supported by the authorization server).
-///
-#[derive(Deserialize, Serialize)]
-RefreshToken(String)];
-new_secret_type![///
-/// Access token returned by the token endpoint and used to access protected resources.
-///
-#[derive(Deserialize, Serialize)]
-AccessToken(String)];
-new_secret_type![///
-/// Resource owner's password used directly as an authorization grant to obtain an access
-/// token.
-///
-ResourceOwnerPassword(String)];
+new_secret_type![
+    ///
+    /// Authorization code returned from the authorization endpoint.
+    ///
+    #[derive(Deserialize, Serialize)]
+    AuthorizationCode(String)
+];
+new_secret_type![
+    ///
+    /// Refresh token used to obtain a new access token (if supported by the authorization server).
+    ///
+    #[derive(Deserialize, Serialize)]
+    RefreshToken(String)
+];
+new_secret_type![
+    ///
+    /// Access token returned by the token endpoint and used to access protected resources.
+    ///
+    #[derive(Deserialize, Serialize)]
+    AccessToken(String)
+];
+new_secret_type![
+    ///
+    /// Resource owner's password used directly as an authorization grant to obtain an access
+    /// token.
+    ///
+    ResourceOwnerPassword(String)
+];
 
 ///
 /// Stores the configuration for an OAuth2 client.

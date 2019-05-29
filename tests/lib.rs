@@ -1148,13 +1148,12 @@ mod custom_errors {
 
     extern crate serde_json;
 
-    use oauth2::*;
     use colorful_extension::*;
-
+    use oauth2::*;
 
     #[derive(Serialize, Deserialize, Debug)]
     pub struct CustomErrorResponse {
-        pub custom_error: String
+        pub custom_error: String,
     }
 
     impl Display for CustomErrorResponse {
@@ -1183,9 +1182,7 @@ fn test_extension_with_custom_json_error() {
         .match_body("grant_type=authorization_code&code=ccc")
         .with_status(400)
         .with_header("content-type", "application/json")
-        .with_body(
-            "{\"custom_error\": \"non-compliant oauth implementation ;-)\"}",
-        )
+        .with_body("{\"custom_error\": \"non-compliant oauth implementation ;-)\"}")
         .create();
 
     let client = CustomErrorClient::new(
@@ -1204,8 +1201,10 @@ fn test_extension_with_custom_json_error() {
     assert!(token.is_err());
 
     match token.err().unwrap() {
-        RequestTokenError::ServerResponse(e) => assert_eq!("non-compliant oauth implementation ;-)", e.custom_error),
-        e => panic!("failed to correctly parse custom server error, got {:?}", e)
+        RequestTokenError::ServerResponse(e) => {
+            assert_eq!("non-compliant oauth implementation ;-)", e.custom_error)
+        }
+        e => panic!("failed to correctly parse custom server error, got {:?}", e),
     };
 }
 

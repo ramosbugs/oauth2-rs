@@ -237,7 +237,7 @@ use std::time::Duration;
 use curl::easy::Easy;
 use rand::{thread_rng, Rng};
 use serde::de::DeserializeOwned;
-use serde::{Serialize};
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use url::Url;
 
@@ -1418,9 +1418,11 @@ where
 ///
 /// Server Error Response
 ///
-/// See `StandardErrorResponse` for an implementation adhering to the oauth standard.
+/// This trait exists separately from the `StandardErrorResponse` struct
+/// to support customization by clients, such as supporting interoperability with
+/// non-standards-complaint OAuth2 providers
 ///
-pub trait ErrorResponse: DeserializeOwned + Serialize + Send + Sync + Debug + Display + 'static {}
+pub trait ErrorResponse: Debug + DeserializeOwned + Display + Send + Serialize + Sync {}
 
 ///
 /// Error types enum.
@@ -1529,7 +1531,7 @@ impl<TE: ErrorResponseType> Display for StandardErrorResponse<TE> {
 /// Error encountered while requesting access token.
 ///
 #[derive(Debug, Fail)]
-pub enum RequestTokenError<T: ErrorResponse> {
+pub enum RequestTokenError<T: ErrorResponse + 'static> {
     ///
     /// Error response returned by authorization server. Contains the parsed `ErrorResponse`
     /// returned by the server.
@@ -1567,7 +1569,7 @@ pub mod basic {
 
     use super::helpers;
     use super::{
-        Client, EmptyExtraTokenFields, StandardErrorResponse, ErrorResponseType, RequestTokenError,
+        Client, EmptyExtraTokenFields, ErrorResponseType, RequestTokenError, StandardErrorResponse,
         StandardTokenResponse, TokenType,
     };
 

@@ -19,7 +19,6 @@ extern crate rand;
 extern crate url;
 
 use oauth2::basic::BasicClient;
-use oauth2::prelude::*;
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope,
     TokenResponse, TokenUrl,

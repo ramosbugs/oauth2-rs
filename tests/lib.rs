@@ -11,7 +11,6 @@ use url::form_urlencoded::byte_serialize;
 use url::Url;
 
 use oauth2::basic::*;
-use oauth2::prelude::*;
 use oauth2::*;
 
 fn new_client() -> BasicClient {

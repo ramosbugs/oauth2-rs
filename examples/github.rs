@@ -19,6 +19,7 @@ extern crate rand;
 extern crate url;
 
 use oauth2::basic::BasicClient;
+use oauth2::curl::http_client;
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope,
     TokenResponse, TokenUrl,
@@ -52,9 +53,6 @@ fn main() {
         auth_url,
         Some(token_url),
     )
-    // This example is requesting access to the user's public repos and email.
-    .add_scope(Scope::new("public_repo".to_string()))
-    .add_scope(Scope::new("user:email".to_string()))
     // This example will be running its own server at localhost:8080.
     // See below for the server implementation.
     .set_redirect_url(RedirectUrl::new(
@@ -62,7 +60,12 @@ fn main() {
     ));
 
     // Generate the authorization URL to which we'll redirect the user.
-    let (authorize_url, csrf_state) = client.authorize_url(CsrfToken::new_random);
+    let (authorize_url, csrf_state) = client
+        .authorize_url(CsrfToken::new_random)
+        // This example is requesting access to the user's public repos and email.
+        .add_scope(Scope::new("public_repo".to_string()))
+        .add_scope(Scope::new("user:email".to_string()))
+        .url();
 
     println!(
         "Open this URL in your browser:\n{}\n",
@@ -123,7 +126,7 @@ fn main() {
             );
 
             // Exchange the code with a token.
-            let token_res = client.exchange_code(code);
+            let token_res = client.exchange_code(code).request(http_client);
 
             println!("Github returned the following token:\n{:?}\n", token_res);
 

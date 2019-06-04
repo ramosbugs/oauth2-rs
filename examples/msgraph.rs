@@ -28,9 +28,10 @@ extern crate rand;
 extern crate url;
 
 use oauth2::basic::BasicClient;
+use oauth2::curl::http_client;
 use oauth2::{
-    AuthType, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeVerifierS256,
-    RedirectUrl, ResponseType, Scope, TokenUrl,
+    AuthType, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
+    RedirectUrl, Scope, TokenUrl,
 };
 use std::env;
 use std::io::{BufRead, BufReader, Write};
@@ -61,10 +62,6 @@ fn main() {
         auth_url,
         Some(token_url),
     )
-    // This example requests read access to OneDrive.
-    .add_scope(Scope::new(
-        "https://graph.microsoft.com/Files.Read".to_string(),
-    ))
     // Microsoft Graph requires client_id and client_secret in URL rather than
     // using Basic authentication.
     .set_auth_type(AuthType::RequestBody)
@@ -76,15 +73,17 @@ fn main() {
 
     // Microsoft Graph supports Proof Key for Code Exchange (PKCE - https://oauth.net/2/pkce/).
     // Create a PKCE code verifier and SHA-256 encode it as a code challenge.
-    let code_verifier = PkceCodeVerifierS256::new_random();
+    let (pkce_code_challenge, pkce_code_verifier) = PkceCodeChallenge::new_random_sha256();
 
     // Generate the authorization URL to which we'll redirect the user.
-    let (authorize_url, csrf_state) = client.authorize_url_extension(
-        &ResponseType::new("code".to_string()),
-        CsrfToken::new_random,
-        // Send the PKCE code challenge in the authorization request
-        &code_verifier.authorize_url_params(),
-    );
+    let (authorize_url, csrf_state) = client
+        .authorize_url(CsrfToken::new_random)
+        // This example requests read access to OneDrive.
+        .add_scope(Scope::new(
+            "https://graph.microsoft.com/Files.Read".to_string(),
+        ))
+        .set_pkce_challenge(pkce_code_challenge)
+        .url();
 
     println!(
         "Open this URL in your browser:\n{}\n",
@@ -144,11 +143,12 @@ fn main() {
                 csrf_state.secret()
             );
 
-            // Send the PKCE code verifier in the token request
-            let params: Vec<(&str, &str)> = vec![("code_verifier", &code_verifier.secret())];
-
             // Exchange the code with a token.
-            let token = client.exchange_code_extension(code, &params);
+            let token = client
+                .exchange_code(code)
+                // Send the PKCE code verifier in the token request
+                .set_pkce_verifier(pkce_code_verifier)
+                .request(http_client);
 
             println!("MS Graph returned the following token:\n{:?}\n", token);
 

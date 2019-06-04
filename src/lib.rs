@@ -3,9 +3,11 @@
 //! A simple implementation of the OAuth2 flow, trying to adhere as much as possible to
 //! [RFC 6749](https://tools.ietf.org/html/rfc6749).
 //!
-//! # Getting started: Authorization Code Grant
+//! # Getting started: Authorization Code Grant w/ PKCE
 //!
-//! This is the most common OAuth2 flow.
+//! This is the most common OAuth2 flow. PKCE is recommended whenever the OAuth2 client has no
+//! client secret or has a client secret that cannot remain confidential (e.g., native, mobile, or
+//! client-side web applications).
 //!
 //! ## Example
 //!
@@ -21,15 +23,18 @@
 //!     ClientId,
 //!     ClientSecret,
 //!     CsrfToken,
+//!     PkceCodeChallenge,
 //!     RedirectUrl,
 //!     Scope,
 //!     TokenResponse,
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
+//! use oauth2::curl;
 //! use url::Url;
 //!
-//! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
+//! # extern crate failure;
+//! # fn err_wrapper() -> Result<(), failure::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client =
@@ -39,15 +44,21 @@
 //!         AuthUrl::new(Url::parse("http://authorize")?),
 //!         Some(TokenUrl::new(Url::parse("http://token")?))
 //!     )
-//!         // Set the desired scopes.
-//!         .add_scope(Scope::new("read".to_string()))
-//!         .add_scope(Scope::new("write".to_string()))
+//!     // Set the URL the user will be redirected to after the authorization process.
+//!     .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
 //!
-//!         // Set the URL the user will be redirected to after the authorization process.
-//!         .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
+//! // Generate a PKCE challenge.
+//! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 //!
 //! // Generate the full authorization URL.
-//! let (auth_url, csrf_token) = client.authorize_url(CsrfToken::new_random);
+//! let (auth_url, csrf_token) = client
+//!     .authorize_url(CsrfToken::new_random)
+//!     // Set the desired scopes.
+//!     .add_scope(Scope::new("read".to_string()))
+//!     .add_scope(Scope::new("write".to_string()))
+//!     // Set the PKCE code challenge.
+//!     .set_pkce_challenge(pkce_challenge)
+//!     .url();
 //!
 //! // This is the URL you should redirect the user to, in order to trigger the authorization
 //! // process.
@@ -59,7 +70,11 @@
 //!
 //! // Now you can trade it for an access token.
 //! let token_result =
-//!     client.exchange_code(AuthorizationCode::new("some authorization code".to_string()));
+//!     client
+//!         .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
+//!         // Set the PKCE code verifier.
+//!         .set_pkce_verifier(pkce_verifier)
+//!         .request(curl::http_client)?;
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
 //! # Ok(())
@@ -92,7 +107,8 @@
 //! use oauth2::basic::BasicClient;
 //! use url::Url;
 //!
-//! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
+//! # extern crate failure;
+//! # fn err_wrapper() -> Result<(), failure::Error> {
 //! let client =
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
@@ -102,7 +118,10 @@
 //!     );
 //!
 //! // Generate the full authorization URL.
-//! let (auth_url, csrf_token) = client.authorize_url_implicit(CsrfToken::new_random);
+//! let (auth_url, csrf_token) = client
+//!     .authorize_url(CsrfToken::new_random)
+//!     .use_implicit_flow()
+//!     .url();
 //!
 //! // This is the URL you should redirect the user to, in order to trigger the authorization
 //! // process.
@@ -141,23 +160,27 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
+//! use oauth2::curl;
 //! use url::Url;
 //!
-//! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
+//! # extern crate failure;
+//! # fn err_wrapper() -> Result<(), failure::Error> {
 //! let client =
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
 //!         AuthUrl::new(Url::parse("http://authorize")?),
 //!         Some(TokenUrl::new(Url::parse("http://token")?))
-//!     )
-//!         .add_scope(Scope::new("read".to_string()));
+//!     );
 //!
 //! let token_result =
-//!     client.exchange_password(
-//!         &ResourceOwnerUsername::new("user".to_string()),
-//!         &ResourceOwnerPassword::new("pass".to_string())
-//!     );
+//!     client
+//!         .exchange_password(
+//!             &ResourceOwnerUsername::new("user".to_string()),
+//!             &ResourceOwnerPassword::new("pass".to_string())
+//!         )
+//!         .add_scope(Scope::new("read".to_string()))
+//!         .request(curl::http_client)?;
 //! # Ok(())
 //! # }
 //! # fn main() {}
@@ -183,19 +206,23 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
+//! use oauth2::curl;
 //! use url::Url;
 //!
-//! # fn err_wrapper() -> Result<(), Box<std::error::Error>> {
+//! # extern crate failure;
+//! # fn err_wrapper() -> Result<(), failure::Error> {
 //! let client =
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
 //!         AuthUrl::new(Url::parse("http://authorize")?),
 //!         Some(TokenUrl::new(Url::parse("http://token")?))
-//!     )
-//!         .add_scope(Scope::new("read".to_string()));
+//!     );
 //!
-//! let token_result = client.exchange_client_credentials();
+//! let token_result = client
+//!     .exchange_client_credentials()
+//!     .add_scope(Scope::new("read".to_string()))
+//!     .request(curl::http_client)?;
 //! # Ok(())
 //! # }
 //! # fn main() {}
@@ -207,13 +234,12 @@
 //!
 //! - [Google](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/google.rs)
 //! - [Github](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/github.rs)
+//! - [Microsoft Graph](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/msgraph.rs)
 //!
 
 extern crate base64;
-extern crate curl;
+extern crate curl as curl_;
 extern crate failure;
-#[macro_use]
-extern crate failure_derive;
 extern crate rand;
 extern crate serde;
 #[macro_use]
@@ -222,22 +248,27 @@ extern crate serde_json;
 extern crate sha2;
 extern crate url;
 
+use std::borrow::Cow;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
-use std::io::Read;
 use std::marker::PhantomData;
 use std::time::Duration;
 
-use curl::easy::Easy;
+use failure::Fail;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use url::Url;
+use url::{form_urlencoded, Url};
 
 ///
 /// Basic OAuth2 implementation with no extensions
 /// ([RFC 6749](https://tools.ietf.org/html/rfc6749)).
 ///
 pub mod basic;
+
+///
+/// HTTP client backed by the [curl](https://crates.io/crates/curl) crate.
+///
+pub mod curl;
 
 ///
 /// Helper methods used by OAuth2 implementations/extensions.
@@ -247,9 +278,9 @@ pub mod helpers;
 mod types;
 
 pub use types::{
-    AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
-    PkceCodeChallengeMethod, PkceCodeChallengeS256, PkceCodeVerifierS256, RedirectUrl,
-    RefreshToken, ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, Scope, TokenUrl,
+    AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
+    PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
+    ResourceOwnerUsername, ResponseType, Scope, TokenUrl,
 };
 
 const CONTENT_TYPE_JSON: &str = "application/json";
@@ -284,7 +315,6 @@ where
     auth_url: AuthUrl,
     auth_type: AuthType,
     token_url: Option<TokenUrl>,
-    scopes: Vec<Scope>,
     redirect_url: Option<RedirectUrl>,
     phantom_te: PhantomData<TE>,
     phantom_tr: PhantomData<TR>,
@@ -329,21 +359,11 @@ where
             auth_url,
             auth_type: AuthType::BasicAuth,
             token_url,
-            scopes: Vec::new(),
             redirect_url: None,
             phantom_te: PhantomData,
             phantom_tr: PhantomData,
             phantom_tt: PhantomData,
         }
-    }
-
-    ///
-    /// Appends a new scope to the authorization URL.
-    ///
-    pub fn add_scope(mut self, scope: Scope) -> Self {
-        self.scopes.push(scope);
-
-        self
     }
 
     ///
@@ -369,9 +389,7 @@ where
     }
 
     ///
-    /// Produces the full authorization URL used by the
-    /// [Authorization Code Grant](https://tools.ietf.org/html/rfc6749#section-4.1) flow, which
-    /// is the most common OAuth2 flow.
+    /// Generates an authorization URL for a new authorization request.
     ///
     /// # Arguments
     ///
@@ -388,100 +406,191 @@ where
     ///  attacks. To disable CSRF protections (NOT recommended), use `insecure::authorize_url`
     ///  instead.
     ///
-    pub fn authorize_url<F>(&self, state_fn: F) -> (Url, CsrfToken)
+    pub fn authorize_url<S>(&self, state_fn: S) -> AuthorizationRequest
     where
-        F: FnOnce() -> CsrfToken,
+        S: FnOnce() -> CsrfToken,
     {
-        let state = state_fn();
-        (
-            self.authorize_url_impl::<&str>("code", Some(&state), None),
-            state,
-        )
+        AuthorizationRequest {
+            auth_url: &self.auth_url,
+            client_id: &self.client_id,
+            extra_params: Vec::new(),
+            pkce_challenge: None,
+            redirect_url: self.redirect_url.as_ref(),
+            response_type: "code".into(),
+            scopes: Vec::new(),
+            state: state_fn(),
+        }
     }
 
     ///
-    /// Produces the full authorization URL used by the
-    /// [Implicit Grant](https://tools.ietf.org/html/rfc6749#section-4.2) flow.
+    /// Exchanges a code produced by a successful authorization process with an access token.
     ///
-    /// # Arguments
+    /// Acquires ownership of the `code` because authorization codes may only be used once to
+    /// retrieve an access token from the authorization server.
     ///
-    /// * `state_fn` - A function that returns an opaque value used by the client to maintain state
-    ///   between the request and callback. The authorization server includes this value when
-    ///   redirecting the user-agent back to the client.
+    /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
     ///
-    /// # Security Warning
-    ///
-    /// Callers should use a fresh, unpredictable `state` for each authorization request and verify
-    /// that this value matches the `state` parameter passed by the authorization server to the
-    /// redirect URI. Doing so mitigates
-    /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12)
-    ///  attacks. To disable CSRF protections (NOT recommended), use
-    /// `insecure::authorize_url_implicit` instead.
-    ///
-    pub fn authorize_url_implicit<F>(&self, state_fn: F) -> (Url, CsrfToken)
-    where
-        F: FnOnce() -> CsrfToken,
-    {
-        let state = state_fn();
-        (
-            self.authorize_url_impl::<&str>("token", Some(&state), None),
-            state,
-        )
+    pub fn exchange_code(&self, code: AuthorizationCode) -> CodeTokenRequest<TE, TR, TT> {
+        CodeTokenRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            code,
+            extra_params: Vec::new(),
+            pkce_verifier: None,
+            token_url: self.token_url.as_ref(),
+            redirect_url: self.redirect_url.as_ref(),
+            _phantom: PhantomData,
+        }
     }
 
     ///
-    /// Produces the full authorization URL used by an OAuth2
-    /// [extension](https://tools.ietf.org/html/rfc6749#section-8.4).
+    /// Requests an access token for the *password* grant type.
     ///
-    /// # Arguments
+    /// See https://tools.ietf.org/html/rfc6749#section-4.3.2
     ///
-    /// * `response_type` - The response type this client expects from the authorization endpoint.
-    ///   For `"code"` or `"token"` response types, instead use the `authorize_url` or
-    ///   `authorize_url_implicit` functions, respectively.
-    /// * `state_fn` - A function that returns an opaque value used by the client to maintain state
-    ///   between the request and callback. The authorization server includes this value when
-    ///   redirecting the user-agent back to the client.
-    /// * `extra_params` - Additional parameters as required by the applicable OAuth2 extension(s).
-    ///   Callers should NOT specify any of the following parameters: `response_type`, `client_id`,
-    ///   `redirect_uri`, or `scope`.
+    pub fn exchange_password<'a, 'b>(
+        &'a self,
+        username: &'b ResourceOwnerUsername,
+        password: &'b ResourceOwnerPassword,
+    ) -> PasswordTokenRequest<'b, TE, TR, TT>
+    where
+        'a: 'b,
+    {
+        PasswordTokenRequest::<'b> {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            username,
+            password,
+            extra_params: Vec::new(),
+            scopes: Vec::new(),
+            token_url: self.token_url.as_ref(),
+            _phantom: PhantomData,
+        }
+    }
+
+    ///
+    /// Requests an access token for the *client credentials* grant type.
+    ///
+    /// See https://tools.ietf.org/html/rfc6749#section-4.4.2
+    ///
+    pub fn exchange_client_credentials(&self) -> ClientCredentialsTokenRequest<TE, TR, TT> {
+        ClientCredentialsTokenRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            scopes: Vec::new(),
+            token_url: self.token_url.as_ref(),
+            _phantom: PhantomData,
+        }
+    }
+
+    ///
+    /// Exchanges a refresh token for an access token
+    ///
+    /// See https://tools.ietf.org/html/rfc6749#section-6
+    ///
+    pub fn exchange_refresh_token<'a, 'b>(
+        &'a self,
+        refresh_token: &'b RefreshToken,
+    ) -> RefreshTokenRequest<'b, TE, TR, TT>
+    where
+        'a: 'b,
+    {
+        RefreshTokenRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            refresh_token,
+            scopes: Vec::new(),
+            token_url: self.token_url.as_ref(),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+///
+/// A request to the authorization endpoint
+pub struct AuthorizationRequest<'a> {
+    auth_url: &'a AuthUrl,
+    client_id: &'a ClientId,
+    extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    pkce_challenge: Option<PkceCodeChallenge>,
+    redirect_url: Option<&'a RedirectUrl>,
+    response_type: Cow<'a, str>,
+    scopes: Vec<Cow<'a, Scope>>,
+    state: CsrfToken,
+}
+impl<'a> AuthorizationRequest<'a> {
+    ///
+    /// Appends a new scope to the authorization URL.
+    ///
+    pub fn add_scope(mut self, scope: Scope) -> Self {
+        self.scopes.push(Cow::Owned(scope));
+        self
+    }
+
+    ///
+    /// Appends an extra param to the authorization URL.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7636](https://tools.ietf.org/html/rfc7636).
     ///
     /// # Security Warning
-    ///
-    /// Callers should use a fresh, unpredictable `state` for each authorization request and verify
-    /// that this value matches the `state` parameter passed by the authorization server to the
-    /// redirect URI. Doing so mitigates
-    /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12)
-    ///  attacks.
     ///
     /// Callers should follow the security recommendations for any OAuth2 extensions used with
     /// this function, which are beyond the scope of
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
-    pub fn authorize_url_extension<F, T>(
-        &self,
-        response_type: &ResponseType,
-        state_fn: F,
-        extra_params: &[(&str, T)],
-    ) -> (Url, CsrfToken)
+    ///
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
     where
-        F: FnOnce() -> CsrfToken,
-        T: AsRef<str> + Clone,
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
     {
-        let state = state_fn();
-        (
-            self.authorize_url_impl(response_type, Some(&state), Some(extra_params)),
-            state,
-        )
+        self.extra_params.push((name.into(), value.into()));
+        self
     }
 
-    fn authorize_url_impl<T>(
-        &self,
-        response_type: &str,
-        state_opt: Option<&CsrfToken>,
-        extra_params_opt: Option<&[(&str, T)]>,
-    ) -> Url
-    where
-        T: AsRef<str> + Clone,
-    {
+    ///
+    /// Enables the [Implicit Grant](https://tools.ietf.org/html/rfc6749#section-4.2) flow.
+    ///
+    pub fn use_implicit_flow(mut self) -> Self {
+        self.response_type = "token".into();
+        self
+    }
+
+    ///
+    /// Enables custom flows other than the `code` and `token` (implicit flow) grant.
+    ///
+    pub fn set_response_type(mut self, response_type: &ResponseType) -> Self {
+        self.response_type = (&**response_type).to_owned().into();
+        self
+    }
+
+    ///
+    /// Enables the use of [Proof Key for Code Exchange](https://tools.ietf.org/html/rfc7636)
+    /// (PKCE).
+    ///
+    /// PKCE is *highly recommended* for all public clients (i.e., those for which there
+    /// is no client secret or for which the client secret is distributed with the client,
+    /// such as in a native, mobile app, or browser app).
+    ///
+    pub fn set_pkce_challenge(mut self, pkce_code_challenge: PkceCodeChallenge) -> Self {
+        self.pkce_challenge = Some(pkce_code_challenge);
+        self
+    }
+
+    ///
+    /// Returns the full authorization URL and CSRF state for this authorization
+    /// request.
+    ///
+    pub fn url(self) -> (Url, CsrfToken) {
         let scopes = self
             .scopes
             .iter()
@@ -490,9 +599,15 @@ where
             .join(" ");
 
         let mut pairs: Vec<(&str, &str)> = vec![
-            ("response_type", response_type),
+            ("response_type", self.response_type.as_ref()),
             ("client_id", &self.client_id),
+            ("state", self.state.secret()),
         ];
+
+        if let Some(ref pkce_challenge) = self.pkce_challenge {
+            pairs.push(("code_challenge", &pkce_challenge.as_str()));
+            pairs.push(("code_challenge_method", &pkce_challenge.method().as_str()));
+        }
 
         if let Some(ref redirect_url) = self.redirect_url {
             pairs.push(("redirect_uri", redirect_url.as_str()));
@@ -502,317 +617,563 @@ where
             pairs.push(("scope", &scopes));
         }
 
-        if let Some(state) = state_opt {
-            pairs.push(("state", state.secret()));
-        }
-
-        let mut url: Url = (*self.auth_url).clone();
+        let mut url: Url = (**self.auth_url).to_owned();
 
         url.query_pairs_mut()
             .extend_pairs(pairs.iter().map(|&(k, v)| (k, &v[..])));
 
-        if let Some(extra_params) = extra_params_opt {
-            url.query_pairs_mut()
-                .extend_pairs(extra_params.iter().cloned());
-        }
+        url.query_pairs_mut()
+            .extend_pairs(self.extra_params.iter().cloned());
 
-        url
-    }
-
-    ///
-    /// Exchanges a code produced by a successful authorization process with an access token.
-    ///
-    /// Acquires ownership of the `code` because authorization codes may only be used to retrieve
-    /// an access token from the authorization server.
-    ///
-    /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
-    ///
-    pub fn exchange_code(&self, code: AuthorizationCode) -> Result<TR, RequestTokenError<TE>> {
-        self.exchange_code_extension::<&str>(code, &[])
-    }
-
-    ///
-    /// Exchanges a code produced by a successful authorization process with an access token.
-    ///
-    /// Acquires ownership of the `code` because authorization codes may only be used to retrieve
-    /// an access token from the authorization server.
-    ///
-    /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
-    ///
-    pub fn exchange_code_extension<T>(
-        &self,
-        code: AuthorizationCode,
-        extra_params: &[(&str, T)],
-    ) -> Result<TR, RequestTokenError<TE>>
-    where
-        T: AsRef<str> + Clone,
-    {
-        // Make Clippy happy since we're intentionally taking ownership.
-        let code_owned = code;
-        let mut params: Vec<(&str, &str)> = vec![
-            ("grant_type", "authorization_code"),
-            ("code", code_owned.secret()),
-        ];
-
-        params.extend_from_slice(
-            &extra_params
-                .iter()
-                .map(|&(k, ref v)| (k, v.as_ref()))
-                .collect::<Vec<(&str, &str)>>(),
-        );
-
-        self.request_token(params)
-    }
-
-    ///
-    /// Requests an access token for the *password* grant type.
-    ///
-    /// See https://tools.ietf.org/html/rfc6749#section-4.3.2
-    ///
-    pub fn exchange_password(
-        &self,
-        username: &ResourceOwnerUsername,
-        password: &ResourceOwnerPassword,
-    ) -> Result<TR, RequestTokenError<TE>> {
-        // Generate the space-delimited scopes String before initializing params so that it has
-        // a long enough lifetime.
-        let scopes_opt = if !self.scopes.is_empty() {
-            Some(
-                self.scopes
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect::<Vec<_>>()
-                    .join(" "),
-            )
-        } else {
-            None
-        };
-
-        let mut params = vec![
-            ("grant_type", "password"),
-            ("username", username),
-            ("password", password.secret()),
-        ];
-
-        if let Some(ref scopes) = scopes_opt {
-            params.push(("scope", scopes));
-        }
-
-        self.request_token(params)
-    }
-
-    ///
-    /// Requests an access token for the *client credentials* grant type.
-    ///
-    /// See https://tools.ietf.org/html/rfc6749#section-4.4.2
-    ///
-    pub fn exchange_client_credentials(&self) -> Result<TR, RequestTokenError<TE>> {
-        // Generate the space-delimited scopes String before initializing params so that it has
-        // a long enough lifetime.
-        let scopes_opt = if !self.scopes.is_empty() {
-            Some(
-                self.scopes
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect::<Vec<_>>()
-                    .join(" "),
-            )
-        } else {
-            None
-        };
-
-        let mut params: Vec<(&str, &str)> = vec![("grant_type", "client_credentials")];
-
-        if let Some(ref scopes) = scopes_opt {
-            params.push(("scope", scopes));
-        }
-        self.request_token(params)
-    }
-
-    ///
-    /// Exchanges a refresh token for an access token
-    ///
-    /// See https://tools.ietf.org/html/rfc6749#section-6
-    ///
-    pub fn exchange_refresh_token(
-        &self,
-        refresh_token: &RefreshToken,
-    ) -> Result<TR, RequestTokenError<TE>> {
-        self.exchange_refresh_token_extension::<&str>(refresh_token, &[])
-    }
-
-    ///
-    /// Exchanges a refresh token for an access token
-    ///
-    /// See https://tools.ietf.org/html/rfc6749#section-6
-    ///
-    pub fn exchange_refresh_token_extension<T>(
-        &self,
-        refresh_token: &RefreshToken,
-        extra_params: &[(&str, T)],
-    ) -> Result<TR, RequestTokenError<TE>>
-    where
-        T: AsRef<str> + Clone,
-    {
-        let mut params: Vec<(&str, &str)> = vec![
-            ("grant_type", "refresh_token"),
-            ("refresh_token", refresh_token.secret()),
-        ];
-
-        params.extend_from_slice(
-            &extra_params
-                .iter()
-                .map(|&(k, ref v)| (k, v.as_ref()))
-                .collect::<Vec<(&str, &str)>>(),
-        );
-
-        self.request_token(params)
-    }
-
-    fn post_request_token<'a, 'b: 'a>(
-        &'b self,
-        token_url: &TokenUrl,
-        mut params: Vec<(&'b str, &'a str)>,
-    ) -> Result<RequestTokenResponse, curl::Error> {
-        let mut easy = Easy::new();
-
-        // FIXME: add support for auth extensions? e.g., client_secret_jwt and private_key_jwt
-        match self.auth_type {
-            AuthType::RequestBody => {
-                params.push(("client_id", &self.client_id));
-                if let Some(ref client_secret) = self.client_secret {
-                    params.push(("client_secret", client_secret.secret()));
-                }
-            }
-            AuthType::BasicAuth => {
-                // Section 2.3.1 of RFC 6749 requires separately url-encoding the id and secret
-                // before using them as HTTP Basic auth username and password. Note that this is
-                // not standard for ordinary Basic auth, so curl won't do it for us.
-                let encoded_id = easy.url_encode(&self.client_id.as_bytes());
-                easy.username(&encoded_id)?;
-
-                if let Some(ref client_secret) = self.client_secret {
-                    let encoded_secret = easy.url_encode(client_secret.secret().as_bytes());
-                    easy.password(&encoded_secret)?;
-                }
-            }
-        }
-
-        if let Some(ref redirect_url) = self.redirect_url {
-            params.push(("redirect_uri", redirect_url.as_str()));
-        }
-
-        let form = url::form_urlencoded::Serializer::new(String::new())
-            .extend_pairs(params)
-            .finish()
-            .into_bytes();
-        let mut form_slice = &form[..];
-
-        easy.url(&token_url.to_string()[..])?;
-
-        // Section 5.1 of RFC 6749 (https://tools.ietf.org/html/rfc6749#section-5.1) only permits
-        // JSON responses for this request. Some providers such as GitHub have off-spec behavior
-        // and not only support different response formats, but have non-JSON defaults. Explicitly
-        // request JSON here.
-        let mut headers = curl::easy::List::new();
-        let accept_header = format!("Accept: {}", CONTENT_TYPE_JSON);
-        headers.append(&accept_header)?;
-        easy.http_headers(headers)?;
-
-        easy.post(true)?;
-        easy.post_field_size(form.len() as u64)?;
-
-        let mut data = Vec::new();
-        {
-            let mut transfer = easy.transfer();
-
-            transfer.read_function(|buf| Ok(form_slice.read(buf).unwrap_or(0)))?;
-
-            transfer.write_function(|new_data| {
-                data.extend_from_slice(new_data);
-                Ok(new_data.len())
-            })?;
-
-            transfer.perform()?;
-        }
-
-        let http_status = easy.response_code()?;
-        let content_type = easy.content_type()?;
-
-        Ok(RequestTokenResponse {
-            http_status,
-            content_type: content_type.map(|s| s.to_string()),
-            response_body: data,
-        })
-    }
-
-    fn request_token(&self, params: Vec<(&str, &str)>) -> Result<TR, RequestTokenError<TE>> {
-        let token_url = self.token_url.as_ref().ok_or_else(||
-                // Arguably, it could be better to panic in this case. However, there may be
-                // situations where the library user gets the authorization server's configuration
-                // dynamically. In those cases, it would be preferable to return an `Err` rather
-                // than panic. An example situation where this might arise is OpenID Connect
-                // discovery.
-                RequestTokenError::Other("token_url must not be `None`".to_string()))?;
-        let token_response = self
-            .post_request_token(token_url, params)
-            .map_err(RequestTokenError::Request)?;
-        if token_response.http_status != 200 {
-            let reason = token_response.response_body.as_slice();
-            if reason.is_empty() {
-                return Err(RequestTokenError::Other(
-                    "Server returned empty error response".to_string(),
-                ));
-            } else {
-                let error = match serde_json::from_slice::<TE>(reason) {
-                    Ok(error) => RequestTokenError::ServerResponse(error),
-                    Err(error) => RequestTokenError::Parse(error, reason.to_vec()),
-                };
-                return Err(error);
-            }
-        }
-
-        // Validate that the response Content-Type is JSON.
-        token_response
-            .content_type
-            .map_or(Ok(()), |content_type|
-                // Section 3.1.1.1 of RFC 7231 indicates that media types are case insensitive and
-                // may be followed by optional whitespace and/or a parameter (e.g., charset).
-                // See https://tools.ietf.org/html/rfc7231#section-3.1.1.1.
-                if !content_type.to_lowercase().starts_with(CONTENT_TYPE_JSON) {
-                    Err(
-                        RequestTokenError::Other(
-                            format!(
-                                "Unexpected response Content-Type: `{}`, should be `{}`",
-                                content_type,
-                                CONTENT_TYPE_JSON
-                            )
-                        )
-                    )
-                } else {
-                    Ok(())
-                }
-            )?;
-
-        if token_response.response_body.is_empty() {
-            Err(RequestTokenError::Other(
-                "Server returned empty response body".to_string(),
-            ))
-        } else {
-            let response_body = token_response.response_body.as_slice();
-            serde_json::from_slice(response_body)
-                .map_err(|e| RequestTokenError::Parse(e, response_body.to_vec()))
-        }
+        (url, self.state)
     }
 }
 
 ///
-/// Private struct returned by `post_request_token`.
+/// HTTP request method.
 ///
-struct RequestTokenResponse {
-    http_status: u32,
-    content_type: Option<String>,
-    response_body: Vec<u8>,
+#[derive(Clone, Debug, PartialEq)]
+pub enum HttpRequestMethod {
+    /// GET request.
+    Get,
+    /// POST request.
+    Post,
+}
+
+///
+/// An HTTP request.
+///
+#[derive(Clone, Debug)]
+pub struct HttpRequest {
+    // These are all owned values so that the request can safely be passed between
+    // threads.
+    /// URL to which the HTTP request is being made.
+    pub url: Url,
+    /// HTTP request method for this request.
+    pub method: HttpRequestMethod,
+    /// HTTP request headers to send.
+    pub headers: Vec<(String, String)>,
+    /// HTTP request body (typically for POST requests only).
+    pub body: Vec<u8>,
+}
+
+///
+/// An HTTP response.
+///
+#[derive(Clone, Debug)]
+pub struct HttpResponse {
+    /// HTTP status code returned by the server.
+    pub status_code: u32,
+    /// HTTP response headers returned by the server.
+    pub headers: Vec<(String, String)>,
+    /// HTTP response body returned by the server.
+    pub body: Vec<u8>,
+}
+
+///
+/// A request to exchange an authorization code for an access token.
+///
+/// See https://tools.ietf.org/html/rfc6749#section-4.1.3.
+///
+#[derive(Debug)]
+pub struct CodeTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    auth_type: &'a AuthType,
+    client_id: &'a ClientId,
+    client_secret: Option<&'a ClientSecret>,
+    code: AuthorizationCode,
+    extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    pkce_verifier: Option<PkceCodeVerifier>,
+    token_url: Option<&'a TokenUrl>,
+    redirect_url: Option<&'a RedirectUrl>,
+    _phantom: PhantomData<(TE, TR, TT)>,
+}
+impl<'a, TE, TR, TT> CodeTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    ///
+    /// Appends an extra param to the token request.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should follow the security recommendations for any OAuth2 extensions used with
+    /// this function, which are beyond the scope of
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
+    ///
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
+    {
+        self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    ///
+    /// Completes the [Proof Key for Code Exchange](https://tools.ietf.org/html/rfc7636)
+    /// (PKCE) protocol flow.
+    ///
+    /// This method must be called if `set_pkce_challenge` was used during the authorization
+    /// request.
+    ///
+    pub fn set_pkce_verifier(mut self, pkce_verifier: PkceCodeVerifier) -> Self {
+        self.pkce_verifier = Some(pkce_verifier);
+        self
+    }
+
+    ///
+    /// Synchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
+        RE: Fail,
+    {
+        let mut params = vec![
+            ("grant_type", "authorization_code"),
+            ("code", self.code.secret()),
+        ];
+        if let Some(ref pkce_verifier) = self.pkce_verifier {
+            params.push(("code_verifier", pkce_verifier.secret()));
+        }
+
+        let http_request = token_request(
+            self.auth_type,
+            self.client_id,
+            self.client_secret,
+            &self.extra_params,
+            self.redirect_url,
+            None,
+            self.token_url
+                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
+            params,
+        );
+        http_client(http_request)
+            .map_err(RequestTokenError::Request)
+            .and_then(token_response)
+    }
+}
+
+///
+/// A request to exchange a refresh token for an access token.
+///
+/// See https://tools.ietf.org/html/rfc6749#section-6.
+///
+#[derive(Debug)]
+pub struct RefreshTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    auth_type: &'a AuthType,
+    client_id: &'a ClientId,
+    client_secret: Option<&'a ClientSecret>,
+    extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    refresh_token: &'a RefreshToken,
+    scopes: Vec<Cow<'a, Scope>>,
+    token_url: Option<&'a TokenUrl>,
+    _phantom: PhantomData<(TE, TR, TT)>,
+}
+impl<'a, TE, TR, TT> RefreshTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    ///
+    /// Appends an extra param to the token request.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should follow the security recommendations for any OAuth2 extensions used with
+    /// this function, which are beyond the scope of
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
+    ///
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
+    {
+        self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    ///
+    /// Appends a new scope to the token request.
+    ///
+    pub fn add_scope(mut self, scope: Scope) -> Self {
+        self.scopes.push(Cow::Owned(scope));
+        self
+    }
+
+    ///
+    /// Synchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
+        RE: Fail,
+    {
+        let http_request = token_request(
+            self.auth_type,
+            self.client_id,
+            self.client_secret,
+            &self.extra_params,
+            None,
+            Some(&self.scopes),
+            self.token_url
+                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
+            vec![
+                ("grant_type", "refresh_token"),
+                ("refresh_token", self.refresh_token.secret()),
+            ],
+        );
+        http_client(http_request)
+            .map_err(RequestTokenError::Request)
+            .and_then(token_response)
+    }
+}
+
+///
+/// A request to exchange resource owner credentials for an access token.
+///
+/// See https://tools.ietf.org/html/rfc6749#section-4.3.
+///
+#[derive(Debug)]
+pub struct PasswordTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    auth_type: &'a AuthType,
+    client_id: &'a ClientId,
+    client_secret: Option<&'a ClientSecret>,
+    extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    username: &'a ResourceOwnerUsername,
+    password: &'a ResourceOwnerPassword,
+    scopes: Vec<Cow<'a, Scope>>,
+    token_url: Option<&'a TokenUrl>,
+    _phantom: PhantomData<(TE, TR, TT)>,
+}
+impl<'a, TE, TR, TT> PasswordTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    ///
+    /// Appends an extra param to the token request.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should follow the security recommendations for any OAuth2 extensions used with
+    /// this function, which are beyond the scope of
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
+    ///
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
+    {
+        self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    ///
+    /// Appends a new scope to the token request.
+    ///
+    pub fn add_scope(mut self, scope: Scope) -> Self {
+        self.scopes.push(Cow::Owned(scope));
+        self
+    }
+
+    ///
+    /// Synchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
+        RE: Fail,
+    {
+        let http_request = token_request(
+            self.auth_type,
+            self.client_id,
+            self.client_secret,
+            &self.extra_params,
+            None,
+            Some(&self.scopes),
+            self.token_url
+                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
+            vec![
+                ("grant_type", "password"),
+                ("username", self.username),
+                ("password", self.password.secret()),
+            ],
+        );
+        http_client(http_request)
+            .map_err(RequestTokenError::Request)
+            .and_then(token_response)
+    }
+}
+
+///
+/// A request to exchange client credentials for an access token.
+///
+/// See https://tools.ietf.org/html/rfc6749#section-4.4.
+///
+#[derive(Debug)]
+pub struct ClientCredentialsTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    auth_type: &'a AuthType,
+    client_id: &'a ClientId,
+    client_secret: Option<&'a ClientSecret>,
+    extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    scopes: Vec<Cow<'a, Scope>>,
+    token_url: Option<&'a TokenUrl>,
+    _phantom: PhantomData<(TE, TR, TT)>,
+}
+impl<'a, TE, TR, TT> ClientCredentialsTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    ///
+    /// Appends an extra param to the token request.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should follow the security recommendations for any OAuth2 extensions used with
+    /// this function, which are beyond the scope of
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
+    ///
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
+    {
+        self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    ///
+    /// Appends a new scope to the token request.
+    ///
+    pub fn add_scope(mut self, scope: Scope) -> Self {
+        self.scopes.push(Cow::Owned(scope));
+        self
+    }
+
+    ///
+    /// Synchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
+        RE: Fail,
+    {
+        let http_request = token_request(
+            self.auth_type,
+            self.client_id,
+            self.client_secret,
+            &self.extra_params,
+            None,
+            Some(&self.scopes),
+            self.token_url
+                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
+            vec![("grant_type", "client_credentials")],
+        );
+        http_client(http_request)
+            .map_err(RequestTokenError::Request)
+            .and_then(token_response)
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn token_request<'a>(
+    auth_type: &'a AuthType,
+    client_id: &'a ClientId,
+    client_secret: Option<&'a ClientSecret>,
+    extra_params: &'a [(Cow<'a, str>, Cow<'a, str>)],
+    redirect_url: Option<&'a RedirectUrl>,
+    scopes: Option<&'a Vec<Cow<'a, Scope>>>,
+    token_url: &'a TokenUrl,
+    params: Vec<(&'a str, &'a str)>,
+) -> HttpRequest {
+    let mut headers = vec![("Accept".to_string(), CONTENT_TYPE_JSON.to_string())];
+
+    let scopes_opt = scopes.and_then(|scopes| {
+        if !scopes.is_empty() {
+            Some(
+                scopes
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            )
+        } else {
+            None
+        }
+    });
+
+    let mut params: Vec<(&str, &str)> = params;
+    if let Some(ref scopes) = scopes_opt {
+        params.push(("scope", scopes));
+    }
+
+    // FIXME: add support for auth extensions? e.g., client_secret_jwt and private_key_jwt
+    match auth_type {
+        AuthType::RequestBody => {
+            params.push(("client_id", client_id));
+            if let Some(ref client_secret) = client_secret {
+                params.push(("client_secret", client_secret.secret()));
+            }
+        }
+        AuthType::BasicAuth => {
+            // Section 2.3.1 of RFC 6749 requires separately url-encoding the id and secret
+            // before using them as HTTP Basic auth username and password. Note that this is
+            // not standard for ordinary Basic auth, so curl won't do it for us.
+            let urlencoded_id: String =
+                form_urlencoded::byte_serialize(&client_id.as_bytes()).collect();
+
+            let urlencoded_secret = client_secret.map(|secret| {
+                form_urlencoded::byte_serialize(secret.secret().as_bytes()).collect::<String>()
+            });
+            let b64_credential = base64::encode(&format!(
+                "{}:{}",
+                &urlencoded_id,
+                urlencoded_secret
+                    .as_ref()
+                    .map(|secret| secret.as_str())
+                    .unwrap_or("")
+            ));
+            headers.push((
+                "Authorization".to_string(),
+                format!("Basic {}", &b64_credential),
+            ));
+        }
+    }
+
+    if let Some(ref redirect_url) = redirect_url {
+        params.push(("redirect_uri", redirect_url.as_ref()));
+    }
+
+    params.extend_from_slice(
+        extra_params
+            .iter()
+            .map(|&(ref k, ref v)| (k.as_ref(), v.as_ref()))
+            .collect::<Vec<_>>()
+            .as_slice(),
+    );
+
+    let body = url::form_urlencoded::Serializer::new(String::new())
+        .extend_pairs(params)
+        .finish()
+        .into_bytes();
+
+    HttpRequest {
+        url: (**token_url).to_owned(),
+        method: HttpRequestMethod::Post,
+        headers,
+        body,
+    }
+}
+
+fn token_response<RE, TE, TR, TT>(
+    http_response: HttpResponse,
+) -> Result<TR, RequestTokenError<RE, TE>>
+where
+    RE: Fail,
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    if http_response.status_code != 200 {
+        let reason = http_response.body.as_slice();
+        if reason.is_empty() {
+            return Err(RequestTokenError::Other(
+                "Server returned empty error response".to_string(),
+            ));
+        } else {
+            let error = match serde_json::from_slice::<TE>(reason) {
+                Ok(error) => RequestTokenError::ServerResponse(error),
+                Err(error) => RequestTokenError::Parse(error, reason.to_vec()),
+            };
+            return Err(error);
+        }
+    }
+
+    // Validate that the response Content-Type is JSON.
+    http_response
+        .headers
+        .iter()
+        .find(|(name, _)| name.to_lowercase() == "content-type")
+        .map(|(_, value)| value)
+        .map_or(Ok(()), |content_type|
+            // Section 3.1.1.1 of RFC 7231 indicates that media types are case insensitive and
+            // may be followed by optional whitespace and/or a parameter (e.g., charset).
+            // See https://tools.ietf.org/html/rfc7231#section-3.1.1.1.
+            if !content_type.to_lowercase().starts_with(CONTENT_TYPE_JSON) {
+                Err(
+                    RequestTokenError::Other(
+                        format!(
+                            "Unexpected response Content-Type: `{}`, should be `{}`",
+                            content_type,
+                            CONTENT_TYPE_JSON
+                        )
+                    )
+                )
+            } else {
+                Ok(())
+            }
+        )?;
+
+    if http_response.body.is_empty() {
+        Err(RequestTokenError::Other(
+            "Server returned empty response body".to_string(),
+        ))
+    } else {
+        let response_body = http_response.body.as_slice();
+        serde_json::from_slice(response_body)
+            .map_err(|e| RequestTokenError::Parse(e, response_body.to_vec()))
+    }
 }
 
 ///
@@ -1139,7 +1500,11 @@ impl<TE: ErrorResponseType> Display for StandardErrorResponse<TE> {
 /// Error encountered while requesting access token.
 ///
 #[derive(Debug, Fail)]
-pub enum RequestTokenError<T: ErrorResponse + 'static> {
+pub enum RequestTokenError<RE, T>
+where
+    RE: Fail,
+    T: ErrorResponse + 'static,
+{
     ///
     /// Error response returned by authorization server. Contains the parsed `ErrorResponse`
     /// returned by the server.
@@ -1151,7 +1516,7 @@ pub enum RequestTokenError<T: ErrorResponse + 'static> {
     /// connectivity failed).
     ///
     #[fail(display = "Request failed")]
-    Request(#[cause] curl::Error),
+    Request(#[cause] RE),
     ///
     /// Failed to parse server response. Parse errors may occur while parsing either successful
     /// or error responses.
@@ -1163,52 +1528,4 @@ pub enum RequestTokenError<T: ErrorResponse + 'static> {
     ///
     #[fail(display = "Other error: {}", _0)]
     Other(String),
-}
-
-///
-/// Insecure methods -- not recommended for most applications.
-///
-pub mod insecure {
-    use url::Url;
-
-    use super::{Client, ErrorResponse, TokenResponse, TokenType};
-
-    ///
-    /// Produces the full authorization URL used by the
-    /// [Authorization Code Grant](https://tools.ietf.org/html/rfc6749#section-4.1) flow, which
-    /// is the most common OAuth2 flow.
-    ///
-    /// # Security Warning
-    ///
-    /// The URL produced by this function is vulnerable to
-    /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12) attacks.
-    /// It is highly recommended to use the `Client::authorize_url` function instead.
-    ///
-    pub fn authorize_url<TE, TR, TT>(client: &Client<TE, TR, TT>) -> Url
-    where
-        TE: ErrorResponse,
-        TR: TokenResponse<TT>,
-        TT: TokenType,
-    {
-        client.authorize_url_impl::<&str>("code", None, None)
-    }
-
-    ///
-    /// Produces the full authorization URL used by the
-    /// [Implicit Grant](https://tools.ietf.org/html/rfc6749#section-4.2) flow.
-    ///
-    /// # Security Warning
-    ///
-    /// The URL produced by this function is vulnerable to
-    /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12) attacks.
-    /// It is highly recommended to use the `Client::authorize_url_implicit` function instead.
-    ///
-    pub fn authorize_url_implicit<TE, TR, TT>(client: &Client<TE, TR, TT>) -> Url
-    where
-        TE: ErrorResponse,
-        TR: TokenResponse<TT>,
-        TT: TokenType,
-    {
-        client.authorize_url_impl::<&str>("token", None, None)
-    }
 }

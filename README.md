@@ -20,7 +20,7 @@ cargo build
 Run tests:
 
 ```
-cargo test -- --test-threads=1
+cargo test
 ```
 
 Release:

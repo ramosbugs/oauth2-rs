@@ -1,4 +1,5 @@
-extern crate mockito;
+extern crate failure;
+extern crate failure_derive;
 extern crate oauth2;
 extern crate serde;
 extern crate url;
@@ -6,7 +7,7 @@ extern crate url;
 extern crate serde_derive;
 extern crate serde_json;
 
-use mockito::{mock, server_url};
+use failure::Fail;
 use url::form_urlencoded::byte_serialize;
 use url::Url;
 
@@ -17,76 +18,81 @@ fn new_client() -> BasicClient {
     BasicClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse("http://example.com/token").unwrap(),
+            Url::parse("https://example.com/token").unwrap(),
         )),
     )
 }
 
-fn new_mock_client() -> BasicClient {
-    BasicClient::new(
-        ClientId::new("aaa".to_string()),
-        Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
-        Some(TokenUrl::new(
-            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
-        )),
-    )
-}
+fn mock_http_client(
+    request_headers: Vec<(&'static str, &'static str)>,
+    request_body: &'static str,
+    response: HttpResponse,
+) -> impl FnOnce(HttpRequest) -> Result<HttpResponse, FakeError> {
+    move |request: HttpRequest| {
+        assert_eq!(
+            request.url,
+            Url::parse("https://example.com/token").unwrap()
+        );
+        assert_eq!(
+            request
+                .headers
+                .iter()
+                .map(|(k, v)| (k.as_ref(), v.as_ref()))
+                .collect::<Vec<_>>(),
+            request_headers,
+        );
+        assert_eq!(&String::from_utf8(request.body).unwrap(), request_body);
 
-fn new_mock_client_with_unsafe_chars() -> BasicClient {
-    BasicClient::new(
-        ClientId::new("aaa/;&".to_string()),
-        Some(ClientSecret::new("bbb/;&".to_string())),
-        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
-        Some(TokenUrl::new(
-            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
-        )),
-    )
+        Ok(response)
+    }
 }
 
 #[test]
 #[should_panic]
 fn test_code_verifier_too_short() {
-    PkceCodeVerifierS256::new_random_len(31);
+    PkceCodeChallenge::new_random_sha256_len(31);
 }
 
 #[test]
 #[should_panic]
 fn test_code_verifier_too_long() {
-    PkceCodeVerifierS256::new_random_len(97);
+    PkceCodeChallenge::new_random_sha256_len(97);
 }
 
 #[test]
 fn test_code_verifier_min() {
-    let code_verifier = PkceCodeVerifierS256::new_random_len(32);
-    assert!(code_verifier.secret().len() == 43);
+    let code = PkceCodeChallenge::new_random_sha256_len(32);
+    assert_eq!(code.1.secret().len(), 43);
 }
 
 #[test]
 fn test_code_verifier_max() {
-    let code_verifier = PkceCodeVerifierS256::new_random_len(96);
-    assert!(code_verifier.secret().len() == 128);
+    let code = PkceCodeChallenge::new_random_sha256_len(96);
+    assert_eq!(code.1.secret().len(), 128);
 }
 
 #[test]
 fn test_code_verifier_challenge() {
     // Example from https://tools.ietf.org/html/rfc7636#appendix-B
     let code_verifier =
-        PkceCodeVerifierS256::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string());
-    assert!(
-        code_verifier.code_challenge().as_str() == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        PkceCodeVerifier::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string());
+    assert_eq!(
+        PkceCodeChallenge::from_code_verifier_sha256(&code_verifier).as_str(),
+        "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
     );
 }
 
 #[test]
 fn test_authorize_url() {
     let client = new_client();
-    let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token".to_string()));
+    let (url, _) = client
+        .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+        .url();
 
     assert_eq!(
-        Url::parse("http://example.com/auth?response_type=code&client_id=aaa&state=csrf_token")
+        Url::parse("https://example.com/auth?response_type=code&client_id=aaa&state=csrf_token")
             .unwrap(),
         url
     );
@@ -95,11 +101,11 @@ fn test_authorize_url() {
 #[test]
 fn test_authorize_random() {
     let client = new_client();
-    let (url, csrf_state) = client.authorize_url(CsrfToken::new_random);
+    let (url, csrf_state) = client.authorize_url(CsrfToken::new_random).url();
 
     assert_eq!(
         Url::parse(&format!(
-            "http://example.com/auth?response_type=code&client_id=aaa&state={}",
+            "https://example.com/auth?response_type=code&client_id=aaa&state={}",
             byte_serialize(csrf_state.secret().clone().into_bytes().as_slice())
                 .collect::<Vec<_>>()
                 .join("")
@@ -110,35 +116,23 @@ fn test_authorize_random() {
 }
 
 #[test]
-fn test_authorize_url_insecure() {
-    let client = new_client();
-
-    let url = oauth2::insecure::authorize_url(&client);
-
-    assert_eq!(
-        Url::parse("http://example.com/auth?response_type=code&client_id=aaa").unwrap(),
-        url
-    );
-}
-
-#[test]
 fn test_authorize_url_pkce() {
     // Example from https://tools.ietf.org/html/rfc7636#appendix-B
     let client = new_client();
-    let verifier =
-        PkceCodeVerifierS256::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string());
-    let (url, _) = client.authorize_url_extension(
-        &ResponseType::new("code".to_string()),
-        || CsrfToken::new("csrf_token".to_string()),
-        &verifier.authorize_url_params(),
-    );
+
+    let (url, _) = client
+        .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+        .set_pkce_challenge(PkceCodeChallenge::from_code_verifier_sha256(
+            &PkceCodeVerifier::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string()),
+        ))
+        .url();
     assert_eq!(
         Url::parse(concat!(
-            "http://example.com/auth",
+            "https://example.com/auth",
             "?response_type=code&client_id=aaa",
             "&state=csrf_token",
-            "&code_challenge_method=S256",
             "&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+            "&code_challenge_method=S256",
         ))
         .unwrap(),
         url
@@ -149,23 +143,14 @@ fn test_authorize_url_pkce() {
 fn test_authorize_url_implicit() {
     let client = new_client();
 
-    let (url, _) = client.authorize_url_implicit(|| CsrfToken::new("csrf_token".to_string()));
+    let (url, _) = client
+        .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+        .use_implicit_flow()
+        .url();
 
     assert_eq!(
-        Url::parse("http://example.com/auth?response_type=token&client_id=aaa&state=csrf_token")
+        Url::parse("https://example.com/auth?response_type=token&client_id=aaa&state=csrf_token")
             .unwrap(),
-        url
-    );
-}
-
-#[test]
-fn test_authorize_url_implicit_insecure() {
-    let client = new_client();
-
-    let url = oauth2::insecure::authorize_url_implicit(&client);
-
-    assert_eq!(
-        Url::parse("http://example.com/auth?response_type=token&client_id=aaa").unwrap(),
         url
     );
 }
@@ -175,17 +160,19 @@ fn test_authorize_url_with_param() {
     let client = BasicClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("http://example.com/auth?foo=bar").unwrap()),
+        AuthUrl::new(Url::parse("https://example.com/auth?foo=bar").unwrap()),
         Some(TokenUrl::new(
-            Url::parse("http://example.com/token").unwrap(),
+            Url::parse("https://example.com/token").unwrap(),
         )),
     );
 
-    let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token".to_string()));
+    let (url, _) = client
+        .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+        .url();
 
     assert_eq!(
         Url::parse(
-            "http://example.com/auth?foo=bar&response_type=code&client_id=aaa&state=csrf_token"
+            "https://example.com/auth?foo=bar&response_type=code&client_id=aaa&state=csrf_token"
         )
         .unwrap(),
         url
@@ -194,16 +181,19 @@ fn test_authorize_url_with_param() {
 
 #[test]
 fn test_authorize_url_with_scopes() {
-    let client = new_client()
+    let (url, _) = new_client()
+        .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
         .add_scope(Scope::new("read".to_string()))
-        .add_scope(Scope::new("write".to_string()));
-
-    let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token".to_string()));
+        .add_scope(Scope::new("write".to_string()))
+        .url();
 
     assert_eq!(
         Url::parse(
-            "http://example.com/auth?response_type=code&client_id=aaa&scope=read+write&\
-             state=csrf_token"
+            "https://example.com/auth\
+             ?response_type=code\
+             &client_id=aaa\
+             &state=csrf_token\
+             &scope=read+write"
         )
         .unwrap(),
         url
@@ -214,15 +204,15 @@ fn test_authorize_url_with_scopes() {
 fn test_authorize_url_with_extension_response_type() {
     let client = new_client();
 
-    let (url, _) = client.authorize_url_extension(
-        &ResponseType::new("code token".to_string()),
-        || CsrfToken::new("csrf_token".to_string()),
-        &vec![("foo", "bar")],
-    );
+    let (url, _) = client
+        .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+        .set_response_type(&ResponseType::new("code token".to_string()))
+        .add_extra_param("foo", "bar")
+        .url();
 
     assert_eq!(
         Url::parse(
-            "http://example.com/auth?response_type=code+token&client_id=aaa&state=csrf_token\
+            "https://example.com/auth?response_type=code+token&client_id=aaa&state=csrf_token\
              &foo=bar"
         )
         .unwrap(),
@@ -233,45 +223,58 @@ fn test_authorize_url_with_extension_response_type() {
 #[test]
 fn test_authorize_url_with_redirect_url() {
     let client = new_client().set_redirect_url(RedirectUrl::new(
-        Url::parse("http://localhost/redirect").unwrap(),
+        Url::parse("https://localhost/redirect").unwrap(),
     ));
 
-    let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token".to_string()));
+    let (url, _) = client
+        .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+        .url();
 
     assert_eq!(
         Url::parse(
-            "http://example.com/auth?response_type=code&client_id=aaa&redirect_uri=http\
-             %3A%2F%2Flocalhost%2Fredirect&state=csrf_token"
+            "https://example.com/auth?response_type=code\
+             &client_id=aaa\
+             &state=csrf_token\
+             &redirect_uri=https%3A%2F%2Flocalhost%2Fredirect"
         )
         .unwrap(),
         url
     );
 }
 
+#[derive(Debug, Fail)]
+enum FakeError {
+    #[fail(display = "error")]
+    Err,
+}
+
 #[test]
 fn test_exchange_code_successful_with_minimal_json_response() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=authorization_code&code=ccc")
-        // Ensure that token_type is case insensitive.
-        .with_body("{\"access_token\": \"12/34\", \"token_type\": \"BEARER\"}")
-        // Omit the Content-Type header to ensure that we still parse it as JSON.
-        .create();
-
     let client = BasicClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
+            Url::parse("https://example.com/token").unwrap(),
         )),
     );
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=authorization_code&code=ccc",
+            HttpResponse {
+                status_code: 200,
+                headers: Vec::new(),
+                body: "{\"access_token\": \"12/34\", \"token_type\": \"BEARER\"}"
+                    .to_string()
+                    .into_bytes(),
+            },
+        ))
         .unwrap();
-
-    mock.assert();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
@@ -291,22 +294,27 @@ fn test_exchange_code_successful_with_minimal_json_response() {
 
 #[test]
 fn test_exchange_code_successful_with_complete_json_response() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_body("grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb")
-        .with_header("Content-Type", "application/json")
-        .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\", \
-             \"expires_in\": 3600, \"refresh_token\": \"foobar\"}",
-        )
-        .create();
-
-    let client = new_mock_client().set_auth_type(oauth2::AuthType::RequestBody);
+    let client = new_client().set_auth_type(oauth2::AuthType::RequestBody);
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![("Accept", "application/json")],
+            "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![("Content-Type".to_string(), "application/json".to_string())],
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\", \
+                       \"expires_in\": 3600, \
+                       \"refresh_token\": \"foobar\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
         .unwrap();
-
-    mock.assert();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
@@ -335,22 +343,39 @@ fn test_exchange_code_successful_with_complete_json_response() {
 
 #[test]
 fn test_exchange_client_credentials_with_basic_auth() {
-    let mock = mock("POST", "/token")
-        // base64(urlencode("aaa/;&") + ":" + urlencode("bbb/;&"))
-        .match_header(
-            "Authorization",
-            "Basic YWFhJTJGJTNCJTI2OmJiYiUyRiUzQiUyNg==",
-        )
-        .match_body("grant_type=client_credentials")
-        .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
-        )
-        .create();
-
-    let client = new_mock_client_with_unsafe_chars().set_auth_type(oauth2::AuthType::BasicAuth);
-    let token = client.exchange_client_credentials().unwrap();
-
-    mock.assert();
+    let client = BasicClient::new(
+        ClientId::new("aaa/;&".to_string()),
+        Some(ClientSecret::new("bbb/;&".to_string())),
+        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
+        Some(TokenUrl::new(
+            Url::parse("https://example.com/token").unwrap(),
+        )),
+    )
+    .set_auth_type(oauth2::AuthType::BasicAuth);
+    let token = client
+        .exchange_client_credentials()
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                (
+                    "Authorization",
+                    "Basic YWFhJTJGJTNCJTI2OmJiYiUyRiUzQiUyNg==",
+                ),
+            ],
+            "grant_type=client_credentials",
+            HttpResponse {
+                status_code: 200,
+                headers: Vec::new(),
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
+        .unwrap();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
@@ -367,25 +392,27 @@ fn test_exchange_client_credentials_with_basic_auth() {
 
 #[test]
 fn test_exchange_client_credentials_with_body_auth_and_scope() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_body(
-            "grant_type=client_credentials&scope=read+write&client_id=aaa&client_secret=bbb",
-        )
-        // Ensure we parse headers case insensitively.
-        .with_header("content-TYPE", "APPLICATION/jSoN")
-        .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
-        )
-        .create();
-
-    let client = new_mock_client()
-        .set_auth_type(oauth2::AuthType::RequestBody)
+    let client = new_client().set_auth_type(oauth2::AuthType::RequestBody);
+    let token = client
+        .exchange_client_credentials()
         .add_scope(Scope::new("read".to_string()))
-        .add_scope(Scope::new("write".to_string()));
-    let token = client.exchange_client_credentials().unwrap();
-
-    mock.assert();
+        .add_scope(Scope::new("write".to_string()))
+        .request(mock_http_client(
+            vec![("Accept", "application/json")],
+            "grant_type=client_credentials&scope=read+write&client_id=aaa&client_secret=bbb",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![("content-TYPE".to_string(), "APPLICATION/jSoN".to_string())],
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
+        .unwrap();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
@@ -402,21 +429,27 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
 
 #[test]
 fn test_exchange_refresh_token_with_basic_auth() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=refresh_token&refresh_token=ccc")
-        .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
-        )
-        .create();
-
-    let client = new_mock_client().set_auth_type(oauth2::AuthType::BasicAuth);
+    let client = new_client().set_auth_type(oauth2::AuthType::BasicAuth);
     let token = client
         .exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=refresh_token&refresh_token=ccc",
+            HttpResponse {
+                status_code: 200,
+                headers: Vec::new(),
+                body: "{\"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
         .unwrap();
-
-    mock.assert();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
@@ -433,23 +466,28 @@ fn test_exchange_refresh_token_with_basic_auth() {
 
 #[test]
 fn test_exchange_refresh_token_with_json_response() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=refresh_token&refresh_token=ccc")
-        // Ensure we can handle (ignore) charsets
-        .with_header("content-type", "application/json; charset=\"utf-8\"")
-        .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
-        )
-        .create();
-
-    let client = new_mock_client();
+    let client = new_client();
     let token = client
         .exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=refresh_token&refresh_token=ccc",
+            HttpResponse {
+                status_code: 200,
+                headers: Vec::new(),
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
         .unwrap();
-
-    mock.assert();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
@@ -466,27 +504,33 @@ fn test_exchange_refresh_token_with_json_response() {
 
 #[test]
 fn test_exchange_password_with_json_response() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=password&username=user&password=pass&scope=read+write")
-        .with_header("content-type", "application/json")
-        .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
-        )
-        .create();
-
-    let client = new_mock_client()
-        .add_scope(Scope::new("read".to_string()))
-        .add_scope(Scope::new("write".to_string()));
+    let client = new_client();
     let token = client
         .exchange_password(
             &ResourceOwnerUsername::new("user".to_string()),
             &ResourceOwnerPassword::new("pass".to_string()),
         )
+        .add_scope(Scope::new("read".to_string()))
+        .add_scope(Scope::new("write".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=password&username=user&password=pass&scope=read+write",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
         .unwrap();
-
-    mock.assert();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
@@ -503,28 +547,31 @@ fn test_exchange_password_with_json_response() {
 
 #[test]
 fn test_exchange_code_successful_with_redirect_url() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_body(
-            "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb&redirect_uri=\
-             http%3A%2F%2Fredirect%2Fhere",
-        )
-        .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
-        )
-        .create();
-
-    let client = new_mock_client()
+    let client = new_client()
         .set_auth_type(oauth2::AuthType::RequestBody)
         .set_redirect_url(RedirectUrl::new(
-            Url::parse("http://redirect/here").unwrap(),
+            Url::parse("https://redirect/here").unwrap(),
         ));
 
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![("Accept", "application/json")],
+            "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb&\
+             redirect_uri=https%3A%2F%2Fredirect%2Fhere",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
         .unwrap();
-
-    mock.assert();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
@@ -541,28 +588,33 @@ fn test_exchange_code_successful_with_redirect_url() {
 
 #[test]
 fn test_exchange_code_successful_with_basic_auth() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body(
-            "grant_type=authorization_code&code=ccc&redirect_uri=http%3A%2F%2Fredirect%2Fhere",
-        )
-        .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
-        )
-        .create();
-
-    let client = new_mock_client()
+    let client = new_client()
         .set_auth_type(oauth2::AuthType::BasicAuth)
         .set_redirect_url(RedirectUrl::new(
-            Url::parse("http://redirect/here").unwrap(),
+            Url::parse("https://redirect/here").unwrap(),
         ));
 
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=authorization_code&code=ccc&redirect_uri=https%3A%2F%2Fredirect%2Fhere",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
         .unwrap();
-
-    mock.assert();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
@@ -578,36 +630,42 @@ fn test_exchange_code_successful_with_basic_auth() {
 }
 
 #[test]
-fn test_exchange_code_successful_with_extension() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body(
-            "grant_type=authorization_code&code=ccc\
-             &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\
-             &redirect_uri=http%3A%2F%2Fredirect%2Fhere",
-        )
-        .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
-        )
-        .create();
-
-    let client = new_mock_client()
+fn test_exchange_code_successful_with_pkce_and_extension() {
+    let client = new_client()
         .set_auth_type(oauth2::AuthType::BasicAuth)
         .set_redirect_url(RedirectUrl::new(
-            Url::parse("http://redirect/here").unwrap(),
+            Url::parse("https://redirect/here").unwrap(),
         ));
 
-    let params: Vec<(&str, &str)> = vec![(
-        "code_verifier",
-        "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
-    )];
-
     let token = client
-        .exchange_code_extension(AuthorizationCode::new("ccc".to_string()), &params)
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .set_pkce_verifier(PkceCodeVerifier::new(
+            "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string(),
+        ))
+        .add_extra_param("foo", "bar")
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=authorization_code\
+             &code=ccc\
+             &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\
+             &redirect_uri=https%3A%2F%2Fredirect%2Fhere\
+             &foo=bar",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
         .unwrap();
-
-    mock.assert();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
@@ -624,35 +682,34 @@ fn test_exchange_code_successful_with_extension() {
 
 #[test]
 fn test_exchange_refresh_token_successful_with_extension() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body(
-            "grant_type=refresh_token&refresh_token=ccc\
-             &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\
-             &redirect_uri=http%3A%2F%2Fredirect%2Fhere",
-        )
-        .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"bearer\", \"scope\": \"read write\"}",
-        )
-        .create();
-
-    let client = new_mock_client()
+    let client = new_client()
         .set_auth_type(oauth2::AuthType::BasicAuth)
         .set_redirect_url(RedirectUrl::new(
-            Url::parse("http://redirect/here").unwrap(),
+            Url::parse("https://redirect/here").unwrap(),
         ));
 
-    let params: Vec<(&str, &str)> = vec![(
-        "code_verifier",
-        "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
-    )];
-
     let token = client
-        .exchange_refresh_token_extension(&RefreshToken::new("ccc".to_string()), &params)
+        .exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
+        .add_extra_param("foo", "bar")
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=refresh_token&refresh_token=ccc&foo=bar",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
         .unwrap();
-
-    mock.assert();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
@@ -669,19 +726,26 @@ fn test_exchange_refresh_token_successful_with_extension() {
 
 #[test]
 fn test_exchange_code_with_simple_json_error() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=authorization_code&code=ccc")
-        .with_status(400)
-        .with_header("content-type", "application/json")
-        .with_body("{\"error\": \"invalid_request\", \"error_description\": \"stuff happened\"}")
-        .create();
-
-    let client = new_mock_client();
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
-
-    mock.assert();
+    let client = new_client();
+    let token = client
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=authorization_code&code=ccc",
+            HttpResponse {
+                status_code: 400,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "{\
+                       \"error\": \"invalid_request\", \
+                       \"error_description\": \"stuff happened\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ));
 
     assert!(token.is_err());
 
@@ -745,18 +809,21 @@ fn test_exchange_code_with_simple_json_error() {
 
 #[test]
 fn test_exchange_code_with_json_parse_error() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_body("grant_type=authorization_code&code=ccc")
-        .with_header("authorization", "YWFhOmJiYg==") // base64("aaa:bbb")
-        .with_header("content-type", "application/json")
-        .with_body("broken json")
-        .create();
-
-    let client = new_mock_client();
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
-
-    mock.assert();
+    let client = new_client();
+    let token = client
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=authorization_code&code=ccc",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "broken json".to_string().into_bytes(),
+            },
+        ));
 
     assert!(token.is_err());
 
@@ -772,18 +839,24 @@ fn test_exchange_code_with_json_parse_error() {
 
 #[test]
 fn test_exchange_code_with_unexpected_content_type() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_body("grant_type=authorization_code&code=ccc")
-        .with_header("authorization", "YWFhOmJiYg==") // base64("aaa:bbb")
-        .with_header("content-type", "text/plain")
-        .with_body("broken json")
-        .create();
-
-    let client = new_mock_client();
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
-
-    mock.assert();
+    let client = new_client();
+    let token = client
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=authorization_code&code=ccc",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![
+                    ("authorization".to_string(), "YWFhOmJiYg==".to_string()),
+                    ("content-type".to_string(), "text/plain".to_string()),
+                ],
+                body: "broken json".to_string().into_bytes(),
+            },
+        ));
 
     assert!(token.is_err());
 
@@ -800,27 +873,31 @@ fn test_exchange_code_with_unexpected_content_type() {
 
 #[test]
 fn test_exchange_code_with_invalid_token_type() {
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOg==") // base64("aaa:")
-        .match_body("grant_type=authorization_code&code=ccc")
-        .with_header("content-type", "application/json")
-        // "magic" is not a recognized token type.
-        .with_body("{\"access_token\": \"12/34\", \"token_type\": \"magic\"}")
-        .create();
-
     let client = BasicClient::new(
         ClientId::new("aaa".to_string()),
         None,
-        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
+            Url::parse("https://example.com/token").unwrap(),
         )),
     );
 
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
-
-    mock.assert();
+    let token = client
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOg=="),
+            ],
+            "grant_type=authorization_code&code=ccc",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "{\"access_token\": \"12/34\", \"token_type\": \"magic\"}"
+                    .to_string()
+                    .into_bytes(),
+            },
+        ));
 
     assert!(token.is_err());
     match token.err().unwrap() {
@@ -836,19 +913,21 @@ fn test_exchange_code_with_invalid_token_type() {
 #[test]
 fn test_exchange_code_with_400_status_code() {
     let body = r#"{"error":"invalid_request","error_description":"Expired code."}"#;
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=authorization_code&code=ccc")
-        .with_header("content-type", "application/json")
-        .with_body(body)
-        .with_status(400)
-        .create();
-
-    let client = new_mock_client();
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
-
-    mock.assert();
+    let client = new_client();
+    let token = client
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=authorization_code&code=ccc",
+            HttpResponse {
+                status_code: 400,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: body.to_string().into_bytes(),
+            },
+        ));
 
     assert!(token.is_err());
 
@@ -873,17 +952,17 @@ fn test_exchange_code_fails_gracefully_on_transport_error() {
     let client = BasicClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("http://auth").unwrap()),
-        Some(TokenUrl::new(Url::parse("http://token").unwrap())),
+        AuthUrl::new(Url::parse("https://auth").unwrap()),
+        Some(TokenUrl::new(Url::parse("https://token").unwrap())),
     );
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
+    let token = client
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(|_| Err(FakeError::Err));
 
     assert!(token.is_err());
 
-    // The variant argument is "[6] Couldn't resolve host name (Couldn't resolve host 'token')"...
-    // ...or "[6] Couldn't resolve host name (Could not resolve host token)" in some circumstances
     match token.err().unwrap() {
-        RequestTokenError::Request(_) => (),
+        RequestTokenError::Request(FakeError::Err) => (),
         other => panic!("Unexpected error: {:?}", other),
     }
 }
@@ -967,28 +1046,31 @@ mod colorful_extension {
 #[test]
 fn test_extension_successful_with_minimal_json_response() {
     use colorful_extension::*;
-
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=authorization_code&code=ccc")
-        .with_header("content-type", "application/json")
-        .with_body("{\"access_token\": \"12/34\", \"token_type\": \"green\", \"height\": 10}")
-        .create();
-
     let client = ColorfulClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
+            Url::parse("https://example.com/token").unwrap(),
         )),
     );
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=authorization_code&code=ccc",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "{\"access_token\": \"12/34\", \"token_type\": \"green\", \"height\": 10}"
+                    .to_string()
+                    .into_bytes(),
+            },
+        ))
         .unwrap();
-
-    mock.assert();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(ColorfulTokenType::Green, *token.token_type());
@@ -1012,32 +1094,37 @@ fn test_extension_successful_with_minimal_json_response() {
 #[test]
 fn test_extension_successful_with_complete_json_response() {
     use colorful_extension::*;
-
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_body("grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb")
-        .with_header("content-type", "application/json")
-        .with_body(
-            "{\"access_token\": \"12/34\", \"token_type\": \"red\", \"scope\": \"read write\", \
-             \"expires_in\": 3600, \"refresh_token\": \"foobar\", \"shape\": \"round\", \
-             \"height\": 12}",
-        )
-        .create();
-
     let client = ColorfulClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
+            Url::parse("https://example.com/token").unwrap(),
         )),
     )
     .set_auth_type(oauth2::AuthType::RequestBody);
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![("Accept", "application/json")],
+            "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb",
+            HttpResponse {
+                status_code: 200,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"red\", \
+                       \"scope\": \"read write\", \
+                       \"expires_in\": 3600, \
+                       \"refresh_token\": \"foobar\", \
+                       \"shape\": \"round\", \
+                       \"height\": 12\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
         .unwrap();
-
-    mock.assert();
 
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(ColorfulTokenType::Red, *token.token_type());
@@ -1070,30 +1157,31 @@ fn test_extension_successful_with_complete_json_response() {
 #[test]
 fn test_extension_with_simple_json_error() {
     use colorful_extension::*;
-
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=authorization_code&code=ccc")
-        .with_status(400)
-        .with_header("content-type", "application/json")
-        .with_body(
-            "{\"error\": \"too_light\", \"error_description\": \"stuff happened\", \
-             \"error_uri\": \"https://errors\"}",
-        )
-        .create();
-
     let client = ColorfulClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
+            Url::parse("https://example.com/token").unwrap(),
         )),
     );
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
-
-    mock.assert();
+    let token = client
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=authorization_code&code=ccc",
+            HttpResponse {
+                status_code: 400,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "{\"error\": \"too_light\", \"error_description\": \"stuff happened\", \
+                       \"error_uri\": \"https://errors\"}"
+                    .to_string()
+                    .into_bytes(),
+            },
+        ));
 
     assert!(token.is_err());
 
@@ -1174,28 +1262,31 @@ mod custom_errors {
 #[test]
 fn test_extension_with_custom_json_error() {
     use custom_errors::*;
-
-    let mock = mock("POST", "/token")
-        .match_header("Accept", "application/json")
-        .match_header("Authorization", "Basic YWFhOmJiYg==") // base64("aaa:bbb")
-        .match_body("grant_type=authorization_code&code=ccc")
-        .with_status(400)
-        .with_header("content-type", "application/json")
-        .with_body("{\"custom_error\": \"non-compliant oauth implementation ;-)\"}")
-        .create();
-
     let client = CustomErrorClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("http://example.com/auth").unwrap()),
+        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
         Some(TokenUrl::new(
-            Url::parse(&(server_url().to_string() + "/token")).unwrap(),
+            Url::parse("https://example.com/token").unwrap(),
         )),
     );
 
-    let token = client.exchange_code(AuthorizationCode::new("ccc".to_string()));
-
-    mock.assert();
+    let token = client
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                ("Accept", "application/json"),
+                ("Authorization", "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=authorization_code&code=ccc",
+            HttpResponse {
+                status_code: 400,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: "{\"custom_error\": \"non-compliant oauth implementation ;-)\"}"
+                    .to_string()
+                    .into_bytes(),
+            },
+        ));
 
     assert!(token.is_err());
 

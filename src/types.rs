@@ -149,7 +149,7 @@ macro_rules! new_secret_type {
         $(
             #[$attr]
         )*
-        #[derive(Clone, PartialEq)]
+        #[derive(PartialEq)]
         pub struct $name($type);
         impl $name {
             $($item)*
@@ -251,14 +251,16 @@ impl AsRef<str> for Scope {
         self
     }
 }
+
+/*
 new_type![
     ///
     /// Code Challenge used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection via the
     /// `code_challenge` parameter.
     ///
     #[derive(Deserialize, Serialize)]
-    PkceCodeChallengeS256(String)
-];
+    PkceCodeChallenge(String)
+];*/
 new_type![
     ///
     /// Code Challenge Method used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection
@@ -267,18 +269,114 @@ new_type![
     #[derive(Deserialize, Serialize)]
     PkceCodeChallengeMethod(String)
 ];
+// This type intentionally does not implement Clone in order to make it difficult to reuse PKCE
+// challenges across multiple requests.
+new_secret_type![
+    ///
+    /// Code Verifier used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection via the
+    /// `code_verifier` parameter. The value must have a minimum length of 43 characters and a
+    /// maximum length of 128 characters.  Each character must be ASCII alphanumeric or one of
+    /// the characters "-" / "." / "_" / "~".
+    ///
+    #[derive(Deserialize, Serialize)]
+    PkceCodeVerifier(String)
+];
+
+///
+/// Code Challenge used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection via the
+/// `code_challenge` parameter.
+///
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct PkceCodeChallenge {
+    code_challenge: String,
+    code_challenge_method: PkceCodeChallengeMethod,
+}
+impl PkceCodeChallenge {
+    ///
+    /// Generate a new random, base64-encoded SHA-256 PKCE code.
+    ///
+    pub fn new_random_sha256() -> (Self, PkceCodeVerifier) {
+        Self::new_random_sha256_len(32)
+    }
+
+    ///
+    /// Generate a new random, base64-encoded SHA-256 PKCE code.
+    ///
+    /// # Arguments
+    ///
+    /// * `num_bytes` - Number of random bytes to generate, prior to base64-encoding.
+    ///   The value must be in the range 32 to 96 inclusive in order to generate a verifier
+    ///   with a suitable length.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if the resulting PKCE code verifier is not of a suitable length
+    /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    pub fn new_random_sha256_len(num_bytes: u32) -> (Self, PkceCodeVerifier) {
+        // The RFC specifies that the code verifier must have "a minimum length of 43
+        // characters and a maximum length of 128 characters".
+        // This implies 32-96 octets of random data to be base64 encoded.
+        assert!(num_bytes >= 32 && num_bytes <= 96);
+        let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
+        let code_verifier = PkceCodeVerifier::new(base64::encode_config(
+            &random_bytes,
+            base64::URL_SAFE_NO_PAD,
+        ));
+        (
+            Self::from_code_verifier_sha256(&code_verifier),
+            code_verifier,
+        )
+    }
+
+    ///
+    /// Generate a SHA-256 PKCE code challenge from the supplied PKCE code verifier.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if the supplied PKCE code verifier is not of a suitable length
+    /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    pub fn from_code_verifier_sha256(code_verifier: &PkceCodeVerifier) -> Self {
+        // The RFC specifies that the code verifier must have "a minimum length of 43
+        // characters and a maximum length of 128 characters".
+        assert!(code_verifier.secret().len() >= 43 && code_verifier.secret().len() <= 128);
+
+        let digest = Sha256::digest(code_verifier.secret().as_bytes());
+        let code_challenge = base64::encode_config(&digest, base64::URL_SAFE_NO_PAD);
+
+        Self {
+            code_challenge,
+            code_challenge_method: PkceCodeChallengeMethod::new("S256".to_string()),
+        }
+    }
+
+    ///
+    /// Returns the PKCE code challenge as a string.
+    ///
+    pub fn as_str(&self) -> &str {
+        &self.code_challenge
+    }
+
+    ///
+    /// Returns the PKCE code challenge method as a string.
+    ///
+    pub fn method(&self) -> &PkceCodeChallengeMethod {
+        &self.code_challenge_method
+    }
+}
 
 new_secret_type![
     ///
     /// Client password issued to the client during the registration process described by
     /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
     ///
-    #[derive(Deserialize, Serialize)]
+    #[derive(Clone, Deserialize, Serialize)]
     ClientSecret(String)
 ];
 new_secret_type![
     ///
-    /// Value used for [CSRF]((https://tools.ietf.org/html/rfc6749#section-10.12)) protection
+    /// Value used for [CSRF](https://tools.ietf.org/html/rfc6749#section-10.12) protection
     /// via the `state` parameter.
     ///
     #[must_use]
@@ -306,87 +404,23 @@ new_secret_type![
 ];
 new_secret_type![
     ///
-    /// Code Verifier used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection via the
-    /// `code_verifier` parameter. The value must have a minimum length of 43 characters and a
-    /// maximum length of 128 characters.  Each character must be ASCII alphanumeric or one of
-    /// the characters "-" / "." / "_" / "~".
-    ///
-    #[derive(Deserialize, Serialize)]
-    PkceCodeVerifierS256(String)
-    impl {
-        ///
-        /// Generate a new random, base64-encoded code verifier.
-        ///
-        pub fn new_random() -> Self {
-            PkceCodeVerifierS256::new_random_len(32)
-        }
-        ///
-        /// Generate a new random, base64-encoded code verifier.
-        ///
-        /// # Arguments
-        ///
-        /// * `num_bytes` - Number of random bytes to generate, prior to base64-encoding.
-        ///   The value must be in the range 32 to 96 inclusive in order to generate a verifier
-        ///   with a suitable length.
-        ///
-        pub fn new_random_len(num_bytes: u32) -> Self {
-            // The RFC specifies that the code verifier must have "a minimum length of 43
-            // characters and a maximum length of 128 characters".
-            // This implies 32-96 octets of random data to be base64 encoded.
-            assert!(num_bytes >= 32 && num_bytes <= 96);
-            let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
-            let code = base64::encode_config(&random_bytes, base64::URL_SAFE_NO_PAD);
-            assert!(code.len() >=43 && code.len() <= 128);
-            PkceCodeVerifierS256::new(code)
-        }
-        ///
-        /// Return the code challenge for the code verifier.
-        ///
-        pub fn code_challenge(&self) -> PkceCodeChallengeS256 {
-            let digest = Sha256::digest(self.secret().as_bytes());
-            PkceCodeChallengeS256::new(base64::encode_config(&digest, base64::URL_SAFE_NO_PAD))
-        }
-
-        ///
-        /// Return the code challenge method for this code verifier.
-        ///
-        pub fn code_challenge_method() -> PkceCodeChallengeMethod {
-            PkceCodeChallengeMethod::new("S256".to_string())
-        }
-
-        ///
-        /// Return the extension params used for authorize_url.
-        ///
-        pub fn authorize_url_params(&self) -> Vec<(&'static str, String)> {
-            vec![
-                (
-                    "code_challenge_method",
-                    PkceCodeVerifierS256::code_challenge_method().into(),
-                ),
-                ("code_challenge", self.code_challenge().into()),
-            ]
-        }
-    }
-];
-new_secret_type![
-    ///
     /// Authorization code returned from the authorization endpoint.
     ///
-    #[derive(Deserialize, Serialize)]
+    #[derive(Clone, Deserialize, Serialize)]
     AuthorizationCode(String)
 ];
 new_secret_type![
     ///
     /// Refresh token used to obtain a new access token (if supported by the authorization server).
     ///
-    #[derive(Deserialize, Serialize)]
+    #[derive(Clone, Deserialize, Serialize)]
     RefreshToken(String)
 ];
 new_secret_type![
     ///
     /// Access token returned by the token endpoint and used to access protected resources.
     ///
-    #[derive(Deserialize, Serialize)]
+    #[derive(Clone, Deserialize, Serialize)]
     AccessToken(String)
 ];
 new_secret_type![
@@ -394,5 +428,6 @@ new_secret_type![
     /// Resource owner's password used directly as an authorization grant to obtain an access
     /// token.
     ///
+    #[derive(Clone)]
     ResourceOwnerPassword(String)
 ];

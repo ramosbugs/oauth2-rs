@@ -101,4 +101,4 @@ pub type BasicErrorResponse = StandardErrorResponse<BasicErrorResponseType>;
 ///
 /// Token error specialization for basic OAuth2 implementation.
 ///
-pub type BasicRequestTokenError = RequestTokenError<BasicErrorResponseType>;
+pub type BasicRequestTokenError<RE> = RequestTokenError<RE, BasicErrorResponse>;

@@ -598,32 +598,35 @@ impl<'a> AuthorizationRequest<'a> {
             .collect::<Vec<_>>()
             .join(" ");
 
-        let mut pairs: Vec<(&str, &str)> = vec![
-            ("response_type", self.response_type.as_ref()),
-            ("client_id", &self.client_id),
-            ("state", self.state.secret()),
-        ];
+        let url = {
+            let mut pairs: Vec<(&str, &str)> = vec![
+                ("response_type", self.response_type.as_ref()),
+                ("client_id", &self.client_id),
+                ("state", self.state.secret()),
+            ];
 
-        if let Some(ref pkce_challenge) = self.pkce_challenge {
-            pairs.push(("code_challenge", &pkce_challenge.as_str()));
-            pairs.push(("code_challenge_method", &pkce_challenge.method().as_str()));
-        }
+            if let Some(ref pkce_challenge) = self.pkce_challenge {
+                pairs.push(("code_challenge", &pkce_challenge.as_str()));
+                pairs.push(("code_challenge_method", &pkce_challenge.method().as_str()));
+            }
 
-        if let Some(ref redirect_url) = self.redirect_url {
-            pairs.push(("redirect_uri", redirect_url.as_str()));
-        }
+            if let Some(ref redirect_url) = self.redirect_url {
+                pairs.push(("redirect_uri", redirect_url.as_str()));
+            }
 
-        if !scopes.is_empty() {
-            pairs.push(("scope", &scopes));
-        }
+            if !scopes.is_empty() {
+                pairs.push(("scope", &scopes));
+            }
 
-        let mut url: Url = (**self.auth_url).to_owned();
+            let mut url: Url = (**self.auth_url).to_owned();
 
-        url.query_pairs_mut()
-            .extend_pairs(pairs.iter().map(|&(k, v)| (k, &v[..])));
+            url.query_pairs_mut()
+                .extend_pairs(pairs.iter().map(|&(k, v)| (k, &v[..])));
 
-        url.query_pairs_mut()
-            .extend_pairs(self.extra_params.iter().cloned());
+            url.query_pairs_mut()
+                .extend_pairs(self.extra_params.iter().cloned());
+            url
+        };
 
         (url, self.state)
     }

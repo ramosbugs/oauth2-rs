@@ -369,6 +369,9 @@ pub mod helpers;
 ///
 pub mod reqwest;
 
+#[cfg(test)]
+mod tests;
+
 mod types;
 
 pub use types::{

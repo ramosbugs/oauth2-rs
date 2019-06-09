@@ -1,21 +1,11 @@
-extern crate failure;
-extern crate failure_derive;
-extern crate http;
-extern crate oauth2;
-extern crate serde;
-extern crate url;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-
 use failure::Fail;
 use http::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
 use url::form_urlencoded::byte_serialize;
 use url::Url;
 
-use oauth2::basic::*;
-use oauth2::*;
+use super::basic::*;
+use super::*;
 
 fn new_client() -> BasicClient {
     BasicClient::new(
@@ -297,7 +287,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
 
 #[test]
 fn test_exchange_code_successful_with_complete_json_response() {
-    let client = new_client().set_auth_type(oauth2::AuthType::RequestBody);
+    let client = new_client().set_auth_type(AuthType::RequestBody);
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
@@ -362,7 +352,7 @@ fn test_exchange_client_credentials_with_basic_auth() {
             Url::parse("https://example.com/token").unwrap(),
         )),
     )
-    .set_auth_type(oauth2::AuthType::BasicAuth);
+    .set_auth_type(AuthType::BasicAuth);
     let token = client
         .exchange_client_credentials()
         .request(mock_http_client(
@@ -401,7 +391,7 @@ fn test_exchange_client_credentials_with_basic_auth() {
 
 #[test]
 fn test_exchange_client_credentials_with_body_auth_and_scope() {
-    let client = new_client().set_auth_type(oauth2::AuthType::RequestBody);
+    let client = new_client().set_auth_type(AuthType::RequestBody);
     let token = client
         .exchange_client_credentials()
         .add_scope(Scope::new("read".to_string()))
@@ -446,7 +436,7 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
 
 #[test]
 fn test_exchange_refresh_token_with_basic_auth() {
-    let client = new_client().set_auth_type(oauth2::AuthType::BasicAuth);
+    let client = new_client().set_auth_type(AuthType::BasicAuth);
     let token = client
         .exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
         .request(mock_http_client(
@@ -573,7 +563,7 @@ fn test_exchange_password_with_json_response() {
 #[test]
 fn test_exchange_code_successful_with_redirect_url() {
     let client = new_client()
-        .set_auth_type(oauth2::AuthType::RequestBody)
+        .set_auth_type(AuthType::RequestBody)
         .set_redirect_url(RedirectUrl::new(
             Url::parse("https://redirect/here").unwrap(),
         ));
@@ -622,7 +612,7 @@ fn test_exchange_code_successful_with_redirect_url() {
 #[test]
 fn test_exchange_code_successful_with_basic_auth() {
     let client = new_client()
-        .set_auth_type(oauth2::AuthType::BasicAuth)
+        .set_auth_type(AuthType::BasicAuth)
         .set_redirect_url(RedirectUrl::new(
             Url::parse("https://redirect/here").unwrap(),
         ));
@@ -671,7 +661,7 @@ fn test_exchange_code_successful_with_basic_auth() {
 #[test]
 fn test_exchange_code_successful_with_pkce_and_extension() {
     let client = new_client()
-        .set_auth_type(oauth2::AuthType::BasicAuth)
+        .set_auth_type(AuthType::BasicAuth)
         .set_redirect_url(RedirectUrl::new(
             Url::parse("https://redirect/here").unwrap(),
         ));
@@ -728,7 +718,7 @@ fn test_exchange_code_successful_with_pkce_and_extension() {
 #[test]
 fn test_exchange_refresh_token_successful_with_extension() {
     let client = new_client()
-        .set_auth_type(oauth2::AuthType::BasicAuth)
+        .set_auth_type(AuthType::BasicAuth)
         .set_redirect_url(RedirectUrl::new(
             Url::parse("https://redirect/here").unwrap(),
         ));
@@ -1045,7 +1035,7 @@ fn test_exchange_code_fails_gracefully_on_transport_error() {
 mod colorful_extension {
     extern crate serde_json;
 
-    use oauth2::*;
+    use super::super::*;
     use std::fmt::Error as FormatterError;
     use std::fmt::{Debug, Display, Formatter};
 
@@ -1120,7 +1110,7 @@ mod colorful_extension {
 
 #[test]
 fn test_extension_successful_with_minimal_json_response() {
-    use colorful_extension::*;
+    use self::colorful_extension::*;
     let client = ColorfulClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
@@ -1174,7 +1164,7 @@ fn test_extension_successful_with_minimal_json_response() {
 
 #[test]
 fn test_extension_successful_with_complete_json_response() {
-    use colorful_extension::*;
+    use self::colorful_extension::*;
     let client = ColorfulClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
@@ -1183,7 +1173,7 @@ fn test_extension_successful_with_complete_json_response() {
             Url::parse("https://example.com/token").unwrap(),
         )),
     )
-    .set_auth_type(oauth2::AuthType::RequestBody);
+    .set_auth_type(AuthType::RequestBody);
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
@@ -1245,7 +1235,7 @@ fn test_extension_successful_with_complete_json_response() {
 
 #[test]
 fn test_extension_with_simple_json_error() {
-    use colorful_extension::*;
+    use self::colorful_extension::*;
     let client = ColorfulClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
@@ -1303,7 +1293,7 @@ fn test_extension_with_simple_json_error() {
             );
 
             let deserialized_error = serde_json::from_str::<
-                oauth2::StandardErrorResponse<ColorfulErrorResponseType>,
+                StandardErrorResponse<ColorfulErrorResponseType>,
             >(&serialized_json)
             .unwrap();
             assert_eq!(error_response, &deserialized_error);
@@ -1330,8 +1320,8 @@ mod custom_errors {
 
     extern crate serde_json;
 
-    use colorful_extension::*;
-    use oauth2::*;
+    use super::super::*;
+    use super::colorful_extension::*;
 
     #[derive(Serialize, Deserialize, Debug)]
     pub struct CustomErrorResponse {
@@ -1356,7 +1346,7 @@ mod custom_errors {
 
 #[test]
 fn test_extension_with_custom_json_error() {
-    use custom_errors::*;
+    use self::custom_errors::*;
     let client = CustomErrorClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
@@ -1401,7 +1391,7 @@ fn test_extension_with_custom_json_error() {
 
 #[test]
 fn test_extension_serializer() {
-    use colorful_extension::{ColorfulFields, ColorfulTokenResponse, ColorfulTokenType};
+    use self::colorful_extension::{ColorfulFields, ColorfulTokenResponse, ColorfulTokenType};
     let mut token_response = ColorfulTokenResponse::new(
         AccessToken::new("mysecret".to_string()),
         ColorfulTokenType::Red,

@@ -30,7 +30,7 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! use oauth2::curl;
+//! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
 //! # extern crate failure;
@@ -74,7 +74,89 @@
 //!         .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
 //!         // Set the PKCE code verifier.
 //!         .set_pkce_verifier(pkce_verifier)
-//!         .request(curl::http_client)?;
+//!         .request(http_client)?;
+//!
+//! // Unwrapping token_result will either produce a Token or a RequestTokenError.
+//! # Ok(())
+//! # }
+//! # fn main() {}
+//! ```
+//!
+//! # Async API
+//!
+//! An asyncronous API is also provided.
+//!
+//! ## Example
+//!
+//! ```
+//! extern crate base64;
+//! extern crate oauth2;
+//! extern crate rand;
+//! extern crate tokio;
+//! extern crate url;
+//!
+//! use oauth2::{
+//!     AuthorizationCode,
+//!     AuthUrl,
+//!     ClientId,
+//!     ClientSecret,
+//!     CsrfToken,
+//!     PkceCodeChallenge,
+//!     RedirectUrl,
+//!     Scope,
+//!     TokenResponse,
+//!     TokenUrl
+//! };
+//! use oauth2::basic::BasicClient;
+//! use oauth2::reqwest::async_http_client;
+//! use tokio::runtime::Runtime;
+//! use url::Url;
+//!
+//! # extern crate failure;
+//! # fn err_wrapper() -> Result<(), failure::Error> {
+//! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
+//! // token URL.
+//! let client =
+//!     BasicClient::new(
+//!         ClientId::new("client_id".to_string()),
+//!         Some(ClientSecret::new("client_secret".to_string())),
+//!         AuthUrl::new(Url::parse("http://authorize")?),
+//!         Some(TokenUrl::new(Url::parse("http://token")?))
+//!     )
+//!     // Set the URL the user will be redirected to after the authorization process.
+//!     .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
+//!
+//! // Generate a PKCE challenge.
+//! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+//!
+//! // Generate the full authorization URL.
+//! let (auth_url, csrf_token) = client
+//!     .authorize_url(CsrfToken::new_random)
+//!     // Set the desired scopes.
+//!     .add_scope(Scope::new("read".to_string()))
+//!     .add_scope(Scope::new("write".to_string()))
+//!     // Set the PKCE code challenge.
+//!     .set_pkce_challenge(pkce_challenge)
+//!     .url();
+//!
+//! // This is the URL you should redirect the user to, in order to trigger the authorization
+//! // process.
+//! println!("Browse to: {}", auth_url);
+//!
+//! // Once the user has been redirected to the redirect URL, you'll have access to the
+//! // authorization code. For security reasons, your code should verify that the `state`
+//! // parameter returned by the server matches `csrf_state`.
+//!
+//! let mut runtime = Runtime::new().unwrap();
+//! // Now you can trade it for an access token.
+//! let token_result =
+//!     runtime.block_on(
+//!         client
+//!             .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
+//!             // Set the PKCE code verifier.
+//!             .set_pkce_verifier(pkce_verifier)
+//!             .request_async(async_http_client)
+//!     )?;
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
 //! # Ok(())
@@ -160,7 +242,7 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! use oauth2::curl;
+//! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
 //! # extern crate failure;
@@ -180,7 +262,7 @@
 //!             &ResourceOwnerPassword::new("pass".to_string())
 //!         )
 //!         .add_scope(Scope::new("read".to_string()))
-//!         .request(curl::http_client)?;
+//!         .request(http_client)?;
 //! # Ok(())
 //! # }
 //! # fn main() {}
@@ -206,7 +288,7 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! use oauth2::curl;
+//! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
 //! # extern crate failure;
@@ -222,7 +304,7 @@
 //! let token_result = client
 //!     .exchange_client_credentials()
 //!     .add_scope(Scope::new("read".to_string()))
-//!     .request(curl::http_client)?;
+//!     .request(http_client)?;
 //! # Ok(())
 //! # }
 //! # fn main() {}
@@ -240,12 +322,16 @@
 extern crate base64;
 extern crate curl as curl_;
 extern crate failure;
+extern crate futures;
+extern crate http;
 extern crate rand;
+extern crate reqwest as reqwest_;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
 extern crate sha2;
+extern crate tokio_io;
 extern crate url;
 
 use std::borrow::Cow;
@@ -255,6 +341,9 @@ use std::marker::PhantomData;
 use std::time::Duration;
 
 use failure::Fail;
+use futures::{Future, IntoFuture};
+use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use http::status::StatusCode;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use url::{form_urlencoded, Url};
@@ -275,6 +364,11 @@ pub mod curl;
 ///
 pub mod helpers;
 
+///
+/// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
+///
+pub mod reqwest;
+
 mod types;
 
 pub use types::{
@@ -284,6 +378,7 @@ pub use types::{
 };
 
 const CONTENT_TYPE_JSON: &str = "application/json";
+const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";
 
 ///
 /// Indicates whether requests to the authorization server should use basic authentication or
@@ -633,17 +728,6 @@ impl<'a> AuthorizationRequest<'a> {
 }
 
 ///
-/// HTTP request method.
-///
-#[derive(Clone, Debug, PartialEq)]
-pub enum HttpRequestMethod {
-    /// GET request.
-    Get,
-    /// POST request.
-    Post,
-}
-
-///
 /// An HTTP request.
 ///
 #[derive(Clone, Debug)]
@@ -653,9 +737,9 @@ pub struct HttpRequest {
     /// URL to which the HTTP request is being made.
     pub url: Url,
     /// HTTP request method for this request.
-    pub method: HttpRequestMethod,
+    pub method: http::method::Method,
     /// HTTP request headers to send.
-    pub headers: Vec<(String, String)>,
+    pub headers: HeaderMap,
     /// HTTP request body (typically for POST requests only).
     pub body: Vec<u8>,
 }
@@ -666,9 +750,9 @@ pub struct HttpRequest {
 #[derive(Clone, Debug)]
 pub struct HttpResponse {
     /// HTTP status code returned by the server.
-    pub status_code: u32,
+    pub status_code: http::status::StatusCode,
     /// HTTP response headers returned by the server.
-    pub headers: Vec<(String, String)>,
+    pub headers: HeaderMap,
     /// HTTP response body returned by the server.
     pub body: Vec<u8>,
 }
@@ -737,12 +821,8 @@ where
         self
     }
 
-    ///
-    /// Synchronously sends the request to the authorization server and awaits a response.
-    ///
-    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
-        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Fail,
     {
         let mut params = vec![
@@ -753,7 +833,7 @@ where
             params.push(("code_verifier", pkce_verifier.secret()));
         }
 
-        let http_request = token_request(
+        Ok(token_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -763,10 +843,44 @@ where
             self.token_url
                 .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
             params,
-        );
-        http_client(http_request)
+        ))
+    }
+
+    ///
+    /// Synchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
+        RE: Fail,
+    {
+        http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
             .and_then(token_response)
+    }
+}
+impl<'a, TE, TR, TT> CodeTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    ///
+    /// Asynchronously sends the request to the authorization server and returns a Future.
+    ///
+    pub fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Item = HttpResponse, Error = RE>,
+        RE: Fail,
+    {
+        self.prepare_request()
+            .into_future()
+            .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
+            .and_then(|http_response| token_response(http_response).into_future())
     }
 }
 
@@ -1040,7 +1154,12 @@ fn token_request<'a>(
     token_url: &'a TokenUrl,
     params: Vec<(&'a str, &'a str)>,
 ) -> HttpRequest {
-    let mut headers = vec![("Accept".to_string(), CONTENT_TYPE_JSON.to_string())];
+    let mut headers = HeaderMap::new();
+    headers.append(ACCEPT, HeaderValue::from_static(CONTENT_TYPE_JSON));
+    headers.append(
+        CONTENT_TYPE,
+        HeaderValue::from_static(CONTENT_TYPE_FORMENCODED),
+    );
 
     let scopes_opt = scopes.and_then(|scopes| {
         if !scopes.is_empty() {
@@ -1087,10 +1206,10 @@ fn token_request<'a>(
                     .map(|secret| secret.as_str())
                     .unwrap_or("")
             ));
-            headers.push((
-                "Authorization".to_string(),
-                format!("Basic {}", &b64_credential),
-            ));
+            headers.append(
+                AUTHORIZATION,
+                HeaderValue::from_str(&format!("Basic {}", &b64_credential)).unwrap(),
+            );
         }
     }
 
@@ -1113,7 +1232,7 @@ fn token_request<'a>(
 
     HttpRequest {
         url: (**token_url).to_owned(),
-        method: HttpRequestMethod::Post,
+        method: http::method::Method::POST,
         headers,
         body,
     }
@@ -1128,7 +1247,7 @@ where
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
-    if http_response.status_code != 200 {
+    if http_response.status_code != StatusCode::OK {
         let reason = http_response.body.as_slice();
         if reason.is_empty() {
             return Err(RequestTokenError::Other(
@@ -1146,18 +1265,16 @@ where
     // Validate that the response Content-Type is JSON.
     http_response
         .headers
-        .iter()
-        .find(|(name, _)| name.to_lowercase() == "content-type")
-        .map(|(_, value)| value)
+        .get(CONTENT_TYPE)
         .map_or(Ok(()), |content_type|
             // Section 3.1.1.1 of RFC 7231 indicates that media types are case insensitive and
             // may be followed by optional whitespace and/or a parameter (e.g., charset).
             // See https://tools.ietf.org/html/rfc7231#section-3.1.1.1.
-            if !content_type.to_lowercase().starts_with(CONTENT_TYPE_JSON) {
+            if content_type.to_str().ok().filter(|ct| ct.to_lowercase().starts_with(CONTENT_TYPE_JSON)).is_none() {
                 Err(
                     RequestTokenError::Other(
                         format!(
-                            "Unexpected response Content-Type: `{}`, should be `{}`",
+                            "Unexpected response Content-Type: {:?}, should be `{}`",
                             content_type,
                             CONTENT_TYPE_JSON
                         )

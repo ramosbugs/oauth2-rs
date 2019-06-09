@@ -1,5 +1,6 @@
 extern crate failure;
 extern crate failure_derive;
+extern crate http;
 extern crate oauth2;
 extern crate serde;
 extern crate url;
@@ -8,6 +9,8 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use failure::Fail;
+use http::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use http::status::StatusCode;
 use url::form_urlencoded::byte_serialize;
 use url::Url;
 
@@ -26,7 +29,7 @@ fn new_client() -> BasicClient {
 }
 
 fn mock_http_client(
-    request_headers: Vec<(&'static str, &'static str)>,
+    request_headers: Vec<(HeaderName, &'static str)>,
     request_body: &'static str,
     response: HttpResponse,
 ) -> impl FnOnce(HttpRequest) -> Result<HttpResponse, FakeError> {
@@ -36,12 +39,11 @@ fn mock_http_client(
             Url::parse("https://example.com/token").unwrap()
         );
         assert_eq!(
-            request
-                .headers
+            request.headers,
+            request_headers
                 .iter()
-                .map(|(k, v)| (k.as_ref(), v.as_ref()))
-                .collect::<Vec<_>>(),
-            request_headers,
+                .map(|(name, value)| (name.clone(), HeaderValue::from_str(value).unwrap()))
+                .collect(),
         );
         assert_eq!(&String::from_utf8(request.body).unwrap(), request_body);
 
@@ -262,13 +264,14 @@ fn test_exchange_code_successful_with_minimal_json_response() {
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
             HttpResponse {
-                status_code: 200,
-                headers: Vec::new(),
+                status_code: StatusCode::OK,
+                headers: HeaderMap::new(),
                 body: "{\"access_token\": \"12/34\", \"token_type\": \"BEARER\"}"
                     .to_string()
                     .into_bytes(),
@@ -298,11 +301,19 @@ fn test_exchange_code_successful_with_complete_json_response() {
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
-            vec![("Accept", "application/json")],
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+            ],
             "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb",
             HttpResponse {
-                status_code: 200,
-                headers: vec![("Content-Type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\
                        \"access_token\": \"12/34\", \
                        \"token_type\": \"bearer\", \
@@ -356,16 +367,14 @@ fn test_exchange_client_credentials_with_basic_auth() {
         .exchange_client_credentials()
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                (
-                    "Authorization",
-                    "Basic YWFhJTJGJTNCJTI2OmJiYiUyRiUzQiUyNg==",
-                ),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhJTJGJTNCJTI2OmJiYiUyRiUzQiUyNg=="),
             ],
             "grant_type=client_credentials",
             HttpResponse {
-                status_code: 200,
-                headers: Vec::new(),
+                status_code: StatusCode::OK,
+                headers: HeaderMap::new(),
                 body: "{\
                        \"access_token\": \"12/34\", \
                        \"token_type\": \"bearer\", \
@@ -398,11 +407,19 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
         .add_scope(Scope::new("read".to_string()))
         .add_scope(Scope::new("write".to_string()))
         .request(mock_http_client(
-            vec![("Accept", "application/json")],
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+            ],
             "grant_type=client_credentials&scope=read+write&client_id=aaa&client_secret=bbb",
             HttpResponse {
-                status_code: 200,
-                headers: vec![("content-TYPE".to_string(), "APPLICATION/jSoN".to_string())],
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("APPLICATION/jSoN").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\
                        \"access_token\": \"12/34\", \
                        \"token_type\": \"bearer\", \
@@ -434,13 +451,14 @@ fn test_exchange_refresh_token_with_basic_auth() {
         .exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=refresh_token&refresh_token=ccc",
             HttpResponse {
-                status_code: 200,
-                headers: Vec::new(),
+                status_code: StatusCode::OK,
+                headers: HeaderMap::new(),
                 body: "{\"access_token\": \"12/34\", \
                        \"token_type\": \"bearer\", \
                        \"scope\": \"read write\"\
@@ -471,13 +489,14 @@ fn test_exchange_refresh_token_with_json_response() {
         .exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=refresh_token&refresh_token=ccc",
             HttpResponse {
-                status_code: 200,
-                headers: Vec::new(),
+                status_code: StatusCode::OK,
+                headers: HeaderMap::new(),
                 body: "{\
                        \"access_token\": \"12/34\", \
                        \"token_type\": \"bearer\", \
@@ -514,13 +533,19 @@ fn test_exchange_password_with_json_response() {
         .add_scope(Scope::new("write".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=password&username=user&password=pass&scope=read+write",
             HttpResponse {
-                status_code: 200,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\
                        \"access_token\": \"12/34\", \
                        \"token_type\": \"bearer\", \
@@ -556,12 +581,20 @@ fn test_exchange_code_successful_with_redirect_url() {
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
-            vec![("Accept", "application/json")],
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+            ],
             "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb&\
              redirect_uri=https%3A%2F%2Fredirect%2Fhere",
             HttpResponse {
-                status_code: 200,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\
                        \"access_token\": \"12/34\", \
                        \"token_type\": \"bearer\", \
@@ -598,13 +631,19 @@ fn test_exchange_code_successful_with_basic_auth() {
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc&redirect_uri=https%3A%2F%2Fredirect%2Fhere",
             HttpResponse {
-                status_code: 200,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\
                        \"access_token\": \"12/34\", \
                        \"token_type\": \"bearer\", \
@@ -645,8 +684,9 @@ fn test_exchange_code_successful_with_pkce_and_extension() {
         .add_extra_param("foo", "bar")
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code\
              &code=ccc\
@@ -654,8 +694,13 @@ fn test_exchange_code_successful_with_pkce_and_extension() {
              &redirect_uri=https%3A%2F%2Fredirect%2Fhere\
              &foo=bar",
             HttpResponse {
-                status_code: 200,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\
                        \"access_token\": \"12/34\", \
                        \"token_type\": \"bearer\", \
@@ -693,13 +738,19 @@ fn test_exchange_refresh_token_successful_with_extension() {
         .add_extra_param("foo", "bar")
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=refresh_token&refresh_token=ccc&foo=bar",
             HttpResponse {
-                status_code: 200,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\
                        \"access_token\": \"12/34\", \
                        \"token_type\": \"bearer\", \
@@ -731,13 +782,19 @@ fn test_exchange_code_with_simple_json_error() {
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
             HttpResponse {
-                status_code: 400,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::BAD_REQUEST,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\
                        \"error\": \"invalid_request\", \
                        \"error_description\": \"stuff happened\"\
@@ -814,13 +871,19 @@ fn test_exchange_code_with_json_parse_error() {
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
             HttpResponse {
-                status_code: 200,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "broken json".to_string().into_bytes(),
             },
         ));
@@ -844,16 +907,16 @@ fn test_exchange_code_with_unexpected_content_type() {
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
             HttpResponse {
-                status_code: 200,
-                headers: vec![
-                    ("authorization".to_string(), "YWFhOmJiYg==".to_string()),
-                    ("content-type".to_string(), "text/plain".to_string()),
-                ],
+                status_code: StatusCode::OK,
+                headers: vec![(CONTENT_TYPE, HeaderValue::from_str("text/plain").unwrap())]
+                    .into_iter()
+                    .collect(),
                 body: "broken json".to_string().into_bytes(),
             },
         ));
@@ -863,7 +926,7 @@ fn test_exchange_code_with_unexpected_content_type() {
     match token.err().unwrap() {
         RequestTokenError::Other(error_str) => {
             assert_eq!(
-                "Unexpected response Content-Type: `text/plain`, should be `application/json`",
+                "Unexpected response Content-Type: \"text/plain\", should be `application/json`",
                 error_str
             );
         }
@@ -886,13 +949,19 @@ fn test_exchange_code_with_invalid_token_type() {
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOg=="),
             ],
             "grant_type=authorization_code&code=ccc",
             HttpResponse {
-                status_code: 200,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\"access_token\": \"12/34\", \"token_type\": \"magic\"}"
                     .to_string()
                     .into_bytes(),
@@ -918,13 +987,19 @@ fn test_exchange_code_with_400_status_code() {
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
             HttpResponse {
-                status_code: 400,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::BAD_REQUEST,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: body.to_string().into_bytes(),
             },
         ));
@@ -1058,13 +1133,19 @@ fn test_extension_successful_with_minimal_json_response() {
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
             HttpResponse {
-                status_code: 200,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\"access_token\": \"12/34\", \"token_type\": \"green\", \"height\": 10}"
                     .to_string()
                     .into_bytes(),
@@ -1106,11 +1187,19 @@ fn test_extension_successful_with_complete_json_response() {
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
-            vec![("Accept", "application/json")],
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+            ],
             "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb",
             HttpResponse {
-                status_code: 200,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\
                        \"access_token\": \"12/34\", \
                        \"token_type\": \"red\", \
@@ -1169,13 +1258,19 @@ fn test_extension_with_simple_json_error() {
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
             HttpResponse {
-                status_code: 400,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::BAD_REQUEST,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\"error\": \"too_light\", \"error_description\": \"stuff happened\", \
                        \"error_uri\": \"https://errors\"}"
                     .to_string()
@@ -1275,13 +1370,19 @@ fn test_extension_with_custom_json_error() {
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
-                ("Accept", "application/json"),
-                ("Authorization", "Basic YWFhOmJiYg=="),
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
             HttpResponse {
-                status_code: 400,
-                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                status_code: StatusCode::BAD_REQUEST,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
                 body: "{\"custom_error\": \"non-compliant oauth implementation ;-)\"}"
                     .to_string()
                     .into_bytes(),

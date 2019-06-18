@@ -1307,7 +1307,7 @@ pub trait TokenType: Clone + DeserializeOwned + Debug + PartialEq + Serialize {}
 ///
 /// Trait for adding extra fields to the `TokenResponse`.
 ///
-pub trait ExtraTokenFields: Clone + DeserializeOwned + Debug + PartialEq + Serialize {}
+pub trait ExtraTokenFields: Clone + DeserializeOwned + Debug + Serialize {}
 
 ///
 /// Empty (default) extra token fields.
@@ -1324,7 +1324,7 @@ impl ExtraTokenFields for EmptyExtraTokenFields {}
 /// separately from the `StandardTokenResponse` struct to support customization by clients,
 /// such as supporting interoperability with non-standards-complaint OAuth2 providers.
 ///
-pub trait TokenResponse<TT>: Clone + Debug + DeserializeOwned + PartialEq + Serialize
+pub trait TokenResponse<TT>: Clone + Debug + DeserializeOwned + Serialize
 where
     TT: TokenType,
 {
@@ -1368,7 +1368,7 @@ where
 /// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1), as well as
 /// extensions defined by the `EF` type parameter.
 ///
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StandardTokenResponse<EF: ExtraTokenFields, TT: TokenType> {
     access_token: AccessToken,
     #[serde(bound = "TT: TokenType")]

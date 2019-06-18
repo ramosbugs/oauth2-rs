@@ -240,6 +240,23 @@ enum FakeError {
     Err,
 }
 
+// Because the secret types don't implement PartialEq, we can't directly use == to compare tokens.
+fn assert_token_eq<EF, TT>(a: &StandardTokenResponse<EF, TT>, b: &StandardTokenResponse<EF, TT>)
+where
+    EF: ExtraTokenFields + PartialEq,
+    TT: TokenType,
+{
+    assert_eq!(a.access_token().secret(), b.access_token().secret());
+    assert_eq!(a.token_type(), b.token_type());
+    assert_eq!(a.expires_in(), b.expires_in());
+    assert_eq!(
+        a.refresh_token().map(RefreshToken::secret),
+        b.refresh_token().map(RefreshToken::secret)
+    );
+    assert_eq!(a.scopes(), b.scopes());
+    assert_eq!(a.extra_fields(), b.extra_fields());
+}
+
 #[test]
 fn test_exchange_code_successful_with_minimal_json_response() {
     let client = BasicClient::new(
@@ -272,7 +289,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, token.refresh_token());
+    assert!(token.refresh_token().is_none());
 
     // Ensure that serialization produces an equivalent JSON value.
     let serialized_json = serde_json::to_string(&token).unwrap();
@@ -282,7 +299,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
     );
 
     let deserialized_token = serde_json::from_str::<BasicTokenResponse>(&serialized_json).unwrap();
-    assert_eq!(token, deserialized_token);
+    assert_token_eq(&token, &deserialized_token);
 }
 
 #[test]
@@ -339,7 +356,7 @@ fn test_exchange_code_successful_with_complete_json_response() {
     );
 
     let deserialized_token = serde_json::from_str::<BasicTokenResponse>(&serialized_json).unwrap();
-    assert_eq!(token, deserialized_token);
+    assert_token_eq(&token, &deserialized_token);
 }
 
 #[test]
@@ -386,7 +403,7 @@ fn test_exchange_client_credentials_with_basic_auth() {
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, token.refresh_token());
+    assert!(token.refresh_token().is_none());
 }
 
 #[test]
@@ -431,7 +448,7 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, token.refresh_token());
+    assert!(token.refresh_token().is_none());
 }
 
 #[test]
@@ -469,7 +486,7 @@ fn test_exchange_refresh_token_with_basic_auth() {
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, token.refresh_token());
+    assert!(token.refresh_token().is_none());
 }
 
 #[test]
@@ -508,7 +525,7 @@ fn test_exchange_refresh_token_with_json_response() {
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, token.refresh_token());
+    assert!(token.refresh_token().is_none());
 }
 
 #[test]
@@ -557,7 +574,7 @@ fn test_exchange_password_with_json_response() {
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, token.refresh_token());
+    assert!(token.refresh_token().is_none());
 }
 
 #[test]
@@ -606,7 +623,7 @@ fn test_exchange_code_successful_with_redirect_url() {
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, token.refresh_token());
+    assert!(token.refresh_token().is_none());
 }
 
 #[test]
@@ -655,7 +672,7 @@ fn test_exchange_code_successful_with_basic_auth() {
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, token.refresh_token());
+    assert!(token.refresh_token().is_none());
 }
 
 #[test]
@@ -712,7 +729,7 @@ fn test_exchange_code_successful_with_pkce_and_extension() {
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, token.refresh_token());
+    assert!(token.refresh_token().is_none());
 }
 
 #[test]
@@ -762,7 +779,7 @@ fn test_exchange_refresh_token_successful_with_extension() {
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, token.refresh_token());
+    assert!(token.refresh_token().is_none());
 }
 
 #[test]
@@ -1146,7 +1163,7 @@ fn test_extension_successful_with_minimal_json_response() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(ColorfulTokenType::Green, *token.token_type());
     assert_eq!(None, token.expires_in());
-    assert_eq!(None, token.refresh_token());
+    assert!(token.refresh_token().is_none());
     assert_eq!(None, token.extra_fields().shape());
     assert_eq!(10, token.extra_fields().height());
 
@@ -1159,7 +1176,7 @@ fn test_extension_successful_with_minimal_json_response() {
 
     let deserialized_token =
         serde_json::from_str::<ColorfulTokenResponse>(&serialized_json).unwrap();
-    assert_eq!(token, deserialized_token);
+    assert_token_eq(&token, &deserialized_token);
 }
 
 #[test]
@@ -1230,7 +1247,7 @@ fn test_extension_successful_with_complete_json_response() {
 
     let deserialized_token =
         serde_json::from_str::<ColorfulTokenResponse>(&serialized_json).unwrap();
-    assert_eq!(token, deserialized_token);
+    assert_token_eq(&token, &deserialized_token);
 }
 
 #[test]

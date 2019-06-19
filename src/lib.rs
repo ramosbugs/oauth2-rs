@@ -1534,19 +1534,16 @@ where
 /// to support customization by clients, such as supporting interoperability with
 /// non-standards-complaint OAuth2 providers
 ///
-pub trait ErrorResponse: Debug + DeserializeOwned + Display + Send + Serialize + Sync {}
+pub trait ErrorResponse: Debug + DeserializeOwned + Send + Serialize + Sync {}
 
 ///
 /// Error types enum.
 ///
-/// NOTE: The implementation of the `Display` trait must return the `snake_case` representation of
+/// NOTE: The serialization must return the `snake_case` representation of
 /// this error type. This value must match the error type from the relevant OAuth 2.0 standards
 /// (RFC 6749 or an extension).
 ///
-pub trait ErrorResponseType:
-    Debug + DeserializeOwned + Display + PartialEq + Send + Serialize + Sync
-{
-}
+pub trait ErrorResponseType: Debug + DeserializeOwned + Send + Serialize + Sync {}
 
 ///
 /// Error response returned by server after requesting an access token.
@@ -1619,9 +1616,12 @@ impl<T: ErrorResponseType> StandardErrorResponse<T> {
     }
 }
 
-impl<T: ErrorResponseType + 'static> ErrorResponse for StandardErrorResponse<T> {}
+impl<T> ErrorResponse for StandardErrorResponse<T> where T: ErrorResponseType + 'static {}
 
-impl<TE: ErrorResponseType> Display for StandardErrorResponse<TE> {
+impl<TE> Display for StandardErrorResponse<TE>
+where
+    TE: ErrorResponseType + Display,
+{
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
         let mut formatted = self.error().to_string();
 
@@ -1652,7 +1652,7 @@ where
     /// Error response returned by authorization server. Contains the parsed `ErrorResponse`
     /// returned by the server.
     ///
-    #[fail(display = "Server returned error response `{}`", _0)]
+    #[fail(display = "Server returned error response")]
     ServerResponse(T),
     ///
     /// An error occurred while sending the request or receiving the response (e.g., network

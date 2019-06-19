@@ -865,10 +865,7 @@ fn test_exchange_code_with_simple_json_error() {
         format!("{:?}", token_err)
     );
     // Test Display trait for RequestTokenError
-    assert_eq!(
-        "Server returned error response `invalid_request: stuff happened`",
-        format!("{}", token_err)
-    );
+    assert_eq!("Server returned error response", format!("{}", token_err));
 }
 
 #[test]
@@ -1325,10 +1322,7 @@ fn test_extension_with_simple_json_error() {
         format!("{:?}", token_err)
     );
     // Test Display trait for RequestTokenError
-    assert_eq!(
-        "Server returned error response `too_light: stuff happened / See https://errors`",
-        format!("{}", token_err)
-    );
+    assert_eq!("Server returned error response", format!("{}", token_err));
 }
 
 mod custom_errors {

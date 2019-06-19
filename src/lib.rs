@@ -1370,7 +1370,7 @@ where
 /// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1), as well as
 /// extensions defined by the `EF` type parameter.
 ///
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StandardTokenResponse<EF, TT>
 where
     EF: ExtraTokenFields,
@@ -1508,22 +1508,6 @@ where
     ///
     fn scopes(&self) -> Option<&Vec<Scope>> {
         self.scopes.as_ref()
-    }
-}
-impl<EF, TT> Clone for StandardTokenResponse<EF, TT>
-where
-    EF: ExtraTokenFields + Clone,
-    TT: TokenType,
-{
-    fn clone(&self) -> Self {
-        Self {
-            access_token: self.access_token.clone(),
-            token_type: self.token_type.clone(),
-            expires_in: self.expires_in.clone(),
-            refresh_token: self.refresh_token.clone(),
-            scopes: self.scopes.clone(),
-            extra_fields: self.extra_fields.clone(),
-        }
     }
 }
 

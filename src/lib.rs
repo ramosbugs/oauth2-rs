@@ -612,6 +612,8 @@ where
 
 ///
 /// A request to the authorization endpoint
+///
+#[derive(Debug)]
 pub struct AuthorizationRequest<'a> {
     auth_url: &'a AuthUrl,
     client_id: &'a ClientId,
@@ -1307,7 +1309,7 @@ pub trait TokenType: Clone + DeserializeOwned + Debug + PartialEq + Serialize {}
 ///
 /// Trait for adding extra fields to the `TokenResponse`.
 ///
-pub trait ExtraTokenFields: Clone + DeserializeOwned + Debug + Serialize {}
+pub trait ExtraTokenFields: DeserializeOwned + Debug + Serialize {}
 
 ///
 /// Empty (default) extra token fields.
@@ -1324,7 +1326,7 @@ impl ExtraTokenFields for EmptyExtraTokenFields {}
 /// separately from the `StandardTokenResponse` struct to support customization by clients,
 /// such as supporting interoperability with non-standards-complaint OAuth2 providers.
 ///
-pub trait TokenResponse<TT>: Clone + Debug + DeserializeOwned + Serialize
+pub trait TokenResponse<TT>: Debug + DeserializeOwned + Serialize
 where
     TT: TokenType,
 {
@@ -1368,8 +1370,12 @@ where
 /// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1), as well as
 /// extensions defined by the `EF` type parameter.
 ///
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct StandardTokenResponse<EF: ExtraTokenFields, TT: TokenType> {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct StandardTokenResponse<EF, TT>
+where
+    EF: ExtraTokenFields,
+    TT: TokenType,
+{
     access_token: AccessToken,
     #[serde(bound = "TT: TokenType")]
     #[serde(deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive")]
@@ -1389,7 +1395,6 @@ pub struct StandardTokenResponse<EF: ExtraTokenFields, TT: TokenType> {
     #[serde(flatten)]
     extra_fields: EF,
 }
-
 impl<EF, TT> StandardTokenResponse<EF, TT>
 where
     EF: ExtraTokenFields,
@@ -1458,7 +1463,6 @@ where
         self.extra_fields = extra_fields;
     }
 }
-
 impl<EF, TT> TokenResponse<TT> for StandardTokenResponse<EF, TT>
 where
     EF: ExtraTokenFields,
@@ -1506,6 +1510,22 @@ where
         self.scopes.as_ref()
     }
 }
+impl<EF, TT> Clone for StandardTokenResponse<EF, TT>
+where
+    EF: ExtraTokenFields + Clone,
+    TT: TokenType,
+{
+    fn clone(&self) -> Self {
+        Self {
+            access_token: self.access_token.clone(),
+            token_type: self.token_type.clone(),
+            expires_in: self.expires_in.clone(),
+            refresh_token: self.refresh_token.clone(),
+            scopes: self.scopes.clone(),
+            extra_fields: self.extra_fields.clone(),
+        }
+    }
+}
 
 ///
 /// Server Error Response
@@ -1524,7 +1544,7 @@ pub trait ErrorResponse: Debug + DeserializeOwned + Display + Send + Serialize +
 /// (RFC 6749 or an extension).
 ///
 pub trait ErrorResponseType:
-    Clone + Debug + DeserializeOwned + Display + PartialEq + Send + Serialize + Sync
+    Debug + DeserializeOwned + Display + PartialEq + Send + Serialize + Sync
 {
 }
 

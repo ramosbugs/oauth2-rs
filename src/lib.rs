@@ -956,7 +956,16 @@ where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Fail,
     {
-        let http_request = token_request(
+        http_client(self.prepare_request()?)
+            .map_err(RequestTokenError::Request)
+            .and_then(token_response)
+    }
+
+    fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Fail,
+    {
+        Ok(token_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -969,10 +978,31 @@ where
                 ("grant_type", "refresh_token"),
                 ("refresh_token", self.refresh_token.secret()),
             ],
-        );
-        http_client(http_request)
-            .map_err(RequestTokenError::Request)
-            .and_then(token_response)
+        ))
+    }
+}
+impl<'a, TE, TR, TT> RefreshTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    ///
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Item = HttpResponse, Error = RE>,
+        RE: Fail,
+    {
+        self.prepare_request()
+            .into_future()
+            .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
+            .and_then(|http_response| token_response(http_response).into_future())
     }
 }
 
@@ -1044,7 +1074,16 @@ where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Fail,
     {
-        let http_request = token_request(
+        http_client(self.prepare_request()?)
+            .map_err(RequestTokenError::Request)
+            .and_then(token_response)
+    }
+
+    fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Fail,
+    {
+        Ok(token_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -1058,10 +1097,31 @@ where
                 ("username", self.username),
                 ("password", self.password.secret()),
             ],
-        );
-        http_client(http_request)
-            .map_err(RequestTokenError::Request)
-            .and_then(token_response)
+        ))
+    }
+}
+impl<'a, TE, TR, TT> PasswordTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    ///
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Item = HttpResponse, Error = RE>,
+        RE: Fail,
+    {
+        self.prepare_request()
+            .into_future()
+            .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
+            .and_then(|http_response| token_response(http_response).into_future())
     }
 }
 
@@ -1131,7 +1191,16 @@ where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Fail,
     {
-        let http_request = token_request(
+        http_client(self.prepare_request()?)
+            .map_err(RequestTokenError::Request)
+            .and_then(token_response)
+    }
+
+    fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Fail,
+    {
+        Ok(token_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -1141,10 +1210,31 @@ where
             self.token_url
                 .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
             vec![("grant_type", "client_credentials")],
-        );
-        http_client(http_request)
-            .map_err(RequestTokenError::Request)
-            .and_then(token_response)
+        ))
+    }
+}
+impl<'a, TE, TR, TT> ClientCredentialsTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    ///
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Item = HttpResponse, Error = RE>,
+        RE: Fail,
+    {
+        self.prepare_request()
+            .into_future()
+            .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
+            .and_then(|http_response| token_response(http_response).into_future())
     }
 }
 

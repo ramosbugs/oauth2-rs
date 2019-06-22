@@ -471,7 +471,7 @@ new_type![///
 /// Client identifier issued to the client during the registration process described by
 /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
 ///
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Eq, Hash)]
 ClientId(String)];
 
 new_type![#[derive(Deserialize, Serialize)]
@@ -511,18 +511,19 @@ new_type![///
 /// Authorization endpoint response (grant) type defined in
 /// [Section 3.1.1](https://tools.ietf.org/html/rfc6749#section-3.1.1).
 ///
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Eq, Hash)]
 ResponseType(String)];
 new_type![///
 /// Resource owner's username used directly as an authorization grant to obtain an access
 /// token.
 ///
+#[derive(Deserialize, Serialize, Eq, Hash)]
 ResourceOwnerUsername(String)];
 
 new_type![///
 /// Access token scope, as defined by the authorization server.
 ///
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Eq, Hash)]
 Scope(String)];
 impl AsRef<str> for Scope {
     fn as_ref(&self) -> &str {
@@ -539,7 +540,7 @@ new_type![///
 /// Code Challenge Method used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection
 /// via the `code_challenge_method` parameter.
 ///
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Eq, Hash)]
 PkceCodeChallengeMethod(String)];
 
 new_secret_type![///

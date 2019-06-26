@@ -1521,8 +1521,8 @@ where
     ///
     /// Set the `expires_in` field.
     ///
-    pub fn set_expires_in(&mut self, expires_in: Option<u64>) {
-        self.expires_in = expires_in;
+    pub fn set_expires_in(&mut self, expires_in: Option<&Duration>) {
+        self.expires_in = expires_in.map(Duration::as_secs);
     }
 
     ///

@@ -1411,7 +1411,7 @@ fn test_extension_serializer() {
             height: 10,
         },
     );
-    token_response.set_expires_in(Some(3600));
+    token_response.set_expires_in(Some(&Duration::from_secs(3600)));
     token_response.set_refresh_token(Some(RefreshToken::new("myothersecret".to_string())));
     let serialized = serde_json::to_string(&token_response).unwrap();
     assert_eq!(

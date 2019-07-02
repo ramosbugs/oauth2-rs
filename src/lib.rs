@@ -317,6 +317,7 @@
 //! - [Google](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/google.rs)
 //! - [Github](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/github.rs)
 //! - [Microsoft Graph](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/msgraph.rs)
+//! - [Wunderlist](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/wunderlist.rs)
 //!
 
 extern crate base64;

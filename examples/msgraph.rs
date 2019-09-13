@@ -28,7 +28,8 @@ extern crate rand;
 extern crate url;
 
 use oauth2::basic::BasicClient;
-use oauth2::curl::http_client;
+// Alternatively, this can be `oauth2::curl::http_client` or a custom client.
+use oauth2::reqwest::http_client;
 use oauth2::{
     AuthType, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
     RedirectUrl, Scope, TokenUrl,

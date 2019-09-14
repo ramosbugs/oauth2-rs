@@ -321,11 +321,13 @@
 //!
 
 extern crate base64;
+#[cfg(feature = "curl")]
 extern crate curl as curl_;
 extern crate failure;
 extern crate futures;
 extern crate http;
 extern crate rand;
+#[cfg(feature = "reqwest")]
 extern crate reqwest as reqwest_;
 extern crate serde;
 #[macro_use]
@@ -358,6 +360,7 @@ pub mod basic;
 ///
 /// HTTP client backed by the [curl](https://crates.io/crates/curl) crate.
 ///
+#[cfg(feature = "curl")]
 pub mod curl;
 
 ///
@@ -368,6 +371,7 @@ pub mod helpers;
 ///
 /// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
 ///
+#[cfg(feature = "reqwest")]
 pub mod reqwest;
 
 #[cfg(test)]

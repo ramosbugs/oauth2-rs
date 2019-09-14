@@ -13,7 +13,7 @@ use super::{HttpRequest, HttpResponse};
 #[derive(Debug, Fail)]
 pub enum Error {
     /// Error returned by reqwest crate.
-    #[fail(display = "curl request failed")]
+    #[fail(display = "request failed")]
     Reqwest(#[cause] reqwest::Error),
     /// Non-reqwest HTTP error.
     #[fail(display = "HTTP error")]

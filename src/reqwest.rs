@@ -36,7 +36,7 @@ pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
         .build()
         .map_err(Error::Reqwest)?;
     let mut request_builder = client
-        .request(request.method, request.url)
+        .request(request.method, request.url.as_str())
         .body(request.body);
     for (name, value) in &request.headers {
         request_builder = request_builder.header(name, value);
@@ -66,7 +66,7 @@ pub fn async_http_client(request: HttpRequest) -> impl Future<Item = HttpRespons
         .into_future()
         .and_then(|client| {
             let mut request_builder = client
-                .request(request.method, request.url)
+                .request(request.method, request.url.as_str())
                 .body(request.body);
             for (name, value) in &request.headers {
                 request_builder = request_builder.header(name, value);

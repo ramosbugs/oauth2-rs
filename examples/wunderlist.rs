@@ -17,33 +17,22 @@
 extern crate base64;
 extern crate oauth2;
 extern crate rand;
-extern crate url;
 extern crate serde;
+extern crate url;
 
+use oauth2::basic::{BasicErrorResponse, BasicTokenType};
 use oauth2::TokenType;
-use oauth2::basic::{ BasicErrorResponse, BasicTokenType };
 // Alternatively, this can be `oauth2::curl::http_client` or a custom client.
-use oauth2::reqwest::http_client;
 use oauth2::helpers;
+use oauth2::reqwest::http_client;
 use oauth2::{
-    AccessToken,
-    AuthorizationCode,
-    AuthUrl,
-    Client,
-    ClientId,
-    ClientSecret,
-    CsrfToken,
-    EmptyExtraTokenFields,
-    ExtraTokenFields,
-    RedirectUrl,
-    RefreshToken,
-    Scope,
-    TokenResponse,
+    AccessToken, AuthUrl, AuthorizationCode, Client, ClientId, ClientSecret, CsrfToken,
+    EmptyExtraTokenFields, ExtraTokenFields, RedirectUrl, RefreshToken, Scope, TokenResponse,
     TokenUrl,
 };
 
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use serde::{Serialize, Deserialize};
 
 use std::env;
 use std::io::{BufRead, BufReader, Write};
@@ -53,7 +42,7 @@ use url::Url;
 type SpecialTokenResponse = NonStandardTokenResponse<EmptyExtraTokenFields>;
 type SpecialClient = Client<BasicErrorResponse, SpecialTokenResponse, BasicTokenType>;
 
-fn default_token_type() -> Option<BasicTokenType>{
+fn default_token_type() -> Option<BasicTokenType> {
     Some(BasicTokenType::Bearer)
 }
 
@@ -146,7 +135,7 @@ fn main() {
         .expect("Missing the WUNDERLIST_CLIENT_ID environment variable.");
 
     let client_secret_str = env::var("WUNDERLIST_CLIENT_SECRET")
-            .expect("Missing the WUNDERLIST_CLIENT_SECRET environment variable.");
+        .expect("Missing the WUNDERLIST_CLIENT_SECRET environment variable.");
 
     let wunder_client_id = ClientId::new(client_id_str.clone());
     let wunderlist_client_secret = ClientSecret::new(client_secret_str.clone());
@@ -173,9 +162,7 @@ fn main() {
     ));
 
     // Generate the authorization URL to which we'll redirect the user.
-    let (authorize_url, csrf_state) = client
-        .authorize_url(CsrfToken::new_random)
-        .url();
+    let (authorize_url, csrf_state) = client.authorize_url(CsrfToken::new_random).url();
 
     println!(
         "Open this URL in your browser:\n{}\n",
@@ -228,7 +215,10 @@ fn main() {
             );
             stream.write_all(response.as_bytes()).unwrap();
 
-            println!("Wunderlist returned the following code:\n{}\n", code.secret());
+            println!(
+                "Wunderlist returned the following code:\n{}\n",
+                code.secret()
+            );
             println!(
                 "Wunderlist returned the following state:\n{} (expected `{}`)\n",
                 state.secret(),
@@ -236,12 +226,16 @@ fn main() {
             );
 
             // Exchange the code with a token.
-            let token_res = client.exchange_code(code)
+            let token_res = client
+                .exchange_code(code)
                 .add_extra_param("client_id", client_id_str)
                 .add_extra_param("client_secret", client_secret_str)
                 .request(http_client);
 
-            println!("Wunderlist returned the following token:\n{:?}\n", token_res);
+            println!(
+                "Wunderlist returned the following token:\n{:?}\n",
+                token_res
+            );
 
             break;
         }

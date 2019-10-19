@@ -371,7 +371,7 @@ new_secret_type![
     /// via the `state` parameter.
     ///
     #[must_use]
-    #[derive(Deserialize, Serialize)]
+    #[derive(Clone, Deserialize, Serialize)]
     CsrfToken(String)
     impl {
         ///

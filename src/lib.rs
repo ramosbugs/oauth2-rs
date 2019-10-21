@@ -88,13 +88,8 @@
 //!
 //! ## Example
 //!
-//! ```
-//! extern crate base64;
-//! extern crate oauth2;
-//! extern crate rand;
-//! extern crate tokio;
-//! extern crate url;
-//!
+//! ```rust,no_run
+//! use failure;
 //! use oauth2::{
 //!     AuthorizationCode,
 //!     AuthUrl,
@@ -112,8 +107,8 @@
 //! use tokio::runtime::Runtime;
 //! use url::Url;
 //!
-//! # extern crate failure;
-//! # fn err_wrapper() -> Result<(), failure::Error> {
+//! #[tokio::main]
+//! async fn main() -> Result<(), failure::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client =
@@ -150,18 +145,16 @@
 //! let mut runtime = Runtime::new().unwrap();
 //! // Now you can trade it for an access token.
 //! let token_result =
-//!     runtime.block_on(
 //!         client
 //!             .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
 //!             // Set the PKCE code verifier.
 //!             .set_pkce_verifier(pkce_verifier)
 //!             .request_async(async_http_client)
-//!     )?;
+//!             .await?;
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
-//! # Ok(())
-//! # }
-//! # fn main() {}
+//! Ok(())
+//! }
 //! ```
 //!
 //! # Implicit Grant
@@ -320,23 +313,6 @@
 //! - [Wunderlist](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/wunderlist.rs)
 //!
 
-extern crate base64;
-#[cfg(feature = "curl")]
-extern crate curl as curl_;
-extern crate failure;
-extern crate futures;
-extern crate http;
-extern crate rand;
-#[cfg(feature = "reqwest")]
-extern crate reqwest as reqwest_;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-extern crate sha2;
-extern crate tokio_io;
-extern crate url;
-
 use std::borrow::Cow;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
@@ -347,8 +323,8 @@ use failure::Fail;
 use futures::{Future, TryFutureExt, future};
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
+use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
-use serde::Serialize;
 use url::{form_urlencoded, Url};
 
 ///
@@ -881,15 +857,15 @@ where
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> impl Future<Output = Result<TR, RequestTokenError<RE, TE>>>
+    ) -> Result<TR, RequestTokenError<RE, TE>>
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Fail,
     {
-        future::ready(self.prepare_request())
-            .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
-            .and_then(|http_response| future::ready(token_response(http_response)))
+        let http_request = self.prepare_request()?;
+        let http_response = http_client(http_request).await.map_err(RequestTokenError::Request)?;
+        token_response(http_response)
     }
 }
 

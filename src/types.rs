@@ -4,6 +4,7 @@ use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 
 use rand::{thread_rng, Rng};
+use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
 use url::Url;
 

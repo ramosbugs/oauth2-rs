@@ -13,11 +13,6 @@
 //! ...and follow the instructions.
 //!
 
-extern crate base64;
-extern crate oauth2;
-extern crate rand;
-extern crate url;
-
 use oauth2::basic::BasicClient;
 // Alternatively, this can be `oauth2::curl::http_client` or a custom client.
 use oauth2::reqwest::http_client;

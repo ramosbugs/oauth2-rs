@@ -1,5 +1,3 @@
-extern crate serde_json;
-
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -8,6 +6,8 @@ use super::{
     Client, EmptyExtraTokenFields, ErrorResponseType, RequestTokenError, StandardErrorResponse,
     StandardTokenResponse, TokenType,
 };
+
+use serde::{Serialize, Deserialize};
 
 ///
 /// Basic OAuth2 client specialization, suitable for most applications.

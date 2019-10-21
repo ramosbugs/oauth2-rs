@@ -1,7 +1,7 @@
 use std::io::Read;
 
 use failure::Fail;
-use reqwest_::{Client, RedirectPolicy};
+use reqwest::{Client, RedirectPolicy};
 use reqwest::blocking;
 
 use super::{HttpRequest, HttpResponse};

@@ -344,7 +344,7 @@ use std::marker::PhantomData;
 use std::time::Duration;
 
 use failure::Fail;
-use futures::{Future, IntoFuture};
+use futures::{Future, TryFutureExt, future};
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
 use serde::de::DeserializeOwned;
@@ -878,19 +878,18 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
-    pub fn request_async<C, F, RE>(
+    pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<RE, TE>>>
     where
         C: FnOnce(HttpRequest) -> F,
-        F: Future<Item = HttpResponse, Error = RE>,
+        F: Future<Output = Result<HttpResponse, RE>>,
         RE: Fail,
     {
-        self.prepare_request()
-            .into_future()
+        future::ready(self.prepare_request())
             .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
-            .and_then(|http_response| token_response(http_response).into_future())
+            .and_then(|http_response| future::ready(token_response(http_response)))
     }
 }
 
@@ -998,16 +997,15 @@ where
     pub fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<RE, TE>>>
     where
         C: FnOnce(HttpRequest) -> F,
-        F: Future<Item = HttpResponse, Error = RE>,
+        F: Future<Output = Result<HttpResponse, RE>>,
         RE: Fail,
     {
-        self.prepare_request()
-            .into_future()
+        future::ready(self.prepare_request())
             .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
-            .and_then(|http_response| token_response(http_response).into_future())
+            .and_then(|http_response| future::ready(token_response(http_response)))
     }
 }
 
@@ -1117,16 +1115,15 @@ where
     pub fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<RE, TE>>>
     where
         C: FnOnce(HttpRequest) -> F,
-        F: Future<Item = HttpResponse, Error = RE>,
+        F: Future<Output = Result<HttpResponse, RE>>,
         RE: Fail,
     {
-        self.prepare_request()
-            .into_future()
+        future::ready(self.prepare_request())
             .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
-            .and_then(|http_response| token_response(http_response).into_future())
+            .and_then(|http_response| future::ready(token_response(http_response)))
     }
 }
 
@@ -1227,19 +1224,18 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub fn request_async<C, F, RE>(
+    pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
+    ) -> Result<TR, RequestTokenError<RE, TE>>
     where
         C: FnOnce(HttpRequest) -> F,
-        F: Future<Item = HttpResponse, Error = RE>,
+        F: Future<Output = Result<HttpResponse, RE>>,
         RE: Fail,
     {
-        self.prepare_request()
-            .into_future()
-            .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
-            .and_then(|http_response| token_response(http_response).into_future())
+        let http_request = self.prepare_request()?;
+        let http_response = http_client(http_request).await.map_err(RequestTokenError::Request)?;
+        token_response(http_response)
     }
 }
 

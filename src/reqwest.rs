@@ -1,9 +1,8 @@
 use std::io::Read;
 
 use failure::Fail;
-use futures::{Future, IntoFuture, Stream};
-use reqwest_::async::Client as AsyncClient;
 use reqwest_::{Client, RedirectPolicy};
+use reqwest::blocking;
 
 use super::{HttpRequest, HttpResponse};
 
@@ -30,7 +29,7 @@ pub enum Error {
 /// Synchronous HTTP client.
 ///
 pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
-    let client = Client::builder()
+    let client = blocking::Client::builder()
         // Following redirects opens the client up to SSRF vulnerabilities.
         .redirect(RedirectPolicy::none())
         .build()
@@ -57,41 +56,39 @@ pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
 ///
 /// Asynchronous HTTP client.
 ///
-pub fn async_http_client(request: HttpRequest) -> impl Future<Item = HttpResponse, Error = Error> {
-    AsyncClient::builder()
+pub async fn async_http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
+    let client = Client::builder()
         // Following redirects opens the client up to SSRF vulnerabilities.
         .redirect(RedirectPolicy::none())
         .build()
-        .map_err(Error::Reqwest)
-        .into_future()
-        .and_then(|client| {
-            let mut request_builder = client
-                .request(request.method, request.url.as_str())
-                .body(request.body);
-            for (name, value) in &request.headers {
-                request_builder = request_builder.header(name, value);
-            }
-            request_builder
-                .build()
-                .map_err(Error::Reqwest)
-                .into_future()
-                .and_then(move |request| {
-                    client
-                        .execute(request)
-                        .and_then(|response| {
-                            let status_code = response.status();
-                            let headers = response.headers().clone();
-                            response
-                                .into_body()
-                                .map(|chunk| chunk.as_ref().to_vec())
-                                .collect()
-                                .map(move |body| HttpResponse {
-                                    status_code,
-                                    headers,
-                                    body: body.into_iter().flatten().collect::<_>(),
-                                })
-                        })
-                        .map_err(Error::Reqwest)
-                })
-        })
+        .map_err(Error::Reqwest)?;
+
+
+    let mut request_builder = client
+        .request(request.method, request.url.as_str())
+        .body(request.body);
+    for (name, value) in &request.headers {
+        request_builder = request_builder.header(name, value);
+    }
+    let request = request_builder
+        .build()
+        .map_err(Error::Reqwest)?;
+
+    let response = client
+        .execute(request)
+        .await
+        .map_err(Error::Reqwest)?;
+
+    let status_code = response.status();
+    let headers = response.headers().clone();
+    let chunks = response
+        .bytes()
+        .await
+        .map_err(Error::Reqwest)?;
+
+     Ok(HttpResponse {
+        status_code,
+        headers,
+        body: chunks.to_vec(),
+    })
 }

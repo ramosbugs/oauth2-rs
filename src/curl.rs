@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use curl_::easy::Easy;
+use curl::easy::Easy;
 use failure::Fail;
 use http::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use http::method::Method;

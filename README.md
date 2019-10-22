@@ -17,10 +17,20 @@ Build:
 cargo build
 ```
 
+using futures 0.3:
+```
+cargo build --no-default-features --features "futures-03"
+```
+
 Run tests:
 
 ```
 cargo test
+```
+
+using futures 0.3:
+```
+cargo test --no-default-features --features "futures-03"
 ```
 
 Release:

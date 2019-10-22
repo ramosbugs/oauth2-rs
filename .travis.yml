@@ -17,6 +17,7 @@ script:
   - cargo test --example google
   - cargo test --example github
   - cargo test --example msgraph
+  - cargo test --no-default-features --features "futures-03"
   - cargo audit
 notifications:
   email:

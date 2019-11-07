@@ -16,7 +16,7 @@ use reqwest::RedirectPolicy;
 #[cfg(feature = "futures-03")]
 use reqwest_futures_03::blocking;
 #[cfg(feature = "futures-03")]
-use reqwest_futures_03::{Client, RedirectPolicy};
+use reqwest_futures_03::RedirectPolicy;
 #[cfg(feature = "futures-03")]
 use reqwest_futures_03 as reqwest;
 
@@ -66,47 +66,6 @@ pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
         status_code: response.status(),
         headers: response.headers().clone(),
         body,
-    })
-}
-
-///
-/// Asynchronous HTTP client.
-///
-#[cfg(feature = "futures-03")]
-pub async fn async_http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
-    let client = Client::builder()
-        // Following redirects opens the client up to SSRF vulnerabilities.
-        .redirect(RedirectPolicy::none())
-        .build()
-        .map_err(Error::Reqwest)?;
-
-
-    let mut request_builder = client
-        .request(request.method, request.url.as_str())
-        .body(request.body);
-    for (name, value) in &request.headers {
-        request_builder = request_builder.header(name, value);
-    }
-    let request = request_builder
-        .build()
-        .map_err(Error::Reqwest)?;
-
-    let response = client
-        .execute(request)
-        .await
-        .map_err(Error::Reqwest)?;
-
-    let status_code = response.status();
-    let headers = response.headers().clone();
-    let chunks = response
-        .bytes()
-        .await
-        .map_err(Error::Reqwest)?;
-
-     Ok(HttpResponse {
-        status_code,
-        headers,
-        body: chunks.to_vec(),
     })
 }
 

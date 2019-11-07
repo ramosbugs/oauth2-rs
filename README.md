@@ -18,6 +18,7 @@ cargo build
 ```
 
 using futures 0.3:
+this requires at least rust 1.39.0
 ```
 cargo build --no-default-features --features "futures-03"
 ```

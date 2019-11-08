@@ -10,6 +10,9 @@ use crate::{
     TokenType,
 };
 
+///
+/// Asynchronous request to exchange an authorization code for an access token.
+///
 #[async_trait]
 pub trait AsyncCodeTokenRequest<'a, TE, TR, TT>
 where
@@ -17,6 +20,9 @@ where
     TR: TokenResponse<TT> + Send,
     TT: TokenType + Send,
 {
+    ///
+    /// Asynchronously sends the request to the authorization server.
+    ///
     async fn request_async<C, F, RE>(self, http_client: C) -> Result<TR, RequestTokenError<RE, TE>>
     where
         C: FnOnce(HttpRequest) -> F + Send,
@@ -48,6 +54,9 @@ where
     }
 }
 
+///
+/// Asynchronous request to exchange a refresh token for an access token.
+///
 #[async_trait]
 pub trait AsyncRefreshTokenRequest<'a, TE, TR, TT>
 where
@@ -55,6 +64,9 @@ where
     TR: TokenResponse<TT> + Send,
     TT: TokenType + Send,
 {
+    ///
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    ///
     async fn request_async<C, F, RE>(self, http_client: C) -> Result<TR, RequestTokenError<RE, TE>>
     where
         C: FnOnce(HttpRequest) -> F + Send,
@@ -87,6 +99,9 @@ where
     }
 }
 
+///
+/// Asynchronous request to exchange resource owner credentials for an access token.
+///
 #[async_trait]
 pub trait AsyncPasswordTokenRequest<'a, TE, TR, TT>
 where
@@ -94,6 +109,9 @@ where
     TR: TokenResponse<TT> + Send,
     TT: TokenType + Send,
 {
+    ///
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    ///
     async fn request_async<C, F, RE>(self, http_client: C) -> Result<TR, RequestTokenError<RE, TE>>
     where
         C: FnOnce(HttpRequest) -> F + Send,
@@ -126,6 +144,9 @@ where
     }
 }
 
+///
+/// Asynchronous request to exchange client credentials for an access token.
+///
 #[async_trait]
 pub trait AsyncClientCredentialsTokenRequest<'a, TE, TR, TT>
 where
@@ -133,6 +154,9 @@ where
     TR: TokenResponse<TT> + Send,
     TT: TokenType + Send,
 {
+    ///
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    ///
     async fn request_async<C, F, RE>(self, http_client: C) -> Result<TR, RequestTokenError<RE, TE>>
     where
         C: FnOnce(HttpRequest) -> F + Send,

@@ -410,6 +410,9 @@ use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
 use url::{form_urlencoded, Url};
 
+///
+/// Async/await module, requires "futures-03" feature.
+///
 #[cfg(feature = "futures-03")]
 pub mod async_internal;
 

@@ -38,14 +38,10 @@ fn main() {
         env::var("GITHUB_CLIENT_SECRET")
             .expect("Missing the GITHUB_CLIENT_SECRET environment variable."),
     );
-    let auth_url = AuthUrl::new(
-        Url::parse("https://github.com/login/oauth/authorize")
-            .expect("Invalid authorization endpoint URL"),
-    );
-    let token_url = TokenUrl::new(
-        Url::parse("https://github.com/login/oauth/access_token")
-            .expect("Invalid token endpoint URL"),
-    );
+    let auth_url = AuthUrl::new("https://github.com/login/oauth/authorize".to_string())
+        .expect("Invalid authorization endpoint URL");
+    let token_url = TokenUrl::new("https://github.com/login/oauth/access_token".to_string())
+        .expect("Invalid token endpoint URL");
 
     // Set up the config for the Github OAuth2 process.
     let client = BasicClient::new(
@@ -56,9 +52,9 @@ fn main() {
     )
     // This example will be running its own server at localhost:8080.
     // See below for the server implementation.
-    .set_redirect_url(RedirectUrl::new(
-        Url::parse("http://localhost:8080").expect("Invalid redirect URL"),
-    ));
+    .set_redirect_url(
+        RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
+    );
 
     // Generate the authorization URL to which we'll redirect the user.
     let (authorize_url, csrf_state) = client

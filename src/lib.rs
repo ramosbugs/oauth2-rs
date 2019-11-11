@@ -41,11 +41,11 @@
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
-//!         AuthUrl::new(Url::parse("http://authorize")?),
-//!         Some(TokenUrl::new(Url::parse("http://token")?))
+//!         AuthUrl::new("http://authorize".to_string())?,
+//!         Some(TokenUrl::new("http://token".to_string())?)
 //!     )
 //!     // Set the URL the user will be redirected to after the authorization process.
-//!     .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
+//!     .set_redirect_url(RedirectUrl::new("http://redirect".to_string())?);
 //!
 //! // Generate a PKCE challenge.
 //! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -120,11 +120,11 @@
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
-//!         AuthUrl::new(Url::parse("http://authorize")?),
-//!         Some(TokenUrl::new(Url::parse("http://token")?))
+//!         AuthUrl::new("http://authorize".to_string())?,
+//!         Some(TokenUrl::new("http://token".to_string())?)
 //!     )
 //!     // Set the URL the user will be redirected to after the authorization process.
-//!     .set_redirect_url(RedirectUrl::new(Url::parse("http://redirect")?));
+//!     .set_redirect_url(RedirectUrl::new("http://redirect".to_string())?);
 //!
 //! // Generate a PKCE challenge.
 //! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -195,7 +195,7 @@
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
-//!         AuthUrl::new(Url::parse("http://authorize")?),
+//!         AuthUrl::new("http://authorize".to_string())?,
 //!         None
 //!     );
 //!
@@ -251,8 +251,8 @@
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
-//!         AuthUrl::new(Url::parse("http://authorize")?),
-//!         Some(TokenUrl::new(Url::parse("http://token")?))
+//!         AuthUrl::new("http://authorize".to_string())?,
+//!         Some(TokenUrl::new("http://token".to_string())?)
 //!     );
 //!
 //! let token_result =
@@ -297,8 +297,8 @@
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
-//!         AuthUrl::new(Url::parse("http://authorize")?),
-//!         Some(TokenUrl::new(Url::parse("http://token")?))
+//!         AuthUrl::new("http://authorize".to_string())?,
+//!         Some(TokenUrl::new("http://token".to_string())?)
 //!     );
 //!
 //! let token_result = client
@@ -723,7 +723,7 @@ impl<'a> AuthorizationRequest<'a> {
                 pairs.push(("scope", &scopes));
             }
 
-            let mut url: Url = (**self.auth_url).to_owned();
+            let mut url: Url = self.auth_url.url().to_owned();
 
             url.query_pairs_mut()
                 .extend_pairs(pairs.iter().map(|&(k, v)| (k, &v[..])));
@@ -1331,7 +1331,7 @@ fn token_request<'a>(
         .into_bytes();
 
     HttpRequest {
-        url: (**token_url).to_owned(),
+        url: token_url.url().to_owned(),
         method: http::method::Method::POST,
         headers,
         body,

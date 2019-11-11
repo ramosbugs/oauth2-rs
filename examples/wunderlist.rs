@@ -139,14 +139,10 @@ fn main() {
 
     let wunder_client_id = ClientId::new(client_id_str.clone());
     let wunderlist_client_secret = ClientSecret::new(client_secret_str.clone());
-    let auth_url = AuthUrl::new(
-        Url::parse("https://www.wunderlist.com/oauth/authorize")
-            .expect("Invalid authorization endpoint URL"),
-    );
-    let token_url = TokenUrl::new(
-        Url::parse("https://www.wunderlist.com/oauth/access_token")
-            .expect("Invalid token endpoint URL"),
-    );
+    let auth_url = AuthUrl::new("https://www.wunderlist.com/oauth/authorize".to_string())
+        .expect("Invalid authorization endpoint URL");
+    let token_url = TokenUrl::new("https://www.wunderlist.com/oauth/access_token".to_string())
+        .expect("Invalid token endpoint URL");
 
     // Set up the config for the Wunderlist OAuth2 process.
     let client = SpecialClient::new(
@@ -157,9 +153,9 @@ fn main() {
     )
     // This example will be running its own server at localhost:8080.
     // See below for the server implementation.
-    .set_redirect_url(RedirectUrl::new(
-        Url::parse("http://localhost:8080").expect("Invalid redirect URL"),
-    ));
+    .set_redirect_url(
+        RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
+    );
 
     // Generate the authorization URL to which we'll redirect the user.
     let (authorize_url, csrf_state) = client.authorize_url(CsrfToken::new_random).url();

@@ -3,7 +3,6 @@ use std;
 use serde::ser;
 use serde::ser::{Impossible, SerializeStructVariant, SerializeTupleVariant};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use url::Url;
 
 ///
 /// Serde case-insensitive deserializer for an untagged `enum`.
@@ -135,30 +134,8 @@ where
 }
 
 ///
-/// Serde string deserializer for a `Url`.
-///
-pub fn deserialize_url<'de, D>(deserializer: D) -> Result<Url, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    use serde::de::Error;
-    let url_str = String::deserialize(deserializer)?;
-    Url::parse(url_str.as_ref()).map_err(Error::custom)
-}
-
-///
-/// Serde string serializer for a `Url`.
-///
-pub fn serialize_url<S>(url: &Url, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.serialize_str(url.as_str())
-}
-
-///
 /// Serde string serializer for an enum.
-///
+///<
 /// Source:
 /// [https://github.com/serde-rs/serde/issues/553](https://github.com/serde-rs/serde/issues/553)
 ///

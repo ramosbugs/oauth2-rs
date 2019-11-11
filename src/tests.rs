@@ -11,10 +11,8 @@ fn new_client() -> BasicClient {
     BasicClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
-        Some(TokenUrl::new(
-            Url::parse("https://example.com/token").unwrap(),
-        )),
+        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
     )
 }
 
@@ -152,10 +150,8 @@ fn test_authorize_url_with_param() {
     let client = BasicClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("https://example.com/auth?foo=bar").unwrap()),
-        Some(TokenUrl::new(
-            Url::parse("https://example.com/token").unwrap(),
-        )),
+        AuthUrl::new("https://example.com/auth?foo=bar".to_string()).unwrap(),
+        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
     );
 
     let (url, _) = client
@@ -214,9 +210,8 @@ fn test_authorize_url_with_extension_response_type() {
 
 #[test]
 fn test_authorize_url_with_redirect_url() {
-    let client = new_client().set_redirect_url(RedirectUrl::new(
-        Url::parse("https://localhost/redirect").unwrap(),
-    ));
+    let client = new_client()
+        .set_redirect_url(RedirectUrl::new("https://localhost/redirect".to_string()).unwrap());
 
     let (url, _) = client
         .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
@@ -262,10 +257,8 @@ fn test_exchange_code_successful_with_minimal_json_response() {
     let client = BasicClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
-        Some(TokenUrl::new(
-            Url::parse("https://example.com/token").unwrap(),
-        )),
+        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
     );
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -364,10 +357,8 @@ fn test_exchange_client_credentials_with_basic_auth() {
     let client = BasicClient::new(
         ClientId::new("aaa/;&".to_string()),
         Some(ClientSecret::new("bbb/;&".to_string())),
-        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
-        Some(TokenUrl::new(
-            Url::parse("https://example.com/token").unwrap(),
-        )),
+        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
     )
     .set_auth_type(AuthType::BasicAuth);
     let token = client
@@ -581,9 +572,7 @@ fn test_exchange_password_with_json_response() {
 fn test_exchange_code_successful_with_redirect_url() {
     let client = new_client()
         .set_auth_type(AuthType::RequestBody)
-        .set_redirect_url(RedirectUrl::new(
-            Url::parse("https://redirect/here").unwrap(),
-        ));
+        .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
 
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -630,9 +619,7 @@ fn test_exchange_code_successful_with_redirect_url() {
 fn test_exchange_code_successful_with_basic_auth() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
-        .set_redirect_url(RedirectUrl::new(
-            Url::parse("https://redirect/here").unwrap(),
-        ));
+        .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
 
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -679,9 +666,7 @@ fn test_exchange_code_successful_with_basic_auth() {
 fn test_exchange_code_successful_with_pkce_and_extension() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
-        .set_redirect_url(RedirectUrl::new(
-            Url::parse("https://redirect/here").unwrap(),
-        ));
+        .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
 
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -736,9 +721,7 @@ fn test_exchange_code_successful_with_pkce_and_extension() {
 fn test_exchange_refresh_token_successful_with_extension() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
-        .set_redirect_url(RedirectUrl::new(
-            Url::parse("https://redirect/here").unwrap(),
-        ));
+        .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
 
     let token = client
         .exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
@@ -943,10 +926,8 @@ fn test_exchange_code_with_invalid_token_type() {
     let client = BasicClient::new(
         ClientId::new("aaa".to_string()),
         None,
-        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
-        Some(TokenUrl::new(
-            Url::parse("https://example.com/token").unwrap(),
-        )),
+        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
     );
 
     let token = client
@@ -1031,8 +1012,8 @@ fn test_exchange_code_fails_gracefully_on_transport_error() {
     let client = BasicClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("https://auth").unwrap()),
-        Some(TokenUrl::new(Url::parse("https://token").unwrap())),
+        AuthUrl::new("https://auth".to_string()).unwrap(),
+        Some(TokenUrl::new("https://token".to_string()).unwrap()),
     );
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -1128,10 +1109,8 @@ fn test_extension_successful_with_minimal_json_response() {
     let client = ColorfulClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
-        Some(TokenUrl::new(
-            Url::parse("https://example.com/token").unwrap(),
-        )),
+        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
     );
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -1182,10 +1161,8 @@ fn test_extension_successful_with_complete_json_response() {
     let client = ColorfulClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
-        Some(TokenUrl::new(
-            Url::parse("https://example.com/token").unwrap(),
-        )),
+        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
     )
     .set_auth_type(AuthType::RequestBody);
     let token = client
@@ -1253,10 +1230,8 @@ fn test_extension_with_simple_json_error() {
     let client = ColorfulClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
-        Some(TokenUrl::new(
-            Url::parse("https://example.com/token").unwrap(),
-        )),
+        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
     );
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -1352,7 +1327,6 @@ mod custom_errors {
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
     >;
-
 }
 
 #[test]
@@ -1361,10 +1335,8 @@ fn test_extension_with_custom_json_error() {
     let client = CustomErrorClient::new(
         ClientId::new("aaa".to_string()),
         Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new(Url::parse("https://example.com/auth").unwrap()),
-        Some(TokenUrl::new(
-            Url::parse("https://example.com/token").unwrap(),
-        )),
+        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
     );
 
     let token = client

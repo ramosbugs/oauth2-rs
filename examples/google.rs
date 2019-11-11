@@ -38,14 +38,10 @@ fn main() {
         env::var("GOOGLE_CLIENT_SECRET")
             .expect("Missing the GOOGLE_CLIENT_SECRET environment variable."),
     );
-    let auth_url = AuthUrl::new(
-        Url::parse("https://accounts.google.com/o/oauth2/v2/auth")
-            .expect("Invalid authorization endpoint URL"),
-    );
-    let token_url = TokenUrl::new(
-        Url::parse("https://www.googleapis.com/oauth2/v3/token")
-            .expect("Invalid token endpoint URL"),
-    );
+    let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
+        .expect("Invalid authorization endpoint URL");
+    let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_string())
+        .expect("Invalid token endpoint URL");
 
     // Set up the config for the Google OAuth2 process.
     let client = BasicClient::new(
@@ -56,9 +52,9 @@ fn main() {
     )
     // This example will be running its own server at localhost:8080.
     // See below for the server implementation.
-    .set_redirect_url(RedirectUrl::new(
-        Url::parse("http://localhost:8080").expect("Invalid redirect URL"),
-    ));
+    .set_redirect_url(
+        RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
+    );
 
     // Google supports Proof Key for Code Exchange (PKCE - https://oauth.net/2/pkce/).
     // Create a PKCE code verifier and SHA-256 encode it as a code challenge.

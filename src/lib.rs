@@ -152,7 +152,7 @@
 //!  Ok(())
 //! }
 //!
-//! #[cfg(feature = "futures-03")] // only required for doc test you don't need this
+//! #[cfg(not(feature = "futures-01"))] // only required for doc test you don't need this
 //! fn main() {}
 //! ```
 //!
@@ -161,6 +161,14 @@
 //! This flow fetches an access token directly from the authorization endpoint. Be sure to
 //! understand the security implications of this flow before using it. In most cases, the
 //! Authorization Code Grant flow is preferable to the Implicit Grant flow.
+//! In order to use futures 0.1 include the oauth2 crate like this:
+//!
+//! ```toml
+//! [dependencies.oauth2]
+//! version = "3.0.0-alpha.6"
+//! features = "futures-01, reqwest-09"
+//! default-features = false
+//! ```
 //!
 //! ## Example:
 //!
@@ -204,7 +212,7 @@
 //!  Ok(())
 //! }
 //!
-//! #[cfg(feature = "futures-03")] // only required for doc test you don't need this
+//! #[cfg(not(feature = "futures-01"))] // only required for doc test you don't need this
 //! fn main() {}
 //! ```
 //!
@@ -212,6 +220,15 @@
 //!
 //! You can ask for a *password* access token by calling the `Client::exchange_password` method,
 //! while including the username and password.
+//!
+//! In order to use futures 0.1 include the oauth2 crate like this:
+//!
+//! ```toml
+//! [dependencies.oauth2]
+//! version = "3.0.0-alpha.6"
+//! features = "futures-01, reqwest-09"
+//! default-features = false
+//! ```
 //!
 //! ## Example
 //!
@@ -251,7 +268,7 @@
 //!         .request(http_client)?;
 //! Ok(())
 //! }
-//! #[cfg(feature = "futures-03")] // only required for doc test you don't need this
+//! #[cfg(not(feature = "futures-01"))] // only required for doc test you don't need this
 //! fn main() {}
 //! ```
 //!
@@ -293,18 +310,17 @@
 //!     Ok(())
 //! }
 //!
-//! #[cfg(feature = "futures-03")] // only required for doc test you don't need this
+//! #[cfg(not(feature = "futures-01"))] // only required for doc test you don't need this
 //! fn main() {}
 //! ```
 //!
 //! # Async/Await API
 //!
 //! An asynchronous API for async/await is also provided.
-//! In order to use futures 0.3 instead of the default, features 0.1, include oauth2 crate like this:
+//! In order to use futures 0.3 include the oauth2 crate like this:
 //! ```toml
 //! [dependencies.oauth2]
 //! version = "3.0.0-alpha.6"
-//! default-features = false
 //! features = "futures-03"
 //! ```
 //!
@@ -381,7 +397,7 @@
 //! Ok(())
 //! }
 //!
-//! #[cfg(feature = "futures-01")] // only required for doc test you don't need this
+//! #[cfg(not(feature = "futures-03"))] // only required for doc test you don't need this
 //! fn main() {}
 //! ```
 //!
@@ -436,13 +452,7 @@ pub mod helpers;
 ///
 /// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
 ///
-#[cfg(feature = "reqwest")]
-pub mod reqwest;
-
-///
-/// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
-///
-#[cfg(feature = "reqwest-futures-03")]
+#[cfg(any(feature = "reqwest-09", feature="reqwest", feature = "futures-03", feature = "futures-01"))]
 pub mod reqwest;
 
 #[cfg(test)]
@@ -458,9 +468,11 @@ pub use types::{
 
 #[cfg(feature = "futures-03")]
 pub use async_internal::{AsyncClientCredentialsTokenRequest, AsyncCodeTokenRequest,
-    AsyncPasswordTokenRequest, AsyncRefreshTokenRequest,
-    async_http_client
+    AsyncPasswordTokenRequest, AsyncRefreshTokenRequest
 };
+
+#[cfg(any(all(feature = "futures-03", feature = "reqwest"), all(feature = "futures-01", feature = "reqwest-09")))]
+pub use crate::reqwest::async_http_client;
 
 const CONTENT_TYPE_JSON: &str = "application/json";
 const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";

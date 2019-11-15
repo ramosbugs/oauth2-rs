@@ -14,11 +14,22 @@ branches:
 before_script:
   - cargo install --force cargo-audit
 script:
+  # Blocking reqwest using current reqwest
   - cargo test
   - cargo test --example google
   - cargo test --example github
   - cargo test --example msgraph
   - cargo test --no-default-features --features "futures-03"
+  # Blocking reqwest using reqwest 0.9
+  - cargo test --features "reqwest-09" --no-default-features
+  # Futures 0.1 without reqwest
+  - cargo check --features "futures-01" --no-default-features
+  # Futures 0.3 without reqwest
+  - cargo check --features "futures-03" --no-default-features
+  # Futures 0.1 with reqwest
+  - cargo test --features reqwest-09,futures-01 --no-default-features
+  # Futures 0.3 with reqwest
+  - cargo check --features "futures-03"
   - cargo audit
 notifications:
   email:

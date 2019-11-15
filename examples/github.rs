@@ -14,6 +14,7 @@
 //!
 
 use oauth2::basic::BasicClient;
+
 // Alternatively, this can be `oauth2::curl::http_client` or a custom client.
 use oauth2::reqwest::http_client;
 use oauth2::{

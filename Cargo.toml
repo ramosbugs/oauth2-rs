@@ -8,9 +8,9 @@ repository = "https://github.com/ramosbugs/oauth2-rs"
 edition = "2018"
 
 [features]
-default = ["futures-01"]
-futures-01 = ["futures-0-1", "reqwest"]
-futures-03 = ["futures", "reqwest-futures-03", "async-trait"]
+default = ["reqwest"]
+futures-01 = ["futures-0-1"]
+futures-03 = ["futures", "async-trait"]
 
 [dependencies]
 async-trait = { version = "0.1", optional = true }
@@ -22,13 +22,13 @@ futures-0-1 = { version = "0.1", optional = true, package = "futures" }
 futures = {version = "0.3", optional = true }
 http = "0.1"
 rand = "0.6"
-reqwest = { version = "0.9", optional = true }
-reqwest-futures-03 = { version = "0.10.0-alpha.1", optional = true, features = ["blocking"], package = "reqwest" }
+reqwest-09 = { version = "0.9", optional = true, package = "reqwest" }
+reqwest = { version = "0.10.0-alpha.2", optional = true, features = ["blocking"]}
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.7"
 url = "2.1"
 
 [dev-dependencies]
-async-std = "0.99"
+async-std = "1.0"
 tokio = "0.1"

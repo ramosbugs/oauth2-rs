@@ -80,6 +80,13 @@
 //!
 //! An asynchronous API is also provided.
 //!
+//! In order to use `futures` 0.1, include the `oauth2` crate like this:
+//!
+//! ```toml
+//! [dependencies]
+//! oauth2 = { version = "<desired version>", features = ["features-01"] }
+//! ```
+//!
 //! ## Example
 //!
 //! ```rust,no_run
@@ -158,14 +165,6 @@
 //! This flow fetches an access token directly from the authorization endpoint. Be sure to
 //! understand the security implications of this flow before using it. In most cases, the
 //! Authorization Code Grant flow is preferable to the Implicit Grant flow.
-//! In order to use futures 0.1 include the oauth2 crate like this:
-//!
-//! ```toml
-//! [dependencies.oauth2]
-//! version = "3.0.0-alpha.6"
-//! features = "futures-01, reqwest-09"
-//! default-features = false
-//! ```
 //!
 //! ## Example:
 //!
@@ -298,7 +297,8 @@
 //! ```toml
 //! [dependencies.oauth2]
 //! version = "<desired version>"
-//! features = "futures-03"
+//! features = ["futures-03"]
+//! default-features = false
 //! ```
 //!
 //! ## Example

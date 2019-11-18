@@ -8,7 +8,7 @@ sudo: false
 cache: cargo
 before_script:
   - cargo install --force cargo-when
-  - cargo when --channel=stable install --force cargo-audit
+  - cargo when -v ^1.39 install --force cargo-audit
 script:
   # Tests should run on all supported rustc versions
   - cargo test --tests --examples
@@ -27,7 +27,7 @@ script:
   - cargo test --tests --examples --features reqwest,futures-01 --no-default-features
   # Futures 0.3 with reqwest 0.9 (included by default)
   - cargo test --tests --examples --features futures-03
-  - cargo when --channel=stable audit
+  - cargo when -v ^1.39 audit
 notifications:
   email:
     on_success: never

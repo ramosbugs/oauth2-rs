@@ -16,17 +16,17 @@ script:
   - cargo when -v ^1.39 -- test --doc
   # Enabling all features (including async/await) requires rustc >= 1.39.0
   - cargo when -v ^1.39 -- test --all-features
-  - cargo test --tests --examples --no-default-features --features "futures-03"
+  - cargo when -v ^1.39 -- test --tests --examples --no-default-features --features futures-03
   # Blocking reqwest using reqwest 0.9
   - cargo test --tests --examples --features reqwest --no-default-features
   # Futures 0.1 without reqwest (examples will not build)
   - cargo test --tests --features futures-01 --no-default-features
   # Futures 0.3 without reqwest 0.9 (but includes reqwest 0.10)
-  - cargo test --tests --examples --features futures-03 --no-default-features
+  - cargo when -v ^1.39 -- test --tests --examples --features futures-03 --no-default-features
   # Futures 0.1 with reqwest 0.9
   - cargo test --tests --examples --features reqwest,futures-01 --no-default-features
   # Futures 0.3 with reqwest 0.9 (included by default)
-  - cargo test --tests --examples --features futures-03
+  - cargo when -v ^1.39 -- test --tests --examples --features futures-03
   - cargo when -v ^1.39 audit
 notifications:
   email:

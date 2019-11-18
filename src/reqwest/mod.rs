@@ -33,6 +33,7 @@ pub use async_client::async_http_client;
 
 #[cfg(feature = "reqwest")]
 mod blocking {
+    use super::Error;
     use super::super::{HttpRequest, HttpResponse};
 
     #[cfg(not(feature = "futures-03"))]
@@ -51,13 +52,11 @@ mod blocking {
 
     use std::io::Read;
 
-    type Error = super::Error<reqwest::Error>;
-
     ///
     /// Synchronous HTTP client.
     ///
     #[cfg(feature = "reqwest")]
-    pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
+    pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error<reqwest::Error>> {
         let client = blocking::Client::builder()
             // Following redirects opens the client up to SSRF vulnerabilities.
             .redirect(RedirectPolicy::none())
@@ -85,20 +84,19 @@ mod blocking {
 
 #[cfg(all(feature = "futures-01", feature = "reqwest"))]
 mod future_client {
+    use super::Error;
     use super::super::{HttpRequest, HttpResponse};
 
     use futures_0_1::{Future, IntoFuture, Stream};
     use reqwest_0_9 as reqwest;
     use reqwest_0_9::r#async::Client as AsyncClient;
 
-    type Error = super::Error<reqwest::Error>;
-
     ///
     /// Asynchronous HTTP client.
     ///
     pub fn future_http_client(
         request: HttpRequest,
-    ) -> impl Future<Item = HttpResponse, Error = Error> {
+    ) -> impl Future<Item = HttpResponse, Error = Error<reqwest::Error>> {
         AsyncClient::builder()
             // Following redirects opens the client up to SSRF vulnerabilities.
             .redirect(reqwest::RedirectPolicy::none())
@@ -139,41 +137,4 @@ mod future_client {
 }
 
 #[cfg(feature = "futures-03")]
-mod async_client {
-    use super::super::{HttpRequest, HttpResponse};
-
-    use reqwest_0_10 as reqwest;
-
-    type Error = super::Error<reqwest::Error>;
-
-    ///
-    /// Asynchronous HTTP client.
-    ///
-    pub async fn async_http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
-        let client = reqwest::Client::builder()
-            // Following redirects opens the client up to SSRF vulnerabilities.
-            .redirect(reqwest::RedirectPolicy::none())
-            .build()
-            .map_err(Error::Reqwest)?;
-
-        let mut request_builder = client
-            .request(request.method, request.url.as_str())
-            .body(request.body);
-        for (name, value) in &request.headers {
-            request_builder = request_builder.header(name, value);
-        }
-        let request = request_builder.build().map_err(Error::Reqwest)?;
-
-        let response = client.execute(request).await.map_err(Error::Reqwest)?;
-
-        let status_code = response.status();
-        let headers = response.headers().clone();
-        let chunks = response.bytes().await.map_err(Error::Reqwest)?;
-
-        Ok(HttpResponse {
-            status_code,
-            headers,
-            body: chunks.to_vec(),
-        })
-    }
-}
+mod async_client;

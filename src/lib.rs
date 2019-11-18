@@ -323,6 +323,7 @@
 //! # #[cfg(feature = "futures-03")]
 //! use oauth2::reqwest::async_http_client;
 //! use url::Url;
+//! # #[cfg(feature = "futures-03")]
 //! use async_std::task;
 //!
 //! # #[cfg(feature = "futures-03")]

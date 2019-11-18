@@ -1,17 +1,17 @@
-use async_trait::async_trait;
-use failure::Fail;
-use futures::Future;
 use crate::{
     token_response, ClientCredentialsTokenRequest, CodeTokenRequest, ErrorResponse, HttpRequest,
     HttpResponse, PasswordTokenRequest, RefreshTokenRequest, RequestTokenError, TokenResponse,
     TokenType,
 };
+use async_trait::async_trait;
+use failure::Fail;
+use futures_0_3::Future;
 
 ///
 /// Asynchronous request to exchange an authorization code for an access token.
 ///
 #[async_trait]
-pub trait AsyncCodeTokenRequest<'a, TE, TR, TT>
+pub trait AsyncCodeTokenRequest<TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT> + Send,
@@ -28,7 +28,7 @@ where
 }
 
 #[async_trait]
-impl<'a, TE, TR, TT> AsyncCodeTokenRequest<'a, TE, TR, TT> for CodeTokenRequest<'a, TE, TR, TT>
+impl<TE, TR, TT> AsyncCodeTokenRequest<TE, TR, TT> for CodeTokenRequest<'_, TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT> + Send,
@@ -55,7 +55,7 @@ where
 /// Asynchronous request to exchange a refresh token for an access token.
 ///
 #[async_trait]
-pub trait AsyncRefreshTokenRequest<'a, TE, TR, TT>
+pub trait AsyncRefreshTokenRequest<TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT> + Send,
@@ -72,8 +72,7 @@ where
 }
 
 #[async_trait]
-impl<'a, TE, TR, TT> AsyncRefreshTokenRequest<'a, TE, TR, TT>
-    for RefreshTokenRequest<'a, TE, TR, TT>
+impl<TE, TR, TT> AsyncRefreshTokenRequest<TE, TR, TT> for RefreshTokenRequest<'_, TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT> + Send,
@@ -100,7 +99,7 @@ where
 /// Asynchronous request to exchange resource owner credentials for an access token.
 ///
 #[async_trait]
-pub trait AsyncPasswordTokenRequest<'a, TE, TR, TT>
+pub trait AsyncPasswordTokenRequest<TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT> + Send,
@@ -117,8 +116,7 @@ where
 }
 
 #[async_trait]
-impl<'a, TE, TR, TT> AsyncPasswordTokenRequest<'a, TE, TR, TT>
-    for PasswordTokenRequest<'a, TE, TR, TT>
+impl<TE, TR, TT> AsyncPasswordTokenRequest<TE, TR, TT> for PasswordTokenRequest<'_, TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT> + Send,
@@ -145,7 +143,7 @@ where
 /// Asynchronous request to exchange client credentials for an access token.
 ///
 #[async_trait]
-pub trait AsyncClientCredentialsTokenRequest<'a, TE, TR, TT>
+pub trait AsyncClientCredentialsTokenRequest<TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT> + Send,
@@ -162,8 +160,8 @@ where
 }
 
 #[async_trait]
-impl<'a, TE, TR, TT> AsyncClientCredentialsTokenRequest<'a, TE, TR, TT>
-    for ClientCredentialsTokenRequest<'a, TE, TR, TT>
+impl<TE, TR, TT> AsyncClientCredentialsTokenRequest<TE, TR, TT>
+    for ClientCredentialsTokenRequest<'_, TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT> + Send,

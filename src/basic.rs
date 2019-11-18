@@ -7,7 +7,7 @@ use super::{
     StandardTokenResponse, TokenType,
 };
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 ///
 /// Basic OAuth2 client specialization, suitable for most applications.

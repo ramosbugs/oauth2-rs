@@ -10,7 +10,8 @@ edition = "2018"
 [features]
 default = ["reqwest"]
 futures-01 = ["futures-0-1"]
-futures-03 = ["futures", "async-trait"]
+futures-03 = ["futures-0-3", "async-trait", "reqwest-0-10"]
+reqwest = ["reqwest-0-9"]
 
 [dependencies]
 async-trait = { version = "0.1", optional = true }
@@ -19,11 +20,11 @@ curl = { version = "0.4.0", optional = true }
 failure = "0.1"
 failure_derive = "0.1"
 futures-0-1 = { version = "0.1", optional = true, package = "futures" }
-futures = {version = "0.3", optional = true }
+futures-0-3 = { version = "0.3", optional = true, package = "futures" }
 http = "0.1"
 rand = "0.6"
-reqwest-09 = { version = "0.9", optional = true, package = "reqwest" }
-reqwest = { version = "0.10.0-alpha.2", optional = true, features = ["blocking"]}
+reqwest-0-9 = { version = "0.9", optional = true, package = "reqwest" }
+reqwest-0-10 = { version = "0.10.0-alpha.2", optional = true, features = ["blocking"], package = "reqwest" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.7"

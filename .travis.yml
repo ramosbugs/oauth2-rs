@@ -6,11 +6,6 @@ rust:
   - nightly
 sudo: false
 cache: cargo
-branches:
-  only:
-    - master
-    - support/1.x
-    - support/2.x
 before_script:
   - cargo install --force cargo-audit
 script:
@@ -19,17 +14,20 @@ script:
   - cargo test --example google
   - cargo test --example github
   - cargo test --example msgraph
+  - cargo test --all-features
   - cargo test --no-default-features --features "futures-03"
+  # All features enabled
+  - cargo test --all-features
   # Blocking reqwest using reqwest 0.9
-  - cargo test --features "reqwest-09" --no-default-features
+  - cargo test --features reqwest --no-default-features
   # Futures 0.1 without reqwest
-  - cargo check --features "futures-01" --no-default-features
-  # Futures 0.3 without reqwest
-  - cargo check --features "futures-03" --no-default-features
-  # Futures 0.1 with reqwest
-  - cargo test --features reqwest-09,futures-01 --no-default-features
-  # Futures 0.3 with reqwest
-  - cargo check --features "futures-03"
+  - cargo test --features futures-01 --no-default-features
+  # Futures 0.3 without reqwest 0.9 (but includes reqwest 0.10)
+  - cargo test --features futures-03 --no-default-features
+  # Futures 0.1 with reqwest 0.9
+  - cargo test --features reqwest,futures-01 --no-default-features
+  # Futures 0.3 with reqwest 0.9 (included by default)
+  - cargo test --features futures-03
   - cargo audit
 notifications:
   email:

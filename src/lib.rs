@@ -29,7 +29,7 @@
 //! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
-//! fn main() -> Result<(), failure::Error> {
+//! # fn err_wrapper() -> Result<(), failure::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client =
@@ -72,8 +72,8 @@
 //!         .request(http_client)?;
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
-//!  Ok(())
-//! }
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Async API
@@ -97,13 +97,13 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! #[cfg(feature = "futures-01")]
-//! use oauth2::reqwest::async_http_client;
+//! # #[cfg(feature = "futures-01")]
+//! use oauth2::reqwest::future_http_client;
 //! use tokio::runtime::Runtime;
 //! use url::Url;
 //!
-//! #[cfg(feature = "futures-01")] // only required for doc test you don't need this
-//! fn main() -> Result<(), failure::Error> {
+//! # #[cfg(feature = "futures-01")]
+//! # fn err_wrapper() -> Result<(), failure::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client =
@@ -145,15 +145,12 @@
 //!             .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
 //!             // Set the PKCE code verifier.
 //!             .set_pkce_verifier(pkce_verifier)
-//!             .request_async(async_http_client)
+//!             .request_future(future_http_client)
 //!     )?;
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
-//!  Ok(())
-//! }
-//!
-//! #[cfg(not(feature = "futures-01"))] // only required for doc test you don't need this
-//! fn main() {}
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Implicit Grant
@@ -185,8 +182,7 @@
 //! use oauth2::basic::BasicClient;
 //! use url::Url;
 //!
-//! #[cfg(feature = "futures-01")] // only required for doc test you don't need this
-//! fn main() -> Result<(), failure::Error> {
+//! # fn err_wrapper() -> Result<(), failure::Error> {
 //! let client =
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
@@ -209,26 +205,14 @@
 //! // For security reasons, your code should verify that the `state` parameter returned by the
 //! // server matches `csrf_state`.
 //!
-//!  Ok(())
-//! }
-//!
-//! #[cfg(not(feature = "futures-01"))] // only required for doc test you don't need this
-//! fn main() {}
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Resource Owner Password Credentials Grant
 //!
 //! You can ask for a *password* access token by calling the `Client::exchange_password` method,
 //! while including the username and password.
-//!
-//! In order to use futures 0.1 include the oauth2 crate like this:
-//!
-//! ```toml
-//! [dependencies.oauth2]
-//! version = "3.0.0-alpha.6"
-//! features = "futures-01, reqwest-09"
-//! default-features = false
-//! ```
 //!
 //! ## Example
 //!
@@ -248,8 +232,7 @@
 //! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
-//! #[cfg(feature = "futures-01")] // only required for doc test you don't need this
-//! fn main() -> Result<(), failure::Error> {
+//! # fn err_wrapper() -> Result<(), failure::Error> {
 //! let client =
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
@@ -266,10 +249,8 @@
 //!         )
 //!         .add_scope(Scope::new("read".to_string()))
 //!         .request(http_client)?;
-//! Ok(())
-//! }
-//! #[cfg(not(feature = "futures-01"))] // only required for doc test you don't need this
-//! fn main() {}
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Client Credentials Grant
@@ -293,34 +274,30 @@
 //! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
-//! #[cfg(feature = "futures-01")] // only required for doc test you don't need this
-//! fn main() -> Result<(), failure::Error> {
-//!     let client =
-//!         BasicClient::new(
-//!             ClientId::new("client_id".to_string()),
-//!             Some(ClientSecret::new("client_secret".to_string())),
-//!             AuthUrl::new(Url::parse("http://authorize")?),
-//!             Some(TokenUrl::new(Url::parse("http://token")?))
-//!         );
+//! # fn err_wrapper() -> Result<(), failure::Error> {
+//! let client =
+//!     BasicClient::new(
+//!         ClientId::new("client_id".to_string()),
+//!         Some(ClientSecret::new("client_secret".to_string())),
+//!         AuthUrl::new("http://authorize".to_string())?,
+//!         Some(TokenUrl::new("http://token".to_string())?),
+//!     );
 //!
-//!     let token_result = client
-//!         .exchange_client_credentials()
-//!         .add_scope(Scope::new("read".to_string()))
-//!         .request(http_client)?;
-//!     Ok(())
-//! }
-//!
-//! #[cfg(not(feature = "futures-01"))] // only required for doc test you don't need this
-//! fn main() {}
+//! let token_result = client
+//!     .exchange_client_credentials()
+//!     .add_scope(Scope::new("read".to_string()))
+//!     .request(http_client)?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Async/Await API
 //!
 //! An asynchronous API for async/await is also provided.
-//! In order to use futures 0.3 include the oauth2 crate like this:
+//! In order to use `futures` 0.3, include the `oauth2` crate like this:
 //! ```toml
 //! [dependencies.oauth2]
-//! version = "3.0.0-alpha.6"
+//! version = "<desired version>"
 //! features = "futures-03"
 //! ```
 //!
@@ -328,7 +305,7 @@
 //!
 //! ```rust,no_run
 //! use failure;
-//! #[cfg(feature = "futures-03")]
+//! # #[cfg(feature = "futures-03")]
 //! use oauth2::{
 //!     AsyncCodeTokenRequest,
 //!     AuthorizationCode,
@@ -343,13 +320,13 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! #[cfg(feature = "futures-03")]
-//! use oauth2::async_http_client;
+//! # #[cfg(feature = "futures-03")]
+//! use oauth2::reqwest::async_http_client;
 //! use url::Url;
 //! use async_std::task;
 //!
-//! #[cfg(feature = "futures-03")] // only required for doc test you don't need this
-//! fn main() -> Result<(), failure::Error> {
+//! # #[cfg(feature = "futures-03")]
+//! # fn err_wrapper() -> Result<(), failure::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client =
@@ -394,11 +371,8 @@
 //! })?;
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
-//! Ok(())
-//! }
-//!
-//! #[cfg(not(feature = "futures-03"))] // only required for doc test you don't need this
-//! fn main() {}
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Other examples
@@ -422,8 +396,8 @@ use failure::Fail;
 use futures_0_1::{Future, IntoFuture};
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
-use serde::{Serialize, Deserialize};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use url::{form_urlencoded, Url};
 
 ///
@@ -452,7 +426,7 @@ pub mod helpers;
 ///
 /// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
 ///
-#[cfg(any(feature = "reqwest-09", feature="reqwest", feature = "futures-03", feature = "futures-01"))]
+#[cfg(any(feature = "reqwest", feature = "futures-03"))]
 pub mod reqwest;
 
 #[cfg(test)]
@@ -467,12 +441,10 @@ pub use types::{
 };
 
 #[cfg(feature = "futures-03")]
-pub use async_internal::{AsyncClientCredentialsTokenRequest, AsyncCodeTokenRequest,
-    AsyncPasswordTokenRequest, AsyncRefreshTokenRequest
+pub use async_internal::{
+    AsyncClientCredentialsTokenRequest, AsyncCodeTokenRequest, AsyncPasswordTokenRequest,
+    AsyncRefreshTokenRequest,
 };
-
-#[cfg(any(all(feature = "futures-03", feature = "reqwest"), all(feature = "futures-01", feature = "reqwest-09")))]
-pub use crate::reqwest::async_http_client;
 
 const CONTENT_TYPE_JSON: &str = "application/json";
 const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";
@@ -969,7 +941,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
-    pub fn request_async<C, F, RE>(
+    pub fn request_future<C, F, RE>(
         self,
         http_client: C,
     ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
@@ -1085,11 +1057,10 @@ where
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
-
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub fn request_async<C, F, RE>(
+    pub fn request_future<C, F, RE>(
         self,
         http_client: C,
     ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
@@ -1210,7 +1181,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub fn request_async<C, F, RE>(
+    pub fn request_future<C, F, RE>(
         self,
         http_client: C,
     ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
@@ -1325,7 +1296,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub fn request_async<C, F, RE>(
+    pub fn request_future<C, F, RE>(
         self,
         http_client: C,
     ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>

@@ -22,16 +22,16 @@ where
     Other(String),
 }
 
-#[cfg(feature = "reqwest")]
+#[cfg(any(feature = "reqwest", feature = "futures-03"))]
 pub use blocking::http_client;
 
 #[cfg(all(feature = "futures-01", feature = "reqwest"))]
 pub use future_client::future_http_client;
 
-#[cfg(all(feature = "reqwest", feature = "futures-03"))]
+#[cfg(feature = "futures-03")]
 pub use async_client::async_http_client;
 
-#[cfg(feature = "reqwest")]
+#[cfg(any(feature = "reqwest", feature = "futures-03"))]
 mod blocking {
     use super::Error;
     use super::super::{HttpRequest, HttpResponse};
@@ -55,7 +55,6 @@ mod blocking {
     ///
     /// Synchronous HTTP client.
     ///
-    #[cfg(feature = "reqwest")]
     pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error<reqwest::Error>> {
         let client = blocking::Client::builder()
             // Following redirects opens the client up to SSRF vulnerabilities.

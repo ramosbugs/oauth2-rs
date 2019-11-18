@@ -14,12 +14,6 @@
 //! ...and follow the instructions.
 //!
 
-extern crate base64;
-extern crate oauth2;
-extern crate rand;
-extern crate serde;
-extern crate url;
-
 use oauth2::basic::{BasicErrorResponse, BasicTokenType};
 use oauth2::TokenType;
 // Alternatively, this can be `oauth2::curl::http_client` or a custom client.

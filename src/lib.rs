@@ -11,12 +11,8 @@
 //!
 //! ## Example
 //!
-//! ```
-//! extern crate base64;
-//! extern crate oauth2;
-//! extern crate rand;
-//! extern crate url;
-//!
+//! ```rust,no_run
+//! use failure;
 //! use oauth2::{
 //!     AuthorizationCode,
 //!     AuthUrl,
@@ -33,7 +29,6 @@
 //! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
-//! # extern crate failure;
 //! # fn err_wrapper() -> Result<(), failure::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
@@ -79,22 +74,23 @@
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
 //! # Ok(())
 //! # }
-//! # fn main() {}
 //! ```
 //!
 //! # Async API
 //!
-//! An asyncronous API is also provided.
+//! An asynchronous API is also provided.
+//!
+//! In order to use `futures` 0.1, include the `oauth2` crate like this:
+//!
+//! ```toml
+//! [dependencies]
+//! oauth2 = { version = "<desired version>", features = ["features-01"] }
+//! ```
 //!
 //! ## Example
 //!
-//! ```
-//! extern crate base64;
-//! extern crate oauth2;
-//! extern crate rand;
-//! extern crate tokio;
-//! extern crate url;
-//!
+//! ```rust,no_run
+//! use failure;
 //! use oauth2::{
 //!     AuthorizationCode,
 //!     AuthUrl,
@@ -108,11 +104,12 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! use oauth2::reqwest::async_http_client;
+//! # #[cfg(feature = "futures-01")]
+//! use oauth2::reqwest::future_http_client;
 //! use tokio::runtime::Runtime;
 //! use url::Url;
 //!
-//! # extern crate failure;
+//! # #[cfg(feature = "futures-01")]
 //! # fn err_wrapper() -> Result<(), failure::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
@@ -155,13 +152,12 @@
 //!             .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
 //!             // Set the PKCE code verifier.
 //!             .set_pkce_verifier(pkce_verifier)
-//!             .request_async(async_http_client)
+//!             .request_future(future_http_client)
 //!     )?;
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
 //! # Ok(())
 //! # }
-//! # fn main() {}
 //! ```
 //!
 //! # Implicit Grant
@@ -172,12 +168,8 @@
 //!
 //! ## Example:
 //!
-//! ```
-//! extern crate base64;
-//! extern crate oauth2;
-//! extern crate rand;
-//! extern crate url;
-//!
+//! ```rust,no_run
+//! use failure;
 //! use oauth2::{
 //!     AuthUrl,
 //!     ClientId,
@@ -189,7 +181,6 @@
 //! use oauth2::basic::BasicClient;
 //! use url::Url;
 //!
-//! # extern crate failure;
 //! # fn err_wrapper() -> Result<(), failure::Error> {
 //! let client =
 //!     BasicClient::new(
@@ -215,7 +206,6 @@
 //!
 //! # Ok(())
 //! # }
-//! # fn main() {}
 //! ```
 //!
 //! # Resource Owner Password Credentials Grant
@@ -225,12 +215,8 @@
 //!
 //! ## Example
 //!
-//! ```
-//! extern crate base64;
-//! extern crate oauth2;
-//! extern crate rand;
-//! extern crate url;
-//!
+//! ```rust,no_run
+//! use failure;
 //! use oauth2::{
 //!     AuthUrl,
 //!     ClientId,
@@ -245,7 +231,6 @@
 //! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
-//! # extern crate failure;
 //! # fn err_wrapper() -> Result<(), failure::Error> {
 //! let client =
 //!     BasicClient::new(
@@ -265,7 +250,6 @@
 //!         .request(http_client)?;
 //! # Ok(())
 //! # }
-//! # fn main() {}
 //! ```
 //!
 //! # Client Credentials Grant
@@ -275,10 +259,8 @@
 //!
 //! ## Example:
 //!
-//! ```
-//! extern crate oauth2;
-//! extern crate url;
-//!
+//! ```rust,no_run
+//! use failure;
 //! use oauth2::{
 //!     AuthUrl,
 //!     ClientId,
@@ -291,14 +273,13 @@
 //! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
-//! # extern crate failure;
 //! # fn err_wrapper() -> Result<(), failure::Error> {
 //! let client =
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
 //!         AuthUrl::new("http://authorize".to_string())?,
-//!         Some(TokenUrl::new("http://token".to_string())?)
+//!         Some(TokenUrl::new("http://token".to_string())?),
 //!     );
 //!
 //! let token_result = client
@@ -307,7 +288,92 @@
 //!     .request(http_client)?;
 //! # Ok(())
 //! # }
-//! # fn main() {}
+//! ```
+//!
+//! # Async/Await API
+//!
+//! An asynchronous API for async/await is also provided.
+//! In order to use `futures` 0.3, include the `oauth2` crate like this:
+//! ```toml
+//! [dependencies.oauth2]
+//! version = "<desired version>"
+//! features = ["futures-03"]
+//! default-features = false
+//! ```
+//!
+//! ## Example
+//!
+//! ```rust,no_run
+//! use failure;
+//! # #[cfg(feature = "futures-03")]
+//! use oauth2::{
+//!     AsyncCodeTokenRequest,
+//!     AuthorizationCode,
+//!     AuthUrl,
+//!     ClientId,
+//!     ClientSecret,
+//!     CsrfToken,
+//!     PkceCodeChallenge,
+//!     RedirectUrl,
+//!     Scope,
+//!     TokenResponse,
+//!     TokenUrl
+//! };
+//! use oauth2::basic::BasicClient;
+//! # #[cfg(feature = "futures-03")]
+//! use oauth2::reqwest::async_http_client;
+//! use url::Url;
+//! # #[cfg(feature = "futures-03")]
+//! use async_std::task;
+//!
+//! # #[cfg(feature = "futures-03")]
+//! # fn err_wrapper() -> Result<(), failure::Error> {
+//! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
+//! // token URL.
+//! let client =
+//!     BasicClient::new(
+//!         ClientId::new("client_id".to_string()),
+//!         Some(ClientSecret::new("client_secret".to_string())),
+//!         AuthUrl::new("http://authorize".to_string())?,
+//!         Some(TokenUrl::new("http://token".to_string())?)
+//!     )
+//!     // Set the URL the user will be redirected to after the authorization process.
+//!     .set_redirect_url(RedirectUrl::new("http://redirect".to_string())?);
+//!
+//! // Generate a PKCE challenge.
+//! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+//!
+//! // Generate the full authorization URL.
+//! let (auth_url, csrf_token) = client
+//!     .authorize_url(CsrfToken::new_random)
+//!     // Set the desired scopes.
+//!     .add_scope(Scope::new("read".to_string()))
+//!     .add_scope(Scope::new("write".to_string()))
+//!     // Set the PKCE code challenge.
+//!     .set_pkce_challenge(pkce_challenge)
+//!     .url();
+//!
+//! // This is the URL you should redirect the user to, in order to trigger the authorization
+//! // process.
+//! println!("Browse to: {}", auth_url);
+//!
+//! // Once the user has been redirected to the redirect URL, you'll have access to the
+//! // authorization code. For security reasons, your code should verify that the `state`
+//! // parameter returned by the server matches `csrf_state`.
+//!
+//! // Now you can trade it for an access token.
+//! let token_result = task::block_on(async {
+//!     client
+//!        .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
+//!        // Set the PKCE code verifier.
+//!        .set_pkce_verifier(pkce_verifier)
+//!        .request_async(async_http_client)
+//!        .await
+//! })?;
+//!
+//! // Unwrapping token_result will either produce a Token or a RequestTokenError.
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Other examples
@@ -320,23 +386,6 @@
 //! - [Wunderlist](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/wunderlist.rs)
 //!
 
-extern crate base64;
-#[cfg(feature = "curl")]
-extern crate curl as curl_;
-extern crate failure;
-extern crate futures;
-extern crate http;
-extern crate rand;
-#[cfg(feature = "reqwest")]
-extern crate reqwest as reqwest_;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-extern crate sha2;
-extern crate tokio_io;
-extern crate url;
-
 use std::borrow::Cow;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
@@ -344,12 +393,19 @@ use std::marker::PhantomData;
 use std::time::Duration;
 
 use failure::Fail;
-use futures::{Future, IntoFuture};
+#[cfg(feature = "futures-01")]
+use futures_0_1::{Future, IntoFuture};
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
 use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use url::{form_urlencoded, Url};
+
+///
+/// Async/await module, requires "futures-03" feature.
+///
+#[cfg(feature = "futures-03")]
+pub mod async_internal;
 
 ///
 /// Basic OAuth2 implementation with no extensions
@@ -371,7 +427,7 @@ pub mod helpers;
 ///
 /// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
 ///
-#[cfg(feature = "reqwest")]
+#[cfg(any(feature = "reqwest", feature = "futures-03"))]
 pub mod reqwest;
 
 #[cfg(test)]
@@ -383,6 +439,12 @@ pub use types::{
     AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
     PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
     ResourceOwnerUsername, ResponseType, Scope, TokenUrl,
+};
+
+#[cfg(feature = "futures-03")]
+pub use async_internal::{
+    AsyncClientCredentialsTokenRequest, AsyncCodeTokenRequest, AsyncPasswordTokenRequest,
+    AsyncRefreshTokenRequest,
 };
 
 const CONTENT_TYPE_JSON: &str = "application/json";
@@ -869,6 +931,8 @@ where
             .and_then(token_response)
     }
 }
+
+#[cfg(feature = "futures-01")]
 impl<'a, TE, TR, TT> CodeTokenRequest<'a, TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
@@ -878,7 +942,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
-    pub fn request_async<C, F, RE>(
+    pub fn request_future<C, F, RE>(
         self,
         http_client: C,
     ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
@@ -986,6 +1050,8 @@ where
         ))
     }
 }
+
+#[cfg(feature = "futures-01")]
 impl<'a, TE, TR, TT> RefreshTokenRequest<'a, TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
@@ -995,7 +1061,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub fn request_async<C, F, RE>(
+    pub fn request_future<C, F, RE>(
         self,
         http_client: C,
     ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
@@ -1105,6 +1171,8 @@ where
         ))
     }
 }
+
+#[cfg(feature = "futures-01")]
 impl<'a, TE, TR, TT> PasswordTokenRequest<'a, TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
@@ -1114,7 +1182,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub fn request_async<C, F, RE>(
+    pub fn request_future<C, F, RE>(
         self,
         http_client: C,
     ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
@@ -1218,6 +1286,8 @@ where
         ))
     }
 }
+
+#[cfg(feature = "futures-01")]
 impl<'a, TE, TR, TT> ClientCredentialsTokenRequest<'a, TE, TR, TT>
 where
     TE: ErrorResponse + 'static,
@@ -1227,7 +1297,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub fn request_async<C, F, RE>(
+    pub fn request_future<C, F, RE>(
         self,
         http_client: C,
     ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>

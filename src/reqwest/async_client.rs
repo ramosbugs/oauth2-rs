@@ -1,7 +1,7 @@
 use super::Error;
 use super::super::{HttpRequest, HttpResponse};
 
-use reqwest_0_10 as reqwest;
+pub use reqwest_0_10 as reqwest;
 
 ///
 /// Asynchronous HTTP client.

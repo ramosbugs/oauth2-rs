@@ -11,7 +11,10 @@ edition = "2018"
 default = ["reqwest"]
 futures-01 = ["futures-0-1"]
 futures-03 = ["futures-0-3", "async-std", "async-trait", "reqwest-0-10"]
-reqwest = ["reqwest-0-9"]
+reqwest = ["reqwest-native-tls"]
+reqwest-native-tls = ["reqwest-0-9/default-tls"]
+reqwest-0-10-native-tls = ["reqwest-0-10/default-tls"]
+reqwest-rustls = ["reqwest-0-9/rustls-tls"]
 
 [dependencies]
 async-std = { version = "1.0", optional = true }
@@ -24,8 +27,8 @@ futures-0-1 = { version = "0.1", optional = true, package = "futures" }
 futures-0-3 = { version = "0.3", optional = true, package = "futures" }
 http = "0.1"
 rand = "0.6"
-reqwest-0-9 = { version = "0.9", optional = true, package = "reqwest" }
-reqwest-0-10 = { version = "0.10.0-alpha.2", optional = true, features = ["blocking"], package = "reqwest" }
+reqwest-0-9 = { version = "0.9", optional = true, default_features = false, package = "reqwest"}
+reqwest-0-10 = { version = "0.10.0-alpha.2", optional = true, default_features = false, features = ["blocking"], package = "reqwest" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.7"

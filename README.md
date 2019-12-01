@@ -5,9 +5,13 @@
 
 A simple implementation of the OAuth2 flow in Rust.
 
-Documentation is available on [docs.rs](https://docs.rs/crate/oauth2) or check the [examples](https://github.com/ramosbugs/oauth2-rs/tree/master/examples).
+Documentation is available on [docs.rs](https://docs.rs/oauth2) or check the [examples](https://github.com/ramosbugs/oauth2-rs/tree/master/examples).
 
 Before upgrading make sure to check out the [changelog](https://github.com/ramosbugs/oauth2-rs/releases).
+
+### Contributed Examples
+
+- [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
 
 ## Development
 

@@ -323,11 +323,9 @@
 //! # #[cfg(feature = "futures-03")]
 //! use oauth2::reqwest::async_http_client;
 //! use url::Url;
-//! # #[cfg(feature = "futures-03")]
-//! use async_std::task;
 //!
 //! # #[cfg(feature = "futures-03")]
-//! # fn err_wrapper() -> Result<(), failure::Error> {
+//! # async fn err_wrapper() -> Result<(), failure::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client =
@@ -362,14 +360,12 @@
 //! // parameter returned by the server matches `csrf_state`.
 //!
 //! // Now you can trade it for an access token.
-//! let token_result = task::block_on(async {
-//!     client
-//!        .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
-//!        // Set the PKCE code verifier.
-//!        .set_pkce_verifier(pkce_verifier)
-//!        .request_async(async_http_client)
-//!        .await
-//! })?;
+//! let token_result = client
+//!     .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
+//!     // Set the PKCE code verifier.
+//!     .set_pkce_verifier(pkce_verifier)
+//!     .request_async(async_http_client)
+//!     .await?;
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
 //! # Ok(())

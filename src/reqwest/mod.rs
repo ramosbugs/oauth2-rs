@@ -22,47 +22,47 @@ where
     Other(String),
 }
 
-#[cfg(any(feature = "reqwest", feature = "futures-03"))]
+#[cfg(any(feature = "reqwest-09", feature = "reqwest-010"))]
 pub use blocking::http_client;
 ///
 /// Error type returned by failed reqwest blocking HTTP requests.
 ///
-#[cfg(any(feature = "reqwest", feature = "futures-03"))]
+#[cfg(any(feature = "reqwest-09", feature = "reqwest-010"))]
 pub type HttpClientError = Error<blocking::reqwest::Error>;
 
-#[cfg(all(feature = "futures-01", feature = "reqwest"))]
+#[cfg(all(feature = "futures-01", feature = "reqwest-09"))]
 pub use future_client::future_http_client;
 ///
 /// Error type returned by failed reqwest futures HTTP requests.
 ///
-#[cfg(all(feature = "futures-01", feature = "reqwest"))]
-pub type FutureHttpClientError = Error<future_client::reqwest::Error>;
+#[cfg(all(feature = "futures-01", feature = "reqwest-09"))]
+pub type FutureHttpClientError = Error<reqwest_0_9::Error>;
 
-#[cfg(feature = "futures-03")]
+#[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
 pub use async_client::async_http_client;
 ///
 /// Error type returned by failed reqwest async HTTP requests.
 ///
-#[cfg(feature = "futures-03")]
-pub type AsyncHttpClientError = Error<async_client::reqwest::Error>;
+#[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
+pub type AsyncHttpClientError = Error<reqwest_0_10::Error>;
 
-#[cfg(any(feature = "reqwest", feature = "futures-03"))]
+#[cfg(any(feature = "reqwest-09", feature = "reqwest-010"))]
 mod blocking {
-    use super::Error;
     use super::super::{HttpRequest, HttpResponse};
+    use super::Error;
 
-    #[cfg(not(feature = "futures-03"))]
+    #[cfg(all(feature = "reqwest-09", not(feature = "reqwest-010")))]
     use reqwest_0_9 as blocking;
-    #[cfg(not(feature = "futures-03"))]
+    #[cfg(all(feature = "reqwest-09", not(feature = "reqwest-010")))]
     pub use reqwest_0_9 as reqwest;
-    #[cfg(not(feature = "futures-03"))]
+    #[cfg(all(feature = "reqwest-09", not(feature = "reqwest-010")))]
     use reqwest_0_9::RedirectPolicy;
 
-    #[cfg(feature = "futures-03")]
+    #[cfg(feature = "reqwest-010")]
     pub use reqwest_0_10 as reqwest;
-    #[cfg(feature = "futures-03")]
+    #[cfg(feature = "reqwest-010")]
     use reqwest_0_10::blocking;
-    #[cfg(feature = "futures-03")]
+    #[cfg(feature = "reqwest-010")]
     use reqwest_0_10::RedirectPolicy;
 
     use std::io::Read;
@@ -96,13 +96,13 @@ mod blocking {
     }
 }
 
-#[cfg(all(feature = "futures-01", feature = "reqwest"))]
+#[cfg(all(feature = "futures-01", feature = "reqwest-09"))]
 mod future_client {
-    use super::Error;
     use super::super::{HttpRequest, HttpResponse};
+    use super::Error;
 
     use futures_0_1::{Future, IntoFuture, Stream};
-    pub use reqwest_0_9 as reqwest;
+    use reqwest_0_9 as reqwest;
     use reqwest_0_9::r#async::Client as AsyncClient;
 
     ///
@@ -150,5 +150,5 @@ mod future_client {
     }
 }
 
-#[cfg(feature = "futures-03")]
+#[cfg(all(feature = "reqwest-010", feature = "futures-03"))]
 mod async_client;

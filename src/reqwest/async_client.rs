@@ -1,12 +1,14 @@
-use super::Error;
 use super::super::{HttpRequest, HttpResponse};
+use super::Error;
 
 pub use reqwest_0_10 as reqwest;
 
 ///
 /// Asynchronous HTTP client.
 ///
-pub async fn async_http_client(request: HttpRequest) -> Result<HttpResponse, Error<reqwest::Error>> {
+pub async fn async_http_client(
+    request: HttpRequest,
+) -> Result<HttpResponse, Error<reqwest::Error>> {
     let client = reqwest::Client::builder()
         // Following redirects opens the client up to SSRF vulnerabilities.
         .redirect(reqwest::RedirectPolicy::none())

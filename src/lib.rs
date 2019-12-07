@@ -104,12 +104,12 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! # #[cfg(feature = "futures-01")]
+//! # #[cfg(all(feature = "futures-01", any(feature = "reqwest-09", feature = "reqwest-010")))]
 //! use oauth2::reqwest::future_http_client;
 //! use tokio::runtime::Runtime;
 //! use url::Url;
 //!
-//! # #[cfg(feature = "futures-01")]
+//! # #[cfg(all(feature = "futures-01", any(feature = "reqwest-09", feature = "reqwest-010")))]
 //! # fn err_wrapper() -> Result<(), failure::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
@@ -320,11 +320,11 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! # #[cfg(feature = "futures-03")]
+//! # #[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
 //! use oauth2::reqwest::async_http_client;
 //! use url::Url;
 //!
-//! # #[cfg(feature = "futures-03")]
+//! # #[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
 //! # async fn err_wrapper() -> Result<(), failure::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
@@ -423,7 +423,7 @@ pub mod helpers;
 ///
 /// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
 ///
-#[cfg(any(feature = "reqwest", feature = "futures-03"))]
+#[cfg(any(feature = "reqwest-09", feature = "reqwest-010"))]
 pub mod reqwest;
 
 #[cfg(test)]

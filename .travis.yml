@@ -26,7 +26,7 @@ script:
   # Futures 0.3 with reqwest 0.10
   - cargo when -v ^1.39 -- test --tests --examples --features futures-03,reqwest-010 --no-default-features
   # Futures 0.1 with reqwest 0.9
-  - cargo test --tests --examples --features reqwest,futures-01 --no-default-features
+  - cargo test --tests --examples --features reqwest-09,futures-01 --no-default-features
   # Futures 0.3 with reqwest 0.9 (included by default)
   - cargo when -v ^1.39 -- test --tests --examples --features futures-03
   - cargo when -v ^1.39 audit

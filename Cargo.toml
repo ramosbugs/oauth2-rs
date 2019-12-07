@@ -7,6 +7,9 @@ description = "Bindings for exchanging OAuth 2 tokens"
 repository = "https://github.com/ramosbugs/oauth2-rs"
 edition = "2018"
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 default = ["reqwest"]
 futures-01 = ["futures-0-1"]

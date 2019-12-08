@@ -1,7 +1,94 @@
 #![warn(missing_docs)]
 //!
-//! A simple implementation of the OAuth2 flow, trying to adhere as much as possible to
-//! [RFC 6749](https://tools.ietf.org/html/rfc6749).
+//! An extensible, strongly-typed implementation of OAuth2
+//! ([RFC 6749](https://tools.ietf.org/html/rfc6749)).
+//!
+//! # Importing `oauth2`: selecting an HTTP client interface
+//!
+//! This library offers a flexible HTTP client interface with three modes:
+//!  * **Synchronous (blocking)**
+//!
+//!    The synchronous interface is available for any combination of feature flags.
+//!
+//!    Example import in `Cargo.toml`:
+//!    ```toml
+//!    oauth2 = "3.0"
+//!    ```
+//!  * **Asynchronous via `futures` 0.1**
+//!
+//!    Support is enabled via the `futures-01` feature flag.
+//!
+//!    Example import in `Cargo.toml`:
+//!    ```toml
+//!    oauth2 = { version = "3.0", features = ["futures-01"] }
+//!    ```
+//!  * **Async/await via `futures` 0.3**
+//!
+//!    Support is enabled via the `futures-03` feature flag. Typically, the default
+//!    support for `reqwest` 0.9 is also disabled when using async/await. If desired, the
+//!    `reqwest-010` feature flag can be used to enable `reqwest` 0.10 and its async/await
+//!    client interface.
+//!
+//!    Example import in `Cargo.toml`:
+//!    ```toml
+//!    oauth2 = { version = "3.0", features = ["futures-03"], default-features = false }
+//!    ```
+//!
+//! For the HTTP client modes described above, the following HTTP client implementations can be
+//! used:
+//!  * **[`reqwest`]**
+//!
+//!    The `reqwest` HTTP client supports all three modes. By default, `reqwest` 0.9 is enabled,
+//!    which supports the synchronous and asynchronous `futures` 0.1 APIs.
+//!
+//!    Synchronous client: [`reqwest::http_client`]
+//!
+//!    Asynchronous `futures` 0.1 client: [`reqwest::future_http_client`]
+//!
+//!    Async/await `futures` 0.3 client: [`reqwest::async_http_client`]. This mode requires
+//!    `reqwest` 0.10, which can be enabled via the `reqwest-010` feature flag. Typically, the
+//!    default features are also disabled (`default-features = false` in `Cargo.toml`) to remove the
+//!    dependency on `reqwest` 0.9 when using `reqwest` 0.10. However, both can be used together if
+//!    both asynchronous interfaces are desired.
+//!
+//!  * **[`curl`]**
+//!
+//!    The `curl` HTTP client only supports the synchronous HTTP client mode and can be enabled in
+//!    `Cargo.toml` via the `curl` feature flag.
+//!
+//!    Synchronous client: [`curl::http_client`]
+//!
+//!  * **Custom**
+//!
+//!    In addition to the clients above, users may define their own HTTP clients, which must accept
+//!    an [`HttpRequest`] and return an [`HttpResponse`] or error. Users writing their own clients
+//!    may wish to disable the default `reqwest` 0.9 dependency by specifying
+//!    `default-features = false` in `Cargo.toml`:
+//!    ```toml
+//!    oauth2 = { version = "3.0", default-features = false }
+//!    ```
+//!
+//!    Synchronous HTTP clients should implement the following trait:
+//!    ```ignore
+//!    FnOnce(HttpRequest) -> Result<HttpResponse, RE>
+//!    where RE: failure::Fail
+//!    ```
+//!
+//!    Asynchronous `futures` 0.1 HTTP clients should implement the following trait:
+//!    ```ignore
+//!    FnOnce(HttpRequest) -> F
+//!    where
+//!      F: Future<Item = HttpResponse, Error = RE>,
+//!      RE: failure::Fail
+//!    ```
+//!
+//!    Async/await `futures` 0.3 HTTP clients should implement the following trait:
+//!    ```ignore
+//!    FnOnce(HttpRequest) -> F + Send
+//!    where
+//!      F: Future<Output = Result<HttpResponse, RE>> + Send,
+//!      RE: failure::Fail
+//!    ```
 //!
 //! # Getting started: Authorization Code Grant w/ PKCE
 //!
@@ -9,7 +96,9 @@
 //! client secret or has a client secret that cannot remain confidential (e.g., native, mobile, or
 //! client-side web applications).
 //!
-//! ## Example
+//! ## Example: Synchronous (blocking) API
+//!
+//! This example works with `oauth2`'s default feature flags, which include `reqwest` 0.9.
 //!
 //! ```rust,no_run
 //! use failure;
@@ -76,18 +165,14 @@
 //! # }
 //! ```
 //!
-//! # Async API
+//! ## Example: Asynchronous (futures 0.1-based) API
 //!
-//! An asynchronous API is also provided.
-//!
-//! In order to use `futures` 0.1, include the `oauth2` crate like this:
+//! In order to use `futures` 0.1, include `oauth2` as follows:
 //!
 //! ```toml
 //! [dependencies]
-//! oauth2 = { version = "<desired version>", features = ["features-01"] }
+//! oauth2 = { version = "3.0", features = ["futures-01"] }
 //! ```
-//!
-//! ## Example
 //!
 //! ```rust,no_run
 //! use failure;
@@ -160,13 +245,92 @@
 //! # }
 //! ```
 //!
+//! ## Example: Async/Await API
+//!
+//! Async/await support requires `rustc` 1.39.0 or newer. In order to use async/await, include
+//! `oauth2` as follows:
+//!
+//! ```toml
+//! [dependencies]
+//! oauth2 = { version = "3.0", features = ["futures-03", "reqwest-010"], default-features = false }
+//! ```
+//!
+//! ```rust,no_run
+//! use failure;
+//! # #[cfg(feature = "futures-03")]
+//! use oauth2::{
+//!     AsyncCodeTokenRequest,
+//!     AuthorizationCode,
+//!     AuthUrl,
+//!     ClientId,
+//!     ClientSecret,
+//!     CsrfToken,
+//!     PkceCodeChallenge,
+//!     RedirectUrl,
+//!     Scope,
+//!     TokenResponse,
+//!     TokenUrl
+//! };
+//! use oauth2::basic::BasicClient;
+//! # #[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
+//! use oauth2::reqwest::async_http_client;
+//! use url::Url;
+//!
+//! # #[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
+//! # async fn err_wrapper() -> Result<(), failure::Error> {
+//! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
+//! // token URL.
+//! let client =
+//!     BasicClient::new(
+//!         ClientId::new("client_id".to_string()),
+//!         Some(ClientSecret::new("client_secret".to_string())),
+//!         AuthUrl::new("http://authorize".to_string())?,
+//!         Some(TokenUrl::new("http://token".to_string())?)
+//!     )
+//!     // Set the URL the user will be redirected to after the authorization process.
+//!     .set_redirect_url(RedirectUrl::new("http://redirect".to_string())?);
+//!
+//! // Generate a PKCE challenge.
+//! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+//!
+//! // Generate the full authorization URL.
+//! let (auth_url, csrf_token) = client
+//!     .authorize_url(CsrfToken::new_random)
+//!     // Set the desired scopes.
+//!     .add_scope(Scope::new("read".to_string()))
+//!     .add_scope(Scope::new("write".to_string()))
+//!     // Set the PKCE code challenge.
+//!     .set_pkce_challenge(pkce_challenge)
+//!     .url();
+//!
+//! // This is the URL you should redirect the user to, in order to trigger the authorization
+//! // process.
+//! println!("Browse to: {}", auth_url);
+//!
+//! // Once the user has been redirected to the redirect URL, you'll have access to the
+//! // authorization code. For security reasons, your code should verify that the `state`
+//! // parameter returned by the server matches `csrf_state`.
+//!
+//! // Now you can trade it for an access token.
+//! let token_result = client
+//!     .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
+//!     // Set the PKCE code verifier.
+//!     .set_pkce_verifier(pkce_verifier)
+//!     .request_async(async_http_client)
+//!     .await?;
+//!
+//! // Unwrapping token_result will either produce a Token or a RequestTokenError.
+//! # Ok(())
+//! # }
+//! ```
+//!
 //! # Implicit Grant
 //!
 //! This flow fetches an access token directly from the authorization endpoint. Be sure to
 //! understand the security implications of this flow before using it. In most cases, the
 //! Authorization Code Grant flow is preferable to the Implicit Grant flow.
 //!
-//! ## Example:
+//! ## Example
 //!
 //! ```rust,no_run
 //! use failure;
@@ -257,7 +421,7 @@
 //! You can ask for a *client credentials* access token by calling the
 //! `Client::exchange_client_credentials` method.
 //!
-//! ## Example:
+//! ## Example
 //!
 //! ```rust,no_run
 //! use failure;
@@ -286,88 +450,6 @@
 //!     .exchange_client_credentials()
 //!     .add_scope(Scope::new("read".to_string()))
 //!     .request(http_client)?;
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! # Async/Await API
-//!
-//! An asynchronous API for async/await is also provided.
-//! In order to use `futures` 0.3, include the `oauth2` crate like this:
-//! ```toml
-//! [dependencies.oauth2]
-//! version = "<desired version>"
-//! features = ["futures-03"]
-//! default-features = false
-//! ```
-//!
-//! ## Example
-//!
-//! ```rust,no_run
-//! use failure;
-//! # #[cfg(feature = "futures-03")]
-//! use oauth2::{
-//!     AsyncCodeTokenRequest,
-//!     AuthorizationCode,
-//!     AuthUrl,
-//!     ClientId,
-//!     ClientSecret,
-//!     CsrfToken,
-//!     PkceCodeChallenge,
-//!     RedirectUrl,
-//!     Scope,
-//!     TokenResponse,
-//!     TokenUrl
-//! };
-//! use oauth2::basic::BasicClient;
-//! # #[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
-//! use oauth2::reqwest::async_http_client;
-//! use url::Url;
-//!
-//! # #[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
-//! # async fn err_wrapper() -> Result<(), failure::Error> {
-//! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
-//! // token URL.
-//! let client =
-//!     BasicClient::new(
-//!         ClientId::new("client_id".to_string()),
-//!         Some(ClientSecret::new("client_secret".to_string())),
-//!         AuthUrl::new("http://authorize".to_string())?,
-//!         Some(TokenUrl::new("http://token".to_string())?)
-//!     )
-//!     // Set the URL the user will be redirected to after the authorization process.
-//!     .set_redirect_url(RedirectUrl::new("http://redirect".to_string())?);
-//!
-//! // Generate a PKCE challenge.
-//! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
-//!
-//! // Generate the full authorization URL.
-//! let (auth_url, csrf_token) = client
-//!     .authorize_url(CsrfToken::new_random)
-//!     // Set the desired scopes.
-//!     .add_scope(Scope::new("read".to_string()))
-//!     .add_scope(Scope::new("write".to_string()))
-//!     // Set the PKCE code challenge.
-//!     .set_pkce_challenge(pkce_challenge)
-//!     .url();
-//!
-//! // This is the URL you should redirect the user to, in order to trigger the authorization
-//! // process.
-//! println!("Browse to: {}", auth_url);
-//!
-//! // Once the user has been redirected to the redirect URL, you'll have access to the
-//! // authorization code. For security reasons, your code should verify that the `state`
-//! // parameter returned by the server matches `csrf_state`.
-//!
-//! // Now you can trade it for an access token.
-//! let token_result = client
-//!     .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
-//!     // Set the PKCE code verifier.
-//!     .set_pkce_verifier(pkce_verifier)
-//!     .request_async(async_http_client)
-//!     .await?;
-//!
-//! // Unwrapping token_result will either produce a Token or a RequestTokenError.
 //! # Ok(())
 //! # }
 //! ```

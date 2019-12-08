@@ -3,12 +3,16 @@ name = "oauth2"
 authors = ["Alex Crichton <alex@alexcrichton.com>", "Florin Lipan <florinlipan@gmail.com>", "David A. Ramos <ramos@cs.stanford.edu>"]
 version = "3.0.0-alpha.7"
 license = "MIT/Apache-2.0"
-description = "Bindings for exchanging OAuth 2 tokens"
+description = "An extensible, strongly-typed implementation of OAuth2"
 repository = "https://github.com/ramosbugs/oauth2-rs"
 edition = "2018"
+readme = "README.md"
 
 [package.metadata.docs.rs]
 all-features = true
+
+[badges]
+maintenance = { status = "actively-developed" }
 
 [features]
 default = ["reqwest-09"]

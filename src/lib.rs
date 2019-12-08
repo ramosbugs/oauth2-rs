@@ -3,6 +3,18 @@
 //! An extensible, strongly-typed implementation of OAuth2
 //! ([RFC 6749](https://tools.ietf.org/html/rfc6749)).
 //!
+//! # Contents
+//! * [Importing `oauth2`: selecting an HTTP client interface](#importing-oauth2-selecting-an-http-client-interface)
+//! * [Getting started: Authorization Code Grant w/ PKCE](#getting-started-authorization-code-grant-w-pkce)
+//!   * [Example: Synchronous (blocking) API](#example-synchronous-blocking-api)
+//!   * [Example: Asynchronous (futures 0.1-based) API](#example-asynchronous-futures-01-based-api)
+//!   * [Example: Async/Await API](#example-asyncawait-api)
+//! * [Implicit Grant](#implicit-grant)
+//! * [Resource Owner Password Credentials Grant](#resource-owner-password-credentials-grant)
+//! * [Client Credentials Grant](#client-credentials-grant)
+//! * [Other examples](#other-examples)
+//!   * [Contributed Examples](#contributed-examples)
+//!
 //! # Importing `oauth2`: selecting an HTTP client interface
 //!
 //! This library offers a flexible HTTP client interface with three modes:
@@ -463,7 +475,10 @@
 //! - [Microsoft Graph](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/msgraph.rs)
 //! - [Wunderlist](https://github.com/ramosbugs/oauth2-rs/blob/master/examples/wunderlist.rs)
 //!
-
+//! ## Contributed Examples
+//!
+//! - [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
+//!
 use std::borrow::Cow;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};

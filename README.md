@@ -3,43 +3,7 @@
 <a href="https://crates.io/crates/oauth2"><img src="https://img.shields.io/crates/v/oauth2.svg"></a>
 <a href="https://travis-ci.org/ramosbugs/oauth2-rs"><img src="https://travis-ci.org/ramosbugs/oauth2-rs.svg?branch=master"></a>
 
-A simple implementation of the OAuth2 flow in Rust.
+An extensible, strongly-typed implementation of OAuth2
+([RFC 6749](https://tools.ietf.org/html/rfc6749)).
 
-Documentation is available on [docs.rs](https://docs.rs/oauth2) or check the [examples](https://github.com/ramosbugs/oauth2-rs/tree/master/examples).
-
-Before upgrading make sure to check out the [changelog](https://github.com/ramosbugs/oauth2-rs/releases).
-
-### Contributed Examples
-
-- [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
-
-## Development
-
-Build:
-
-```
-cargo build
-```
-
-using futures 0.3:
-this requires at least rust 1.39.0
-```
-cargo build --no-default-features --features "futures-03"
-```
-
-Run tests:
-
-```
-cargo test
-```
-
-using futures 0.3:
-```
-cargo test --no-default-features --features "futures-03"
-```
-
-Release:
-
-```
-cargo package && cargo publish
-```
+Documentation is available on [docs.rs](https://docs.rs/oauth2). Release notes are available on [GitHub](https://github.com/ramosbugs/oauth2-rs/releases).

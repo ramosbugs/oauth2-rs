@@ -24,7 +24,6 @@ where
 
 #[cfg(any(feature = "reqwest-09", feature = "reqwest-010"))]
 pub use blocking::http_client;
-
 ///
 /// Error type returned by failed reqwest blocking HTTP requests.
 ///
@@ -33,7 +32,6 @@ pub type HttpClientError = Error<blocking::reqwest::Error>;
 
 #[cfg(all(feature = "futures-01", feature = "reqwest-09"))]
 pub use future_client::future_http_client;
-
 ///
 /// Error type returned by failed reqwest futures HTTP requests.
 ///
@@ -42,7 +40,6 @@ pub type FutureHttpClientError = Error<reqwest_0_9::Error>;
 
 #[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
 pub use async_client::async_http_client;
-
 ///
 /// Error type returned by failed reqwest async HTTP requests.
 ///
@@ -66,7 +63,7 @@ mod blocking {
     #[cfg(feature = "reqwest-010")]
     use reqwest_0_10::blocking;
     #[cfg(feature = "reqwest-010")]
-    use reqwest_0_10::redirect::Policy as RedirectPolicy;
+    use reqwest_0_10::RedirectPolicy;
 
     use std::io::Read;
 
@@ -105,8 +102,6 @@ mod future_client {
     use super::Error;
 
     use futures_0_1::{Future, IntoFuture, Stream};
-    use http::header::{HeaderMap, HeaderName, HeaderValue};
-    use http::StatusCode;
     use reqwest_0_9 as reqwest;
     use reqwest_0_9::r#async::Client as AsyncClient;
 
@@ -117,20 +112,17 @@ mod future_client {
         request: HttpRequest,
     ) -> impl Future<Item = HttpResponse, Error = Error<reqwest::Error>> {
         AsyncClient::builder()
+            // Following redirects opens the client up to SSRF vulnerabilities.
             .redirect(reqwest::RedirectPolicy::none())
             .build()
             .map_err(Error::Reqwest)
             .into_future()
             .and_then(|client| {
                 let mut request_builder = client
-                    .request(
-                        http_0_1::Method::from_bytes(request.method.as_str().as_ref())
-                            .expect("failed to convert Method from http 0.1 to 0.2"),
-                        request.url.as_str(),
-                    )
+                    .request(request.method, request.url.as_str())
                     .body(request.body);
                 for (name, value) in &request.headers {
-                    request_builder = request_builder.header(name.as_str(), value.as_bytes());
+                    request_builder = request_builder.header(name, value);
                 }
                 request_builder
                     .build()
@@ -141,25 +133,13 @@ mod future_client {
                             .execute(request)
                             .and_then(|response| {
                                 let status_code = response.status();
-                                let headers = response
-                                    .headers()
-                                    .iter()
-                                    .map(|(name, value)| {
-                                        (
-                                            HeaderName::from_bytes(name.as_str().as_ref())
-                                                .expect("failed to convert HeaderName from http 0.1 to 0.2"),
-                                            HeaderValue::from_bytes(value.as_bytes())
-                                                .expect("failed to convert HeaderValue from http 0.1 to 0.2"),
-                                        )
-                                    })
-                                    .collect::<HeaderMap>();
+                                let headers = response.headers().clone();
                                 response
                                     .into_body()
                                     .map(|chunk| chunk.as_ref().to_vec())
                                     .collect()
                                     .map(move |body| HttpResponse {
-                                        status_code: StatusCode::from_u16(status_code.as_u16())
-                                            .expect("failed to convert StatusCode from http 0.1 to 0.2"),
+                                        status_code,
                                         headers,
                                         body: body.into_iter().flatten().collect::<_>(),
                                     })

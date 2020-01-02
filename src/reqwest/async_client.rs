@@ -11,7 +11,7 @@ pub async fn async_http_client(
 ) -> Result<HttpResponse, Error<reqwest::Error>> {
     let client = reqwest::Client::builder()
         // Following redirects opens the client up to SSRF vulnerabilities.
-        .redirect(reqwest::RedirectPolicy::none())
+        .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(Error::Reqwest)?;
 

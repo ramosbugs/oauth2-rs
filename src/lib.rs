@@ -528,6 +528,12 @@ mod tests;
 
 mod types;
 
+///
+/// Public re-exports of types used for HTTP client interfaces.
+///
+pub use http;
+pub use url;
+
 pub use types::{
     AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
     PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,

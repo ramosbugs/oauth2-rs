@@ -68,11 +68,9 @@ where
 /// # struct GroceryBasket {
 /// #     items: Vec<String>,
 /// # }
-/// # fn main() {
 /// GroceryBasket {
 ///     items: vec!["foo".to_string(), "bar".to_string(), "baz".to_string()]
 /// };
-/// # }
 /// ```
 ///
 /// Note: this example does not compile automatically due to

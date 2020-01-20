@@ -131,8 +131,8 @@ fn main() {
                 let scopes = if let Some(scopes_vec) = token.scopes() {
                     scopes_vec
                         .iter()
-                        .map(|comma_separated| comma_separated.split(","))
-                        .flat_map(|inner_scopes| inner_scopes)
+                        .map(|comma_separated| comma_separated.split(','))
+                        .flatten()
                         .collect::<Vec<_>>()
                 } else {
                     Vec::new()

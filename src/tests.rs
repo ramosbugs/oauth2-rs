@@ -1077,9 +1077,9 @@ mod colorful_extension {
     impl ColorfulErrorResponseType {
         fn to_str(&self) -> &str {
             match self {
-                &ColorfulErrorResponseType::TooDark => "too_dark",
-                &ColorfulErrorResponseType::TooLight => "too_light",
-                &ColorfulErrorResponseType::WrongColorSpace => "wrong_color_space",
+                ColorfulErrorResponseType::TooDark => "too_dark",
+                ColorfulErrorResponseType::TooLight => "too_light",
+                ColorfulErrorResponseType::WrongColorSpace => "wrong_color_space",
             }
         }
     }

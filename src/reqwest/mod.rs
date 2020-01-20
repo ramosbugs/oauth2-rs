@@ -1,4 +1,5 @@
 use failure::Fail;
+use super::http;
 
 ///
 /// Error type returned by failed reqwest HTTP requests.
@@ -63,7 +64,7 @@ mod blocking {
     #[cfg(feature = "reqwest-010")]
     use reqwest_0_10::blocking;
     #[cfg(feature = "reqwest-010")]
-    use reqwest_0_10::RedirectPolicy;
+    use reqwest_0_10::redirect::Policy as RedirectPolicy;
 
     use std::io::Read;
 

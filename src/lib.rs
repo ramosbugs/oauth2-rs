@@ -488,8 +488,14 @@ use std::time::Duration;
 use failure::Fail;
 #[cfg(feature = "futures-01")]
 use futures_0_1::{Future, IntoFuture};
+
+#[cfg(feature = "reqwest-09")]
+pub use http_0_1 as http;
+#[cfg(feature = "reqwest-010")]
+pub use http_0_2 as http;
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
+
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use url::{form_urlencoded, Url};
@@ -528,10 +534,6 @@ mod tests;
 
 mod types;
 
-///
-/// Public re-exports of types used for HTTP client interfaces.
-///
-pub use http;
 pub use url;
 
 pub use types::{

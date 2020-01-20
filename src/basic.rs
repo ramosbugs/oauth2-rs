@@ -1,13 +1,10 @@
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 
-use super::helpers;
 use super::{
     Client, EmptyExtraTokenFields, ErrorResponseType, RequestTokenError, StandardErrorResponse,
     StandardTokenResponse, TokenType,
 };
-
-use serde::{Deserialize, Serialize};
 
 ///
 /// Basic OAuth2 client specialization, suitable for most applications.
@@ -17,8 +14,7 @@ pub type BasicClient = Client<BasicErrorResponse, BasicTokenResponse, BasicToken
 ///
 /// Basic OAuth2 authorization token types.
 ///
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "lowercase")]
+#[derive(Clone, Debug, PartialEq)]
 pub enum BasicTokenType {
     ///
     /// Bearer token
@@ -30,6 +26,45 @@ pub enum BasicTokenType {
     /// Tokens](https://tools.ietf.org/html/draft-ietf-oauth-v2-http-mac-05)).
     ///
     Mac,
+    ///
+    /// An extension not defined by RFC 6749.
+    ///
+    Extension(String),
+}
+impl BasicTokenType {
+    fn from_str(s: &str) -> Self {
+        match s {
+            "bearer" => BasicTokenType::Bearer,
+            "mac" => BasicTokenType::Mac,
+            ext => BasicTokenType::Extension(ext.to_string()),
+        }
+    }
+}
+impl AsRef<str> for BasicTokenType {
+    fn as_ref(&self) -> &str {
+        match *self {
+            BasicTokenType::Bearer => "bearer",
+            BasicTokenType::Mac => "mac",
+            BasicTokenType::Extension(ref ext) => ext.as_str(),
+        }
+    }
+}
+impl<'de> serde::Deserialize<'de> for BasicTokenType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let variant_str = String::deserialize(deserializer)?;
+        Ok(Self::from_str(&variant_str))
+    }
+}
+impl serde::ser::Serialize for BasicTokenType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        serializer.serialize_str(self.as_ref())
+    }
 }
 impl TokenType for BasicTokenType {}
 
@@ -44,15 +79,8 @@ pub type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields, Basic
 /// These error types are defined in
 /// [Section 5.2 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.2).
 ///
-#[derive(Clone, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Clone, PartialEq)]
 pub enum BasicErrorResponseType {
-    ///
-    /// The request is missing a required parameter, includes an unsupported parameter value
-    /// (other than grant type), repeats a parameter, includes multiple credentials, utilizes
-    /// more than one mechanism for authenticating the client, or is otherwise malformed.
-    ///
-    InvalidRequest,
     ///
     /// Client authentication failed (e.g., unknown client, no client authentication included,
     /// or unsupported authentication method).
@@ -65,6 +93,17 @@ pub enum BasicErrorResponseType {
     ///
     InvalidGrant,
     ///
+    /// The request is missing a required parameter, includes an unsupported parameter value
+    /// (other than grant type), repeats a parameter, includes multiple credentials, utilizes
+    /// more than one mechanism for authenticating the client, or is otherwise malformed.
+    ///
+    InvalidRequest,
+    ///
+    /// The requested scope is invalid, unknown, malformed, or exceeds the scope granted by the
+    /// resource owner.
+    ///
+    InvalidScope,
+    ///
     /// The authenticated client is not authorized to use this authorization grant type.
     ///
     UnauthorizedClient,
@@ -73,14 +112,54 @@ pub enum BasicErrorResponseType {
     ///
     UnsupportedGrantType,
     ///
-    /// The requested scope is invalid, unknown, malformed, or exceeds the scope granted by the
-    /// resource owner.
+    /// An extension not defined by RFC 6749.
     ///
-    InvalidScope,
+    Extension(String),
 }
-
+impl BasicErrorResponseType {
+    fn from_str(s: &str) -> Self {
+        match s {
+            "invalid_client" => BasicErrorResponseType::InvalidClient,
+            "invalid_grant" => BasicErrorResponseType::InvalidGrant,
+            "invalid_request" => BasicErrorResponseType::InvalidRequest,
+            "invalid_scope" => BasicErrorResponseType::InvalidScope,
+            "unauthorized_client" => BasicErrorResponseType::UnauthorizedClient,
+            "unsupported_grant_type" => BasicErrorResponseType::UnsupportedGrantType,
+            ext => BasicErrorResponseType::Extension(ext.to_string()),
+        }
+    }
+}
+impl AsRef<str> for BasicErrorResponseType {
+    fn as_ref(&self) -> &str {
+        match *self {
+            BasicErrorResponseType::InvalidClient => "invalid_client",
+            BasicErrorResponseType::InvalidGrant => "invalid_grant",
+            BasicErrorResponseType::InvalidRequest => "invalid_request",
+            BasicErrorResponseType::InvalidScope => "invalid_scope",
+            BasicErrorResponseType::UnauthorizedClient => "unauthorized_client",
+            BasicErrorResponseType::UnsupportedGrantType => "unsupported_grant_type",
+            BasicErrorResponseType::Extension(ref ext) => ext.as_str(),
+        }
+    }
+}
+impl<'de> serde::Deserialize<'de> for BasicErrorResponseType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let variant_str = String::deserialize(deserializer)?;
+        Ok(Self::from_str(&variant_str))
+    }
+}
+impl serde::ser::Serialize for BasicErrorResponseType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        serializer.serialize_str(self.as_ref())
+    }
+}
 impl ErrorResponseType for BasicErrorResponseType {}
-
 impl Debug for BasicErrorResponseType {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
         Display::fmt(self, f)
@@ -89,7 +168,7 @@ impl Debug for BasicErrorResponseType {
 
 impl Display for BasicErrorResponseType {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
-        write!(f, "{}", helpers::variant_name(&self))
+        write!(f, "{}", self.as_ref())
     }
 }
 

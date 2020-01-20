@@ -947,7 +947,7 @@ fn test_exchange_code_with_invalid_token_type() {
                 )]
                 .into_iter()
                 .collect(),
-                body: "{\"access_token\": \"12/34\", \"token_type\": \"magic\"}"
+                body: "{\"access_token\": \"12/34\", \"token_type\": 123}"
                     .to_string()
                     .into_bytes(),
             },
@@ -957,7 +957,7 @@ fn test_exchange_code_with_invalid_token_type() {
     match token.err().unwrap() {
         RequestTokenError::Parse(json_err, _) => {
             assert_eq!(1, json_err.line());
-            assert_eq!(48, json_err.column());
+            assert_eq!(43, json_err.column());
             assert_eq!(serde_json::error::Category::Data, json_err.classify());
         }
         other => panic!("Unexpected error: {:?}", other),

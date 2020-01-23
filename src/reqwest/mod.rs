@@ -63,7 +63,7 @@ mod blocking {
     #[cfg(feature = "reqwest-010")]
     use reqwest_0_10::blocking;
     #[cfg(feature = "reqwest-010")]
-    use reqwest_0_10::RedirectPolicy;
+    use reqwest_0_10::redirect::Policy as RedirectPolicy;
 
     use std::io::Read;
 
@@ -76,11 +76,22 @@ mod blocking {
             .redirect(RedirectPolicy::none())
             .build()
             .map_err(Error::Reqwest)?;
+
+        #[cfg(all(feature = "reqwest-09", not(feature = "reqwest-010")))]
         let mut request_builder = client
             .request(request.method, request.url.as_str())
             .body(request.body);
+        #[cfg(feature = "reqwest-010")]
+        let mut request_builder = client
+            .request(
+                http_0_2::Method::from_bytes(request.method.as_str().as_ref())
+                    .expect("failed to convert Method from http 0.2 to 0.1"),
+                request.url.as_str(),
+            )
+            .body(request.body);
+
         for (name, value) in &request.headers {
-            request_builder = request_builder.header(name, value);
+            request_builder = request_builder.header(name.as_str(), value.as_bytes());
         }
         let mut response = client
             .execute(request_builder.build().map_err(Error::Reqwest)?)
@@ -88,11 +99,36 @@ mod blocking {
 
         let mut body = Vec::new();
         response.read_to_end(&mut body).map_err(Error::Io)?;
-        Ok(HttpResponse {
-            status_code: response.status(),
-            headers: response.headers().clone(),
-            body,
-        })
+
+        #[cfg(all(feature = "reqwest-09", not(feature = "reqwest-010")))]
+        {
+            Ok(HttpResponse {
+                status_code: response.status(),
+                headers: response.headers().clone(),
+                body,
+            })
+        }
+        #[cfg(feature = "reqwest-010")]
+        {
+            let headers = response
+                .headers()
+                .iter()
+                .map(|(name, value)| {
+                    (
+                        http::header::HeaderName::from_bytes(name.as_str().as_ref())
+                            .expect("failed to convert HeaderName from http 0.2 to 0.1"),
+                        http::HeaderValue::from_bytes(value.as_bytes())
+                            .expect("failed to convert HeaderValue from http 0.2 to 0.1"),
+                    )
+                })
+                .collect::<http::HeaderMap>();
+            Ok(HttpResponse {
+                status_code: http::StatusCode::from_u16(response.status().as_u16())
+                    .expect("failed to convert StatusCode from http 0.2 to 0.1"),
+                headers,
+                body,
+            })
+        }
     }
 }
 

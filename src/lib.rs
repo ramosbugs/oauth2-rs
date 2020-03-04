@@ -493,7 +493,7 @@ use http_0_1::{
     header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     status::StatusCode,
 };
-#[cfg(feature = "http-0-2")]
+#[cfg(all(feature = "http-0-2", not(feature = "http-0-1")))]
 use http_0_2::{
     header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     status::StatusCode,
@@ -541,7 +541,7 @@ mod types;
 ///
 #[cfg(feature = "http-0-1")]
 pub use http_0_1 as http;
-#[cfg(feature = "http-0-2")]
+#[cfg(all(feature = "http-0-2", not(feature = "http-0-1")))]
 pub use http_0_2 as http;
 pub use url;
 

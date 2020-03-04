@@ -1,8 +1,8 @@
 use super::super::{HttpRequest, HttpResponse};
 use super::Error;
 
-use http::header::HeaderName;
-use http::{HeaderMap, HeaderValue, StatusCode};
+use super::super::http::header::HeaderName;
+use super::super::http::{HeaderMap, HeaderValue, StatusCode};
 
 pub use reqwest_0_10 as reqwest;
 

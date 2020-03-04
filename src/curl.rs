@@ -2,9 +2,13 @@ use std::io::Read;
 
 use curl::easy::Easy;
 use failure::Fail;
-use http::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
-use http::method::Method;
-use http::status::StatusCode;
+#[cfg(any(feature = "http-0-1", feature = "http-0-2"))]
+use super::http::{
+    self as http,
+    header::{HeaderMap, HeaderValue, CONTENT_TYPE},
+    method::Method,
+    status::StatusCode,
+};
 
 use super::{HttpRequest, HttpResponse};
 

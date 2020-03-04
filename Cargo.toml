@@ -16,7 +16,7 @@ maintenance = { status = "actively-developed" }
 
 [features]
 default = ["reqwest-09"]
-futures-01 = ["futures-0-1"]
+futures-01 = ["futures-0-1", "http-0-1"]
 futures-03 = ["futures-0-3", "async-trait"]
 reqwest-09 = ["reqwest-0-9", "http-0-1"]
 reqwest-010 = ["reqwest-0-10", "http-0-2"]

@@ -488,8 +488,16 @@ use std::time::Duration;
 use failure::Fail;
 #[cfg(feature = "futures-01")]
 use futures_0_1::{Future, IntoFuture};
-use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
-use http::status::StatusCode;
+#[cfg(feature = "http-0-1")]
+use http_0_1::{
+    header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE},
+    status::StatusCode,
+};
+#[cfg(feature = "http-0-2")]
+use http_0_2::{
+    header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE},
+    status::StatusCode,
+};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use url::{form_urlencoded, Url};
@@ -531,7 +539,10 @@ mod types;
 ///
 /// Public re-exports of types used for HTTP client interfaces.
 ///
-pub use http;
+#[cfg(feature = "http-0-1")]
+pub use http_0_1 as http;
+#[cfg(feature = "http-0-2")]
+pub use http_0_2 as http;
 pub use url;
 
 pub use types::{

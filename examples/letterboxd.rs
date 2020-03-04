@@ -16,7 +16,8 @@
 use crypto::{hmac, mac::Mac, sha2};
 use hex::ToHex;
 use oauth2::{
-    basic::BasicClient, AuthType, AuthUrl, ClientId, ClientSecret, HttpRequest, HttpResponse,
+    basic::BasicClient, http::method::Method,
+    AuthType, AuthUrl, ClientId, ClientSecret, HttpRequest, HttpResponse,
     ResourceOwnerPassword, ResourceOwnerUsername, TokenUrl,
 };
 use url::Url;
@@ -102,7 +103,7 @@ impl SigningHttpClient {
     /// query.
     ///
     /// See http://api-docs.letterboxd.com/#signing.
-    fn sign_url(&self, mut url: Url, method: &http::method::Method, body: &[u8]) -> Url {
+    fn sign_url(&self, mut url: Url, method: &Method, body: &[u8]) -> Url {
         let nonce = uuid::Uuid::new_v4(); // use UUID as random and unique nonce
 
         let timestamp = time::SystemTime::now()

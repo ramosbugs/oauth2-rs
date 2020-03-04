@@ -1,5 +1,10 @@
 use failure::Fail;
 
+#[cfg(feature = "http-0-1")]
+use http_0_1 as http;
+#[cfg(feature = "http-0-2")]
+use http_0_2 as http;
+
 ///
 /// Error type returned by failed reqwest HTTP requests.
 ///
@@ -115,15 +120,15 @@ mod blocking {
                 .iter()
                 .map(|(name, value)| {
                     (
-                        http::header::HeaderName::from_bytes(name.as_str().as_ref())
+                        http_0_2::header::HeaderName::from_bytes(name.as_str().as_ref())
                             .expect("failed to convert HeaderName from http 0.2 to 0.1"),
-                        http::HeaderValue::from_bytes(value.as_bytes())
+                        http_0_2::HeaderValue::from_bytes(value.as_bytes())
                             .expect("failed to convert HeaderValue from http 0.2 to 0.1"),
                     )
                 })
-                .collect::<http::HeaderMap>();
+                .collect::<http_0_2::HeaderMap>();
             Ok(HttpResponse {
-                status_code: http::StatusCode::from_u16(response.status().as_u16())
+                status_code: http_0_2::StatusCode::from_u16(response.status().as_u16())
                     .expect("failed to convert StatusCode from http 0.2 to 0.1"),
                 headers,
                 body,

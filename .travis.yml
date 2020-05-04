@@ -5,7 +5,7 @@ rust:
   - beta
   - nightly
 sudo: false
-cache: cargo
+#cache: cargo
 before_script:
   - cargo install --force cargo-when
   - cargo when -v ^1.39 install --force cargo-audit

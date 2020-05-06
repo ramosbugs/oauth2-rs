@@ -83,7 +83,7 @@
 //!    Synchronous HTTP clients should implement the following trait:
 //!    ```ignore
 //!    FnOnce(HttpRequest) -> Result<HttpResponse, RE>
-//!    where RE: failure::Fail
+//!    where RE: std::error::Error + Send + Sync + 'static 
 //!    ```
 //!
 //!    Asynchronous `futures` 0.1 HTTP clients should implement the following trait:
@@ -91,7 +91,7 @@
 //!    FnOnce(HttpRequest) -> F
 //!    where
 //!      F: Future<Item = HttpResponse, Error = RE>,
-//!      RE: failure::Fail
+//!      RE: std::error::Error + Send + Sync + 'static 
 //!    ```
 //!
 //!    Async/await `futures` 0.3 HTTP clients should implement the following trait:
@@ -99,7 +99,7 @@
 //!    FnOnce(HttpRequest) -> F + Send
 //!    where
 //!      F: Future<Output = Result<HttpResponse, RE>> + Send,
-//!      RE: failure::Fail
+//!      RE: std::error::Error + Send + Sync + 'static  
 //!    ```
 //!
 //! # Getting started: Authorization Code Grant w/ PKCE
@@ -113,7 +113,7 @@
 //! This example works with `oauth2`'s default feature flags, which include `reqwest` 0.9.
 //!
 //! ```rust,no_run
-//! use failure;
+//! use anyhow;
 //! use oauth2::{
 //!     AuthorizationCode,
 //!     AuthUrl,
@@ -130,7 +130,7 @@
 //! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
-//! # fn err_wrapper() -> Result<(), failure::Error> {
+//! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client =
@@ -187,7 +187,7 @@
 //! ```
 //!
 //! ```rust,no_run
-//! use failure;
+//! use anyhow;
 //! use oauth2::{
 //!     AuthorizationCode,
 //!     AuthUrl,
@@ -207,7 +207,7 @@
 //! use url::Url;
 //!
 //! # #[cfg(all(feature = "futures-01", any(feature = "reqwest-09", feature = "reqwest-010")))]
-//! # fn err_wrapper() -> Result<(), failure::Error> {
+//! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client =
@@ -268,7 +268,7 @@
 //! ```
 //!
 //! ```rust,no_run
-//! use failure;
+//! use anyhow;
 //! # #[cfg(feature = "futures-03")]
 //! use oauth2::{
 //!     AsyncCodeTokenRequest,
@@ -289,7 +289,7 @@
 //! use url::Url;
 //!
 //! # #[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
-//! # async fn err_wrapper() -> Result<(), failure::Error> {
+//! # async fn err_wrapper() -> Result<(), anyhow::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client =
@@ -345,7 +345,7 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use failure;
+//! use anyhow;
 //! use oauth2::{
 //!     AuthUrl,
 //!     ClientId,
@@ -357,7 +357,7 @@
 //! use oauth2::basic::BasicClient;
 //! use url::Url;
 //!
-//! # fn err_wrapper() -> Result<(), failure::Error> {
+//! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client =
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
@@ -392,7 +392,7 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use failure;
+//! use anyhow;
 //! use oauth2::{
 //!     AuthUrl,
 //!     ClientId,
@@ -407,7 +407,7 @@
 //! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
-//! # fn err_wrapper() -> Result<(), failure::Error> {
+//! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client =
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
@@ -436,7 +436,7 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use failure;
+//! use anyhow;
 //! use oauth2::{
 //!     AuthUrl,
 //!     ClientId,
@@ -449,7 +449,7 @@
 //! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
-//! # fn err_wrapper() -> Result<(), failure::Error> {
+//! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client =
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
@@ -484,8 +484,8 @@ use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::time::Duration;
+use std::error::Error;
 
-use failure::Fail;
 #[cfg(feature = "futures-01")]
 use futures_0_1::{Future, IntoFuture};
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
@@ -994,7 +994,7 @@ where
 
     fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         let mut params = vec![
             ("grant_type", "authorization_code"),
@@ -1023,7 +1023,7 @@ where
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
@@ -1048,7 +1048,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Item = HttpResponse, Error = RE>,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         self.prepare_request()
             .into_future()
@@ -1122,7 +1122,7 @@ where
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
@@ -1131,7 +1131,7 @@ where
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         Ok(token_request(
             self.auth_type,
@@ -1167,7 +1167,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Item = HttpResponse, Error = RE>,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         self.prepare_request()
             .into_future()
@@ -1242,7 +1242,7 @@ where
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
@@ -1251,7 +1251,7 @@ where
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         Ok(token_request(
             self.auth_type,
@@ -1288,7 +1288,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Item = HttpResponse, Error = RE>,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         self.prepare_request()
             .into_future()
@@ -1361,7 +1361,7 @@ where
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
@@ -1370,7 +1370,7 @@ where
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         Ok(token_request(
             self.auth_type,
@@ -1403,7 +1403,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Item = HttpResponse, Error = RE>,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         self.prepare_request()
             .into_future()
@@ -1511,7 +1511,7 @@ fn token_response<RE, TE, TR, TT>(
     http_response: HttpResponse,
 ) -> Result<TR, RequestTokenError<RE, TE>>
 where
-    RE: Fail,
+    RE: Error + Send + Sync + 'static,
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
@@ -1854,7 +1854,7 @@ impl<T: ErrorResponseType> StandardErrorResponse<T> {
         self.error_description.as_ref()
     }
     ///
-    /// OPTIONAL. A URI identifying a human-readable web page with information about the error,
+    /// OPTIONAL. URI identifying a human-readable web page with information about the error,
     /// used to provide the client developer with additional information about the error.
     /// Values for the "error_uri" parameter MUST conform to the URI-reference syntax and
     /// thus MUST NOT include characters outside the set `%x21 / %x23-5B / %x5D-7E`.
@@ -1890,33 +1890,33 @@ where
 ///
 /// Error encountered while requesting access token.
 ///
-#[derive(Debug, Fail)]
+#[derive(Debug, thiserror::Error)]
 pub enum RequestTokenError<RE, T>
 where
-    RE: Fail,
+    RE: Error + Send + Sync + 'static,
     T: ErrorResponse + 'static,
 {
     ///
     /// Error response returned by authorization server. Contains the parsed `ErrorResponse`
     /// returned by the server.
     ///
-    #[fail(display = "Server returned error response")]
+    #[error("Server returned error response")]
     ServerResponse(T),
     ///
     /// An error occurred while sending the request or receiving the response (e.g., network
-    /// connectivity failed).
+    /// connectivity Errored).
     ///
-    #[fail(display = "Request failed")]
-    Request(#[cause] RE),
+    #[error("Request Errored")]
+    Request(#[source] RE),
     ///
-    /// Failed to parse server response. Parse errors may occur while parsing either successful
+    /// Errored to parse server response. Parse errors may occur while parsing either successful
     /// or error responses.
     ///
-    #[fail(display = "Failed to parse server response")]
-    Parse(#[cause] serde_json::error::Error, Vec<u8>),
+    #[error("Failed to parse server response")]
+    Parse(#[source] serde_json::error::Error, Vec<u8>),
     ///
     /// Some other type of error occurred (e.g., an unexpected server response).
     ///
-    #[fail(display = "Other error: {}", _0)]
+    #[error("Other error: {}", _0)]
     Other(String),
 }

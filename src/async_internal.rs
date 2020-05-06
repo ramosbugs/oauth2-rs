@@ -4,7 +4,7 @@ use crate::{
     TokenType,
 };
 use async_trait::async_trait;
-use failure::Fail;
+use std::error::Error;
 use futures_0_3::Future;
 
 ///
@@ -24,7 +24,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F + Send,
         F: Future<Output = Result<HttpResponse, RE>> + Send,
-        RE: Fail;
+        RE: Error + Send + Sync + 'static;
 }
 
 #[async_trait]
@@ -41,7 +41,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F + Send,
         F: Future<Output = Result<HttpResponse, RE>> + Send,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)
@@ -68,7 +68,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F + Send,
         F: Future<Output = Result<HttpResponse, RE>> + Send,
-        RE: Fail;
+        RE: Error + Send + Sync + 'static;
 }
 
 #[async_trait]
@@ -85,7 +85,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F + Send,
         F: Future<Output = Result<HttpResponse, RE>> + Send,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)
@@ -112,7 +112,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F + Send,
         F: Future<Output = Result<HttpResponse, RE>> + Send,
-        RE: Fail;
+        RE: Error + Send + Sync + 'static;
 }
 
 #[async_trait]
@@ -129,7 +129,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F + Send,
         F: Future<Output = Result<HttpResponse, RE>> + Send,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)
@@ -156,7 +156,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F + Send,
         F: Future<Output = Result<HttpResponse, RE>> + Send,
-        RE: Fail;
+        RE: Error + Send + Sync + 'static;
 }
 
 #[async_trait]
@@ -174,7 +174,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F + Send,
         F: Future<Output = Result<HttpResponse, RE>> + Send,
-        RE: Fail,
+        RE: Error + Send + Sync + 'static,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)

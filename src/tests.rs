@@ -1,4 +1,4 @@
-use failure::Fail;
+use thiserror::Error;
 use http::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
 use url::form_urlencoded::byte_serialize;
@@ -229,9 +229,9 @@ fn test_authorize_url_with_redirect_url() {
     );
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 enum FakeError {
-    #[fail(display = "error")]
+    #[error("error")]
     Err,
 }
 

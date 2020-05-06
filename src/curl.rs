@@ -1,7 +1,6 @@
 use std::io::Read;
 
 use curl::easy::Easy;
-use failure::Fail;
 use http::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use http::method::Method;
 use http::status::StatusCode;
@@ -11,16 +10,16 @@ use super::{HttpRequest, HttpResponse};
 ///
 /// Error type returned by failed curl HTTP requests.
 ///
-#[derive(Debug, Fail)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Error returned by curl crate.
-    #[fail(display = "curl request failed")]
-    Curl(#[cause] curl::Error),
+    #[error("curl request failed")]
+    Curl(#[source] curl::Error),
     /// Non-curl HTTP error.
-    #[fail(display = "HTTP error")]
-    Http(#[cause] http::Error),
+    #[error("HTTP error")]
+    Http(#[source] http::Error),
     /// Other error.
-    #[fail(display = "Other error: {}", _0)]
+    #[error("Other error: {}", _0)]
     Other(String),
 }
 

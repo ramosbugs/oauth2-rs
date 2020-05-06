@@ -1,24 +1,24 @@
-use failure::Fail;
+use thiserror::Error;
 
 ///
 /// Error type returned by failed reqwest HTTP requests.
 ///
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error<T>
 where
     T: std::error::Error + Send + Sync + 'static,
 {
     /// Error returned by reqwest crate.
-    #[fail(display = "request failed")]
-    Reqwest(#[cause] T),
+    #[error("request failed")]
+    Reqwest(#[source] T),
     /// Non-reqwest HTTP error.
-    #[fail(display = "HTTP error")]
-    Http(#[cause] http::Error),
+    #[error("HTTP error")]
+    Http(#[source] http::Error),
     /// I/O error.
-    #[fail(display = "I/O error")]
-    Io(#[cause] std::io::Error),
+    #[error("I/O error")]
+    Io(#[source] std::io::Error),
     /// Other error.
-    #[fail(display = "Other error: {}", _0)]
+    #[error("Other error: {}", _0)]
     Other(String),
 }
 

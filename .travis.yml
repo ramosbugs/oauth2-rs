@@ -14,7 +14,7 @@ script:
   # builds.
   - |
     if [ "${TRAVIS_RUST_VERSION}" == "1.34.0" ]; then
-      cp Cargo-1-34.lock Cargo.lock
+      cp Cargo-1.34.lock Cargo.lock
     fi
   # Tests should run on all supported rustc versions
   - cargo test --tests --examples

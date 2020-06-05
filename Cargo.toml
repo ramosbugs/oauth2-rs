@@ -31,7 +31,7 @@ futures-0-1 = { version = "0.1", optional = true, package = "futures" }
 futures-0-3 = { version = "0.3", optional = true, package = "futures" }
 http = "0.1"
 http-0-2 = { version = "0.2", optional = true, package = "http" }
-rand = "0.6"
+rand = "0.7"
 reqwest-0-9 = { version = "0.9", optional = true, package = "reqwest" }
 reqwest-0-10 = { version = "0.10", optional = true, features = ["blocking"], package = "reqwest" }
 serde = { version = "1.0", features = ["derive"] }

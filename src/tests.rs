@@ -229,6 +229,28 @@ fn test_authorize_url_with_redirect_url() {
     );
 }
 
+#[test]
+fn test_authorize_url_with_redirect_url_override() {
+    let client = new_client()
+        .set_redirect_url(RedirectUrl::new("https://localhost/redirect".to_string()).unwrap());
+
+    let (url, _) = client
+        .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+        .set_redirect_url(Cow::Owned(RedirectUrl::new("https://localhost/alternative".to_string()).unwrap()))
+        .url();
+
+    assert_eq!(
+        Url::parse(
+            "https://example.com/auth?response_type=code\
+             &client_id=aaa\
+             &state=csrf_token\
+             &redirect_uri=https%3A%2F%2Flocalhost%2Falternative"
+        )
+        .unwrap(),
+        url
+    );
+}
+
 #[derive(Debug, Fail)]
 enum FakeError {
     #[fail(display = "error")]

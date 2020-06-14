@@ -1,6 +1,5 @@
 language: rust
 rust:
-  - 1.34.0
   - stable
   - beta
   - nightly
@@ -8,20 +7,12 @@ sudo: false
 #cache: cargo
 before_script:
   - cargo install --force cargo-when
-  - cargo when -v ^1.39 install --force cargo-audit
+  - cargo install --force cargo-audit
 script:
-  # Newer dependency versions don't support rustc 1.34, so we use a Cargo.lock file for those
-  # builds.
-  - |
-    if [ "${TRAVIS_RUST_VERSION}" == "1.34.0" ]; then
-      cp Cargo-1.34.lock Cargo.lock
-    fi
   # Tests should run on all supported rustc versions
   - cargo test --tests --examples
-  # Docs rely on async/await and only work on rustc >= 1.39.0
-  - cargo when -v ^1.39 -- test --doc
-  # Enabling all features (including async/await) requires rustc >= 1.39.0
-  - cargo when -v ^1.39 -- test --all-features
+  - cargo test --doc
+  - cargo test --all-features
   # Blocking reqwest using reqwest 0.9
   - cargo test --tests --examples --features reqwest-09 --no-default-features
   # Futures 0.1 with reqwest 0.9
@@ -29,12 +20,12 @@ script:
   # Futures 0.1 without reqwest (examples will not build)
   - cargo test --tests --features futures-01 --no-default-features
   # Futures 0.3 with reqwest 0.10
-  - cargo when -v ^1.39 -- test --tests --examples --features futures-03,reqwest-010 --no-default-features
+  - cargo test --tests --examples --features futures-03,reqwest-010 --no-default-features
   # Futures 0.3 without reqwest (examples will not build)
-  - cargo when -v ^1.39 -- test --tests --features futures-03 --no-default-features
+  - cargo test --tests --features futures-03 --no-default-features
   # Futures 0.3 with reqwest 0.9 (included by default)
-  - cargo when -v ^1.39 -- test --tests --examples --features futures-03
-  - cargo when -v ^1.39 audit
+  - cargo test --tests --examples --features futures-03
+  - cargo audit
 notifications:
   email:
     on_success: never

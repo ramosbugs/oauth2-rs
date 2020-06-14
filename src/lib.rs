@@ -259,8 +259,7 @@
 //!
 //! ## Example: Async/Await API
 //!
-//! Async/await support requires `rustc` 1.39.0 or newer. In order to use async/await, include
-//! `oauth2` as follows:
+//! In order to use async/await, include `oauth2` as follows:
 //!
 //! ```toml
 //! [dependencies]

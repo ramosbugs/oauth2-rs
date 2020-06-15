@@ -19,7 +19,9 @@ default = ["reqwest-09"]
 futures-01 = ["futures-0-1"]
 futures-03 = ["futures-0-3", "async-trait"]
 reqwest-09 = ["reqwest-0-9"]
+reqwest-09-rustls = ["reqwest-0-9/rustls-tls"]
 reqwest-010 = ["reqwest-0-10", "http-0-2"]
+reqwest-010-rustls = ["reqwest-0-10/rustls-tls"]
 
 [dependencies]
 async-trait = { version = "0.1", optional = true }
@@ -32,8 +34,8 @@ futures-0-3 = { version = "0.3", optional = true, package = "futures" }
 http = "0.1"
 http-0-2 = { version = "0.2", optional = true, package = "http" }
 rand = "0.7"
-reqwest-0-9 = { version = "0.9", optional = true, package = "reqwest" }
-reqwest-0-10 = { version = "0.10", optional = true, features = ["blocking"], package = "reqwest" }
+reqwest-0-9 = { version = "0.9", optional = true, default-features = false, package = "reqwest" }
+reqwest-0-10 = { version = "0.10", optional = true, default-features = false, features = ["blocking"], package = "reqwest" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.8"

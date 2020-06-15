@@ -15,13 +15,15 @@ all-features = true
 maintenance = { status = "actively-developed" }
 
 [features]
-default = ["reqwest-09"]
+default = ["reqwest-09", "reqwest-09-native-tls"]
 futures-01 = ["futures-0-1"]
 futures-03 = ["futures-0-3", "async-trait"]
 reqwest-09 = ["reqwest-0-9"]
 reqwest-09-rustls = ["reqwest-0-9/rustls-tls"]
+reqwest-09-native-tls = ["reqwest-0-9/default-tls"]
 reqwest-010 = ["reqwest-0-10", "http-0-2"]
 reqwest-010-rustls = ["reqwest-0-10/rustls-tls"]
+reqwest-010-native-tls = ["reqwest-0-10/default-tls"]
 
 [dependencies]
 async-trait = { version = "0.1", optional = true }

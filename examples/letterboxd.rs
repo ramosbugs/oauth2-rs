@@ -13,12 +13,13 @@
 //! LETTERBOXD_CLIENT_ID=xxx LETTERBOXD_CLIENT_SECRET=yyy LETTERBOXD_USERNAME=www LETTERBOXD_PASSWORD=zzz cargo run --example letterboxd
 //! ```
 
-use crypto::{hmac, mac::Mac, sha2};
 use hex::ToHex;
+use hmac::{Hmac, Mac, NewMac};
 use oauth2::{
     basic::BasicClient, AuthType, AuthUrl, ClientId, ClientSecret, HttpRequest, HttpResponse,
     ResourceOwnerPassword, ResourceOwnerUsername, TokenUrl,
 };
+use sha2::Sha256;
 use url::Url;
 
 use std::env;
@@ -116,13 +117,14 @@ impl SigningHttpClient {
             .append_pair("timestamp", &format!("{}", timestamp));
 
         // create signature
-        let mut hmac = hmac::Hmac::new(sha2::Sha256::new(), self.client_secret.secret().as_bytes());
-        hmac.input(method.as_str().as_bytes());
-        hmac.input(&[b'\0']);
-        hmac.input(url.as_str().as_bytes());
-        hmac.input(&[b'\0']);
-        hmac.input(body);
-        let signature: String = hmac.result().code().encode_hex();
+        let mut hmac = Hmac::<Sha256>::new_varkey(&self.client_secret.secret().as_bytes())
+            .expect("HMAC can take key of any size");
+        hmac.update(method.as_str().as_bytes());
+        hmac.update(&[b'\0']);
+        hmac.update(url.as_str().as_bytes());
+        hmac.update(&[b'\0']);
+        hmac.update(body);
+        let signature: String = hmac.finalize().into_bytes().encode_hex();
 
         url.query_pairs_mut().append_pair("signature", &signature);
 

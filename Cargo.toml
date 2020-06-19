@@ -36,12 +36,12 @@ reqwest-0-9 = { version = "0.9", optional = true, package = "reqwest" }
 reqwest-0-10 = { version = "0.10", optional = true, features = ["blocking"], package = "reqwest" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sha2 = "0.8"
+sha2 = "0.9"
 unicode-normalization = "0.1"
 url = "2.1"
 
 [dev-dependencies]
 hex = "=0.4.0"
-rust-crypto = "0.2.36"
+hmac = "0.8"
 tokio = "0.1"
 uuid = { version = "0.8.1", features = ["v4"] }

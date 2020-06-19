@@ -66,11 +66,7 @@ mod blocking {
 
         #[cfg(feature = "reqwest-010")]
         let mut request_builder = client
-            .request(
-                http_0_2::Method::from_bytes(request.method.as_str().as_ref())
-                    .expect("failed to convert Method from http 0.2 to 0.1"),
-                request.url.as_str(),
-            )
+            .request(request.method, request.url.as_str())
             .body(request.body);
 
         for (name, value) in &request.headers {

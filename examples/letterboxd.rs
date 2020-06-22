@@ -25,7 +25,7 @@ use url::Url;
 use std::env;
 use std::time;
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     // a.k.a api key in Letterboxd API documentation
     let letterboxd_client_id = ClientId::new(
         env::var("LETTERBOXD_CLIENT_ID")
@@ -90,7 +90,7 @@ impl SigningHttpClient {
     }
 
     /// Signs the request before calling `oauth2::reqwest::http_client`.
-    fn execute(&self, mut request: HttpRequest) -> Result<HttpResponse, impl failure::Fail> {
+    fn execute(&self, mut request: HttpRequest) -> Result<HttpResponse, impl std::error::Error> {
         let signed_url = self.sign_url(request.url, &request.method, &request.body);
         request.url = signed_url;
         oauth2::reqwest::http_client(request)

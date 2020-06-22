@@ -7,7 +7,6 @@
 //! * [Importing `oauth2`: selecting an HTTP client interface](#importing-oauth2-selecting-an-http-client-interface)
 //! * [Getting started: Authorization Code Grant w/ PKCE](#getting-started-authorization-code-grant-w-pkce)
 //!   * [Example: Synchronous (blocking) API](#example-synchronous-blocking-api)
-//!   * [Example: Asynchronous (futures 0.1-based) API](#example-asynchronous-futures-01-based-api)
 //!   * [Example: Async/Await API](#example-asyncawait-api)
 //! * [Implicit Grant](#implicit-grant)
 //! * [Resource Owner Password Credentials Grant](#resource-owner-password-credentials-grant)
@@ -17,7 +16,7 @@
 //!
 //! # Importing `oauth2`: selecting an HTTP client interface
 //!
-//! This library offers a flexible HTTP client interface with three modes:
+//! This library offers a flexible HTTP client interface with two modes:
 //!  * **Synchronous (blocking)**
 //!
 //!    The synchronous interface is available for any combination of feature flags.
@@ -26,18 +25,9 @@
 //!    ```toml
 //!    oauth2 = "3.0"
 //!    ```
-//!  * **Asynchronous via `futures` 0.1**
-//!
-//!    Support is enabled via the `futures-01` feature flag.
-//!
-//!    Example import in `Cargo.toml`:
-//!    ```toml
-//!    oauth2 = { version = "3.0", features = ["futures-01"] }
-//!    ```
 //!  * **Async/await via `futures` 0.3**
 //!
-//!    Support is enabled via the `futures-03` feature flag. Typically, the default
-//!    support for `reqwest` 0.9 is also disabled when using async/await. If desired, the
+//!    Support is enabled via the `futures-03` feature flag. If desired, the
 //!    `reqwest-010` feature flag can be used to enable `reqwest` 0.10 and its async/await
 //!    client interface.
 //!
@@ -50,18 +40,12 @@
 //! used:
 //!  * **[`reqwest`]**
 //!
-//!    The `reqwest` HTTP client supports all three modes. By default, `reqwest` 0.9 is enabled,
-//!    which supports the synchronous and asynchronous `futures` 0.1 APIs.
+//!    The `reqwest` HTTP client supports both modes. By default, `reqwest` 0.10 is enabled,
+//!    which supports the synchronous and asynchronous `futures` 0.3 APIs.
 //!
 //!    Synchronous client: [`reqwest::http_client`]
 //!
-//!    Asynchronous `futures` 0.1 client: [`reqwest::future_http_client`]
-//!
-//!    Async/await `futures` 0.3 client: [`reqwest::async_http_client`]. This mode requires
-//!    `reqwest` 0.10, which can be enabled via the `reqwest-010` feature flag. Typically, the
-//!    default features are also disabled (`default-features = false` in `Cargo.toml`) to remove the
-//!    dependency on `reqwest` 0.9 when using `reqwest` 0.10. However, both can be used together if
-//!    both asynchronous interfaces are desired.
+//!    Async/await `futures` 0.3 client: [`reqwest::async_http_client`]
 //!
 //!  * **[`curl`]**
 //!
@@ -74,7 +58,7 @@
 //!
 //!    In addition to the clients above, users may define their own HTTP clients, which must accept
 //!    an [`HttpRequest`] and return an [`HttpResponse`] or error. Users writing their own clients
-//!    may wish to disable the default `reqwest` 0.9 dependency by specifying
+//!    may wish to disable the default `reqwest` 0.10 dependency by specifying
 //!    `default-features = false` in `Cargo.toml`:
 //!    ```toml
 //!    oauth2 = { version = "3.0", default-features = false }
@@ -110,7 +94,7 @@
 //!
 //! ## Example: Synchronous (blocking) API
 //!
-//! This example works with `oauth2`'s default feature flags, which include `reqwest` 0.9.
+//! This example works with `oauth2`'s default feature flags, which include `reqwest` 0.10.
 //!
 //! ```rust,no_run
 //! use failure;
@@ -171,86 +155,6 @@
 //!         // Set the PKCE code verifier.
 //!         .set_pkce_verifier(pkce_verifier)
 //!         .request(http_client)?;
-//!
-//! // Unwrapping token_result will either produce a Token or a RequestTokenError.
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! ## Example: Asynchronous (futures 0.1-based) API
-//!
-//! In order to use `futures` 0.1, include `oauth2` as follows:
-//!
-//! ```toml
-//! [dependencies]
-//! oauth2 = { version = "3.0", features = ["futures-01"] }
-//! ```
-//!
-//! ```rust,no_run
-//! use failure;
-//! use oauth2::{
-//!     AuthorizationCode,
-//!     AuthUrl,
-//!     ClientId,
-//!     ClientSecret,
-//!     CsrfToken,
-//!     PkceCodeChallenge,
-//!     RedirectUrl,
-//!     Scope,
-//!     TokenResponse,
-//!     TokenUrl
-//! };
-//! use oauth2::basic::BasicClient;
-//! # #[cfg(all(feature = "futures-01", any(feature = "reqwest-09", feature = "reqwest-010")))]
-//! use oauth2::reqwest::future_http_client;
-//! use tokio::runtime::Runtime;
-//! use url::Url;
-//!
-//! # #[cfg(all(feature = "futures-01", any(feature = "reqwest-09", feature = "reqwest-010")))]
-//! # fn err_wrapper() -> Result<(), failure::Error> {
-//! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
-//! // token URL.
-//! let client =
-//!     BasicClient::new(
-//!         ClientId::new("client_id".to_string()),
-//!         Some(ClientSecret::new("client_secret".to_string())),
-//!         AuthUrl::new("http://authorize".to_string())?,
-//!         Some(TokenUrl::new("http://token".to_string())?)
-//!     )
-//!     // Set the URL the user will be redirected to after the authorization process.
-//!     .set_redirect_url(RedirectUrl::new("http://redirect".to_string())?);
-//!
-//! // Generate a PKCE challenge.
-//! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
-//!
-//! // Generate the full authorization URL.
-//! let (auth_url, csrf_token) = client
-//!     .authorize_url(CsrfToken::new_random)
-//!     // Set the desired scopes.
-//!     .add_scope(Scope::new("read".to_string()))
-//!     .add_scope(Scope::new("write".to_string()))
-//!     // Set the PKCE code challenge.
-//!     .set_pkce_challenge(pkce_challenge)
-//!     .url();
-//!
-//! // This is the URL you should redirect the user to, in order to trigger the authorization
-//! // process.
-//! println!("Browse to: {}", auth_url);
-//!
-//! // Once the user has been redirected to the redirect URL, you'll have access to the
-//! // authorization code. For security reasons, your code should verify that the `state`
-//! // parameter returned by the server matches `csrf_state`.
-//!
-//! let mut runtime = Runtime::new().unwrap();
-//! // Now you can trade it for an access token.
-//! let token_result =
-//!     runtime.block_on(
-//!         client
-//!             .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
-//!             // Set the PKCE code verifier.
-//!             .set_pkce_verifier(pkce_verifier)
-//!             .request_future(future_http_client)
-//!     )?;
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
 //! # Ok(())
@@ -485,8 +389,6 @@ use std::marker::PhantomData;
 use std::time::Duration;
 
 use failure::Fail;
-#[cfg(feature = "futures-01")]
-use futures_0_1::{Future, IntoFuture};
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
 use serde::de::DeserializeOwned;
@@ -507,6 +409,7 @@ pub mod basic;
 
 ///
 /// HTTP client backed by the [curl](https://crates.io/crates/curl) crate.
+/// Requires "curl" feature.
 ///
 #[cfg(feature = "curl")]
 pub mod curl;
@@ -518,8 +421,9 @@ pub mod helpers;
 
 ///
 /// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
+/// Requires "reqwest-010" feature.
 ///
-#[cfg(any(feature = "reqwest-09", feature = "reqwest-010"))]
+#[cfg(feature = "reqwest-010")]
 pub mod reqwest;
 
 #[cfg(test)]
@@ -1038,32 +942,6 @@ where
     }
 }
 
-#[cfg(feature = "futures-01")]
-impl<'a, TE, TR, TT> CodeTokenRequest<'a, TE, TR, TT>
-where
-    TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-{
-    ///
-    /// Asynchronously sends the request to the authorization server and returns a Future.
-    ///
-    pub fn request_future<C, F, RE>(
-        self,
-        http_client: C,
-    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
-    where
-        C: FnOnce(HttpRequest) -> F,
-        F: Future<Item = HttpResponse, Error = RE>,
-        RE: Fail,
-    {
-        self.prepare_request()
-            .into_future()
-            .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
-            .and_then(|http_response| token_response(http_response).into_future())
-    }
-}
-
 ///
 /// A request to exchange a refresh token for an access token.
 ///
@@ -1154,32 +1032,6 @@ where
                 ("refresh_token", self.refresh_token.secret()),
             ],
         ))
-    }
-}
-
-#[cfg(feature = "futures-01")]
-impl<'a, TE, TR, TT> RefreshTokenRequest<'a, TE, TR, TT>
-where
-    TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-{
-    ///
-    /// Asynchronously sends the request to the authorization server and awaits a response.
-    ///
-    pub fn request_future<C, F, RE>(
-        self,
-        http_client: C,
-    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
-    where
-        C: FnOnce(HttpRequest) -> F,
-        F: Future<Item = HttpResponse, Error = RE>,
-        RE: Fail,
-    {
-        self.prepare_request()
-            .into_future()
-            .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
-            .and_then(|http_response| token_response(http_response).into_future())
     }
 }
 
@@ -1278,32 +1130,6 @@ where
     }
 }
 
-#[cfg(feature = "futures-01")]
-impl<'a, TE, TR, TT> PasswordTokenRequest<'a, TE, TR, TT>
-where
-    TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-{
-    ///
-    /// Asynchronously sends the request to the authorization server and awaits a response.
-    ///
-    pub fn request_future<C, F, RE>(
-        self,
-        http_client: C,
-    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
-    where
-        C: FnOnce(HttpRequest) -> F,
-        F: Future<Item = HttpResponse, Error = RE>,
-        RE: Fail,
-    {
-        self.prepare_request()
-            .into_future()
-            .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
-            .and_then(|http_response| token_response(http_response).into_future())
-    }
-}
-
 ///
 /// A request to exchange client credentials for an access token.
 ///
@@ -1390,32 +1216,6 @@ where
                 .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
             vec![("grant_type", "client_credentials")],
         ))
-    }
-}
-
-#[cfg(feature = "futures-01")]
-impl<'a, TE, TR, TT> ClientCredentialsTokenRequest<'a, TE, TR, TT>
-where
-    TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-{
-    ///
-    /// Asynchronously sends the request to the authorization server and awaits a response.
-    ///
-    pub fn request_future<C, F, RE>(
-        self,
-        http_client: C,
-    ) -> impl Future<Item = TR, Error = RequestTokenError<RE, TE>>
-    where
-        C: FnOnce(HttpRequest) -> F,
-        F: Future<Item = HttpResponse, Error = RE>,
-        RE: Fail,
-    {
-        self.prepare_request()
-            .into_future()
-            .and_then(|http_request| http_client(http_request).map_err(RequestTokenError::Request))
-            .and_then(|http_response| token_response(http_response).into_future())
     }
 }
 

@@ -1,7 +1,7 @@
 # OAuth2
 
 <a href="https://crates.io/crates/oauth2"><img src="https://img.shields.io/crates/v/oauth2.svg"></a>
-<a href="https://travis-ci.org/ramosbugs/oauth2-rs"><img src="https://travis-ci.org/ramosbugs/oauth2-rs.svg?branch=master"></a>
+<a href="https://travis-ci.org/ramosbugs/oauth2-rs"><img src="https://travis-ci.org/ramosbugs/oauth2-rs.svg?branch=main"></a>
 
 An extensible, strongly-typed implementation of OAuth2
 ([RFC 6749](https://tools.ietf.org/html/rfc6749)).

@@ -19,11 +19,7 @@ pub async fn async_http_client(
         .map_err(Error::Reqwest)?;
 
     let mut request_builder = client
-        .request(
-            http_0_2::Method::from_bytes(request.method.as_str().as_ref())
-                .expect("failed to convert Method from http 0.2 to 0.1"),
-            request.url.as_str(),
-        )
+        .request(request.method, request.url.as_str())
         .body(request.body);
     for (name, value) in &request.headers {
         request_builder = request_builder.header(name.as_str(), value.as_bytes());

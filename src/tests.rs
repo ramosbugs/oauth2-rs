@@ -1455,3 +1455,84 @@ fn test_secret_redaction() {
     let secret = ClientSecret::new("top_secret".to_string());
     assert_eq!("ClientSecret([redacted])", format!("{:?}", secret));
 }
+
+#[test]
+fn test_send_sync_impl() {
+    fn is_sync_and_send<T: Sync + Send>() {};
+    #[derive(Debug)]
+    struct TestError;
+    impl std::fmt::Display for TestError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "TestError")
+        }
+    }
+    impl std::error::Error for TestError {}
+
+    is_sync_and_send::<AccessToken>();
+    is_sync_and_send::<AuthUrl>();
+    is_sync_and_send::<AuthorizationCode>();
+    is_sync_and_send::<AuthorizationRequest>();
+    is_sync_and_send::<
+        Client<
+            StandardErrorResponse<BasicErrorResponseType>,
+            StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
+            BasicTokenType,
+        >,
+    >();
+    is_sync_and_send::<
+        ClientCredentialsTokenRequest<
+            StandardErrorResponse<BasicErrorResponseType>,
+            StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
+            BasicTokenType,
+        >,
+    >();
+    is_sync_and_send::<ClientId>();
+    is_sync_and_send::<ClientSecret>();
+    is_sync_and_send::<
+        CodeTokenRequest<
+            StandardErrorResponse<BasicErrorResponseType>,
+            StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
+            BasicTokenType,
+        >,
+    >();
+    is_sync_and_send::<CsrfToken>();
+    is_sync_and_send::<EmptyExtraTokenFields>();
+    is_sync_and_send::<HttpRequest>();
+    is_sync_and_send::<HttpResponse>();
+    is_sync_and_send::<
+        PasswordTokenRequest<
+            StandardErrorResponse<BasicErrorResponseType>,
+            StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
+            BasicTokenType,
+        >,
+    >();
+    is_sync_and_send::<PkceCodeChallenge>();
+    is_sync_and_send::<PkceCodeChallengeMethod>();
+    is_sync_and_send::<PkceCodeVerifier>();
+    is_sync_and_send::<RedirectUrl>();
+    is_sync_and_send::<RefreshToken>();
+    is_sync_and_send::<
+        RefreshTokenRequest<
+            StandardErrorResponse<BasicErrorResponseType>,
+            StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
+            BasicTokenType,
+        >,
+    >();
+    is_sync_and_send::<ResourceOwnerPassword>();
+    is_sync_and_send::<ResourceOwnerUsername>();
+    is_sync_and_send::<ResponseType>();
+    is_sync_and_send::<Scope>();
+    is_sync_and_send::<StandardErrorResponse<BasicErrorResponseType>>();
+    is_sync_and_send::<StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>>();
+    is_sync_and_send::<TokenUrl>();
+
+    is_sync_and_send::<AuthType>();
+    is_sync_and_send::<BasicErrorResponseType>();
+    is_sync_and_send::<BasicTokenType>();
+    is_sync_and_send::<RequestTokenError<TestError, StandardErrorResponse<BasicErrorResponseType>>>();
+
+    #[cfg(feature = "curl")]
+    is_sync_and_send::<super::curl::Error>();
+    #[cfg(feature = "reqwest-010")]
+    is_sync_and_send::<super::reqwest::Error<TestError>>();
+}

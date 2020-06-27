@@ -1,6 +1,6 @@
-use thiserror::Error;
 use http::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
+use thiserror::Error;
 use url::form_urlencoded::byte_serialize;
 use url::Url;
 
@@ -236,7 +236,9 @@ fn test_authorize_url_with_redirect_url_override() {
 
     let (url, _) = client
         .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
-        .set_redirect_url(Cow::Owned(RedirectUrl::new("https://localhost/alternative".to_string()).unwrap()))
+        .set_redirect_url(Cow::Owned(
+            RedirectUrl::new("https://localhost/alternative".to_string()).unwrap(),
+        ))
         .url();
 
     assert_eq!(

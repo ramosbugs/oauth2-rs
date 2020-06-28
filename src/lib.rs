@@ -57,14 +57,14 @@
 //!    Synchronous HTTP clients should implement the following trait:
 //!    ```ignore
 //!    FnOnce(HttpRequest) -> Result<HttpResponse, RE>
-//!    where RE: std::error::Error + Send + Sync + 'static
+//!    where RE: std::error::Error + 'static
 //!
 //!    Async/await HTTP clients should implement the following trait:
 //!    ```ignore
 //!    FnOnce(HttpRequest) -> F
 //!    where
 //!      F: Future<Output = Result<HttpResponse, RE>>,
-//!      RE: std::error::Error + Send + Sync + 'static
+//!      RE: std::error::Error + 'static
 //!    ```
 //!
 //! # Getting started: Authorization Code Grant w/ PKCE
@@ -868,7 +868,7 @@ where
 
     fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         let mut params = vec![
             ("grant_type", "authorization_code"),
@@ -897,7 +897,7 @@ where
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
@@ -914,7 +914,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)
@@ -989,7 +989,7 @@ where
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
@@ -1005,7 +1005,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)
@@ -1016,7 +1016,7 @@ where
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         Ok(token_request(
             self.auth_type,
@@ -1101,7 +1101,7 @@ where
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
@@ -1118,7 +1118,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)
@@ -1129,7 +1129,7 @@ where
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         Ok(token_request(
             self.auth_type,
@@ -1213,7 +1213,7 @@ where
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
@@ -1230,7 +1230,7 @@ where
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)
@@ -1241,7 +1241,7 @@ where
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
-        RE: Error + Send + Sync + 'static,
+        RE: Error + 'static,
     {
         Ok(token_request(
             self.auth_type,
@@ -1356,7 +1356,7 @@ fn token_response<RE, TE, TR, TT>(
     http_response: HttpResponse,
 ) -> Result<TR, RequestTokenError<RE, TE>>
 where
-    RE: Error + Send + Sync + 'static,
+    RE: Error + 'static,
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
@@ -1627,7 +1627,7 @@ where
 /// to support customization by clients, such as supporting interoperability with
 /// non-standards-complaint OAuth2 providers
 ///
-pub trait ErrorResponse: Debug + DeserializeOwned + Send + Serialize + Sync {}
+pub trait ErrorResponse: Debug + DeserializeOwned + Serialize {}
 
 ///
 /// Error types enum.
@@ -1636,7 +1636,7 @@ pub trait ErrorResponse: Debug + DeserializeOwned + Send + Serialize + Sync {}
 /// this error type. This value must match the error type from the relevant OAuth 2.0 standards
 /// (RFC 6749 or an extension).
 ///
-pub trait ErrorResponseType: Debug + DeserializeOwned + Send + Serialize + Sync {}
+pub trait ErrorResponseType: Debug + DeserializeOwned + Serialize {}
 
 ///
 /// Error response returned by server after requesting an access token.
@@ -1738,7 +1738,7 @@ where
 #[derive(Debug, thiserror::Error)]
 pub enum RequestTokenError<RE, T>
 where
-    RE: Error + Send + Sync + 'static,
+    RE: Error + 'static,
     T: ErrorResponse + 'static,
 {
     ///

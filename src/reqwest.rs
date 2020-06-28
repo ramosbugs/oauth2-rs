@@ -6,7 +6,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum Error<T>
 where
-    T: std::error::Error + Send + Sync + 'static,
+    T: std::error::Error + 'static,
 {
     /// Error returned by reqwest crate.
     #[error("request failed")]

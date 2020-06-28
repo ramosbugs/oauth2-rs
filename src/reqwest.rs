@@ -72,22 +72,9 @@ mod blocking {
 
         #[cfg(feature = "reqwest-010")]
         {
-            let headers = response
-                .headers()
-                .iter()
-                .map(|(name, value)| {
-                    (
-                        http::header::HeaderName::from_bytes(name.as_str().as_ref())
-                            .expect("failed to convert HeaderName from http 0.2 to 0.1"),
-                        http::HeaderValue::from_bytes(value.as_bytes())
-                            .expect("failed to convert HeaderValue from http 0.2 to 0.1"),
-                    )
-                })
-                .collect::<http::HeaderMap>();
             Ok(HttpResponse {
-                status_code: http::StatusCode::from_u16(response.status().as_u16())
-                    .expect("failed to convert StatusCode from http 0.2 to 0.1"),
-                headers,
+                status_code: response.status(),
+                headers: response.headers().to_owned(),
                 body,
             })
         }
@@ -99,10 +86,7 @@ mod async_client {
     use super::Error;
 
     pub use reqwest_0_10 as reqwest;
-    use reqwest_0_10::redirect::Policy as RediretPolicy;
-
-    use http::header::HeaderName;
-    use http::{HeaderMap, HeaderValue, StatusCode};
+    use reqwest_0_10::redirect::Policy as RedirectPolicy;
 
     ///
     /// Asynchronous HTTP client.
@@ -112,7 +96,7 @@ mod async_client {
     ) -> Result<HttpResponse, Error<reqwest::Error>> {
         let client = reqwest::Client::builder()
             // Following redirects opens the client up to SSRF vulnerabilities.
-            .redirect(RediretPolicy::none())
+            .redirect(RedirectPolicy::none())
             .build()
             .map_err(Error::Reqwest)?;
 
@@ -127,22 +111,10 @@ mod async_client {
         let response = client.execute(request).await.map_err(Error::Reqwest)?;
 
         let status_code = response.status();
-        let headers = response
-            .headers()
-            .iter()
-            .map(|(name, value)| {
-                (
-                    HeaderName::from_bytes(name.as_str().as_ref())
-                        .expect("failed to convert HeaderName from http 0.2 to 0.1"),
-                    HeaderValue::from_bytes(value.as_bytes())
-                        .expect("failed to convert HeaderValue from http 0.2 to 0.1"),
-                )
-            })
-            .collect::<HeaderMap>();
+        let headers = response.headers().to_owned();
         let chunks = response.bytes().await.map_err(Error::Reqwest)?;
         Ok(HttpResponse {
-            status_code: StatusCode::from_u16(status_code.as_u16())
-                .expect("failed to convert StatusCode from http 0.2 to 0.1"),
+            status_code,
             headers,
             body: chunks.to_vec(),
         })

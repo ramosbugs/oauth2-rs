@@ -25,16 +25,6 @@
 //!    ```toml
 //!    oauth2 = "3.0"
 //!    ```
-//!  * **Async/await via `futures` 0.3**
-//!
-//!    Support is enabled via the `futures-03` feature flag. If desired, the
-//!    `reqwest-010` feature flag can be used to enable `reqwest` 0.10 and its async/await
-//!    client interface.
-//!
-//!    Example import in `Cargo.toml`:
-//!    ```toml
-//!    oauth2 = { version = "3.0", features = ["futures-03"], default-features = false }
-//!    ```
 //!
 //! For the HTTP client modes described above, the following HTTP client implementations can be
 //! used:
@@ -68,21 +58,12 @@
 //!    ```ignore
 //!    FnOnce(HttpRequest) -> Result<HttpResponse, RE>
 //!    where RE: std::error::Error + Send + Sync + 'static
-//!    ```
 //!
-//!    Asynchronous `futures` 0.1 HTTP clients should implement the following trait:
+//!    Async/await HTTP clients should implement the following trait:
 //!    ```ignore
 //!    FnOnce(HttpRequest) -> F
 //!    where
-//!      F: Future<Item = HttpResponse, Error = RE>,
-//!      RE: std::error::Error + Send + Sync + 'static
-//!    ```
-//!
-//!    Async/await `futures` 0.3 HTTP clients should implement the following trait:
-//!    ```ignore
-//!    FnOnce(HttpRequest) -> F + Send
-//!    where
-//!      F: Future<Output = Result<HttpResponse, RE>> + Send,
+//!      F: Future<Output = Result<HttpResponse, RE>>,
 //!      RE: std::error::Error + Send + Sync + 'static
 //!    ```
 //!
@@ -163,18 +144,11 @@
 //!
 //! ## Example: Async/Await API
 //!
-//! In order to use async/await, include `oauth2` as follows:
-//!
-//! ```toml
-//! [dependencies]
-//! oauth2 = { version = "3.0", features = ["futures-03", "reqwest-010"], default-features = false }
-//! ```
+//! One can use async/await as follows:
 //!
 //! ```rust,no_run
 //! use anyhow;
-//! # #[cfg(feature = "futures-03")]
 //! use oauth2::{
-//!     AsyncCodeTokenRequest,
 //!     AuthorizationCode,
 //!     AuthUrl,
 //!     ClientId,
@@ -187,11 +161,11 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! # #[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
+//! # #[cfg(feature = "reqwest-010")]
 //! use oauth2::reqwest::async_http_client;
 //! use url::Url;
 //!
-//! # #[cfg(all(feature = "futures-03", feature = "reqwest-010"))]
+//! # #[cfg(feature = "reqwest-010")]
 //! # async fn err_wrapper() -> Result<(), anyhow::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
@@ -383,23 +357,18 @@
 //! - [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
 //!
 use std::borrow::Cow;
+use std::error::Error;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
+use std::future::Future;
 use std::marker::PhantomData;
 use std::time::Duration;
-use std::error::Error;
 
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use url::{form_urlencoded, Url};
-
-///
-/// Async/await module, requires "futures-03" feature.
-///
-#[cfg(feature = "futures-03")]
-mod async_internal;
 
 ///
 /// Basic OAuth2 implementation with no extensions
@@ -443,12 +412,6 @@ pub use types::{
     ResourceOwnerUsername, ResponseType, Scope, TokenUrl,
 };
 
-#[cfg(feature = "futures-03")]
-pub use async_internal::{
-    AsyncClientCredentialsTokenRequest, AsyncCodeTokenRequest, AsyncPasswordTokenRequest,
-    AsyncRefreshTokenRequest,
-};
-
 const CONTENT_TYPE_JSON: &str = "application/json";
 const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";
 
@@ -490,7 +453,7 @@ where
 
 impl<TE, TR, TT> Client<TE, TR, TT>
 where
-    TE: ErrorResponse,
+    TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
@@ -863,7 +826,7 @@ where
 }
 impl<'a, TE, TR, TT> CodeTokenRequest<'a, TE, TR, TT>
 where
-    TE: ErrorResponse,
+    TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
@@ -940,6 +903,25 @@ where
             .map_err(RequestTokenError::Request)
             .and_then(token_response)
     }
+
+    ///
+    /// Asynchronously sends the request to the authorization server and returns a Future.
+    ///
+    pub async fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        RE: Error + Send + Sync + 'static,
+    {
+        let http_request = self.prepare_request()?;
+        let http_response = http_client(http_request)
+            .await
+            .map_err(RequestTokenError::Request)?;
+        token_response(http_response)
+    }
 }
 
 ///
@@ -965,7 +947,7 @@ where
 }
 impl<'a, TE, TR, TT> RefreshTokenRequest<'a, TE, TR, TT>
 where
-    TE: ErrorResponse,
+    TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
@@ -1012,6 +994,24 @@ where
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
             .and_then(token_response)
+    }
+    ///
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub async fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        RE: Error + Send + Sync + 'static,
+    {
+        let http_request = self.prepare_request()?;
+        let http_response = http_client(http_request)
+            .await
+            .map_err(RequestTokenError::Request)?;
+        token_response(http_response)
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
@@ -1059,7 +1059,7 @@ where
 }
 impl<'a, TE, TR, TT> PasswordTokenRequest<'a, TE, TR, TT>
 where
-    TE: ErrorResponse,
+    TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
@@ -1106,6 +1106,25 @@ where
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
             .and_then(token_response)
+    }
+
+    ///
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub async fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        RE: Error + Send + Sync + 'static,
+    {
+        let http_request = self.prepare_request()?;
+        let http_response = http_client(http_request)
+            .await
+            .map_err(RequestTokenError::Request)?;
+        token_response(http_response)
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
@@ -1152,7 +1171,7 @@ where
 }
 impl<'a, TE, TR, TT> ClientCredentialsTokenRequest<'a, TE, TR, TT>
 where
-    TE: ErrorResponse,
+    TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
@@ -1199,6 +1218,25 @@ where
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
             .and_then(token_response)
+    }
+
+    ///
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub async fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        RE: Error + Send + Sync + 'static,
+    {
+        let http_request = self.prepare_request()?;
+        let http_response = http_client(http_request)
+            .await
+            .map_err(RequestTokenError::Request)?;
+        token_response(http_response)
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>

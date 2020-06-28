@@ -16,15 +16,12 @@ maintenance = { status = "actively-developed" }
 
 [features]
 default = ["reqwest-010"]
-futures-03 = ["futures-0-3", "async-trait"]
 reqwest-010 = ["reqwest-0-10"]
 
 [dependencies]
-async-trait = { version = "0.1", optional = true }
 base64 = "0.12"
 curl = { version = "0.4.0", optional = true }
 thiserror="1.0"
-futures-0-3 = { version = "0.3", optional = true, package = "futures" }
 http = "0.2"
 rand = "0.7"
 reqwest-0-10 = { version = "0.10", optional = true, features = ["blocking", "rustls-tls"], package = "reqwest", default-features = false }

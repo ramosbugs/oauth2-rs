@@ -385,6 +385,13 @@ pub mod basic;
 pub mod curl;
 
 ///
+/// Device Code Flow OAuth2 implementation
+/// ([RFC 8628](https://tools.ietf.org/html/rfc8628)).
+///
+pub mod devicecode;
+use devicecode::{DeviceCodeAction, DeviceAuthorizationDetails, DeviceCodeErrorResponse};
+
+///
 /// Helper methods used by OAuth2 implementations/extensions.
 ///
 pub mod helpers;
@@ -408,9 +415,10 @@ pub use http;
 pub use url;
 
 pub use types::{
-    AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
+    AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
+    DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl, PkceCodeChallenge,
     PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
-    ResourceOwnerUsername, ResponseType, Scope, TokenUrl,
+    ResourceOwnerUsername, ResponseType, Scope, TokenUrl, UserCode,
 };
 
 const CONTENT_TYPE_JSON: &str = "application/json";
@@ -447,6 +455,8 @@ where
     auth_type: AuthType,
     token_url: Option<TokenUrl>,
     redirect_url: Option<RedirectUrl>,
+    device_authorization_url: Option<DeviceAuthorizationUrl>,
+    device_authorization_details: Option<DeviceAuthorizationDetails>,
     phantom_te: PhantomData<TE>,
     phantom_tr: PhantomData<TR>,
     phantom_tt: PhantomData<TT>,
@@ -491,6 +501,8 @@ where
             auth_type: AuthType::BasicAuth,
             token_url,
             redirect_url: None,
+            device_authorization_url: None,
+            device_authorization_details: None,
             phantom_te: PhantomData,
             phantom_tr: PhantomData,
             phantom_tt: PhantomData,
@@ -515,6 +527,32 @@ where
     ///
     pub fn set_redirect_url(mut self, redirect_url: RedirectUrl) -> Self {
         self.redirect_url = Some(redirect_url);
+
+        self
+    }
+
+    ///
+    /// Sets the the device authorization URL used by the device authorization endpoint.
+    /// Used for Device Code Flow, as per [RFC 8628](https://tools.ietf.org/html/rfc8628).
+    ///
+    pub fn set_device_authorization_url(
+        mut self,
+        device_authorization_url: DeviceAuthorizationUrl,
+    ) -> Self {
+        self.device_authorization_url = Some(device_authorization_url);
+
+        self
+    }
+
+    ///
+    /// Sets the the device codes, returned from the device authorization endpoint.
+    /// Used for Device Code Flow, as per [RFC 8628](https://tools.ietf.org/html/rfc8628).
+    ///
+    pub fn set_device_authorization_details(
+        mut self,
+        device_authorization_details: DeviceAuthorizationDetails,
+    ) -> Self {
+        self.device_authorization_details = Some(device_authorization_details);
 
         self
     }
@@ -638,6 +676,39 @@ where
             refresh_token,
             scopes: Vec::new(),
             token_url: self.token_url.as_ref(),
+            _phantom: PhantomData,
+        }
+    }
+
+    ///
+    /// Perform a device authorization request as per
+    /// https://tools.ietf.org/html/rfc8628#section-3.1
+    ///
+    pub fn exchange_device_code(&self) -> DeviceAuthorizationRequest<TE> {
+        DeviceAuthorizationRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            scopes: Vec::new(),
+            token_url: self.token_url.as_ref(),
+            device_authorization_url: self.device_authorization_url.as_ref(),
+            _phantom: PhantomData,
+        }
+    }
+
+    ///
+    /// Perform a device access token request as per
+    /// https://tools.ietf.org/html/rfc8628#section-3.4
+    ///
+    pub fn exchange_device_access_token(&self) -> DeviceAccessTokenRequest<TE, TR, TT> {
+        DeviceAccessTokenRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            token_url: self.token_url.as_ref(),
+            device_authorization_details: self.device_authorization_details.as_ref(),
             _phantom: PhantomData,
         }
     }
@@ -879,7 +950,7 @@ where
             params.push(("code_verifier", pkce_verifier.secret()));
         }
 
-        Ok(token_request(
+        Ok(endpoint_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -1019,7 +1090,7 @@ where
     where
         RE: Error + 'static,
     {
-        Ok(token_request(
+        Ok(endpoint_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -1132,7 +1203,7 @@ where
     where
         RE: Error + 'static,
     {
-        Ok(token_request(
+        Ok(endpoint_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -1244,7 +1315,7 @@ where
     where
         RE: Error + 'static,
     {
-        Ok(token_request(
+        Ok(endpoint_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -1259,14 +1330,14 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-fn token_request<'a>(
+fn endpoint_request<'a, U: Into<&'a Url>>(
     auth_type: &'a AuthType,
     client_id: &'a ClientId,
     client_secret: Option<&'a ClientSecret>,
     extra_params: &'a [(Cow<'a, str>, Cow<'a, str>)],
     redirect_url: Option<&'a RedirectUrl>,
     scopes: Option<&'a Vec<Cow<'a, Scope>>>,
-    token_url: &'a TokenUrl,
+    url: U,
     params: Vec<(&'a str, &'a str)>,
 ) -> HttpRequest {
     let mut headers = HeaderMap::new();
@@ -1343,21 +1414,20 @@ fn token_request<'a>(
         .into_bytes();
 
     HttpRequest {
-        url: token_url.url().to_owned(),
+        url: url.into().to_owned(),
         method: http::method::Method::POST,
         headers,
         body,
     }
 }
 
-fn token_response<RE, TE, TR, TT>(
+fn endpoint_response<RE, TE, DO>(
     http_response: HttpResponse,
-) -> Result<TR, RequestTokenError<RE, TE>>
+) -> Result<DO, RequestTokenError<RE, TE>>
 where
     RE: Error + 'static,
     TE: ErrorResponse,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    DO: DeserializeOwned,
 {
     if http_response.status_code != StatusCode::OK {
         let reason = http_response.body.as_slice();
@@ -1405,6 +1475,356 @@ where
         let response_body = http_response.body.as_slice();
         serde_json::from_slice(response_body)
             .map_err(|e| RequestTokenError::Parse(e, response_body.to_vec()))
+    }
+}
+
+fn token_response<RE, TE, TR, TT>(
+    http_response: HttpResponse,
+) -> Result<TR, RequestTokenError<RE, TE>>
+where
+    RE: Error + 'static,
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    endpoint_response(http_response)
+}
+
+///
+/// The request for a set of verification codes from the authorization server.
+///
+/// See https://tools.ietf.org/html/rfc8628#section-3.1.
+///
+#[derive(Debug)]
+pub struct DeviceAuthorizationRequest<'a, TE>
+where
+    TE: ErrorResponse,
+{
+    auth_type: &'a AuthType,
+    client_id: &'a ClientId,
+    client_secret: Option<&'a ClientSecret>,
+    extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    scopes: Vec<Cow<'a, Scope>>,
+    token_url: Option<&'a TokenUrl>,
+    device_authorization_url: Option<&'a DeviceAuthorizationUrl>,
+    _phantom: PhantomData<TE>,
+}
+
+impl<'a, TE> DeviceAuthorizationRequest<'a, TE>
+where
+    TE: ErrorResponse + 'static,
+{
+    ///
+    /// Appends an extra param to the token request.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should follow the security recommendations for any OAuth2 extensions used with
+    /// this function, which are beyond the scope of
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
+    ///
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
+    {
+        self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    ///
+    /// Appends a new scope to the token request.
+    ///
+    pub fn add_scope(mut self, scope: Scope) -> Self {
+        self.scopes.push(Cow::Owned(scope));
+        self
+    }
+
+    fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Error + 'static,
+    {
+        Ok(endpoint_request(
+            &AuthType::RequestBody,
+            self.client_id,
+            None,
+            &self.extra_params,
+            None,
+            Some(&self.scopes),
+            self.device_authorization_url.ok_or_else(|| {
+                RequestTokenError::Other("no device authorization_url provided".to_string())
+            })?,
+            vec![],
+        ))
+    }
+
+    ///
+    /// Synchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request<F, RE>(
+        self,
+        http_client: F,
+    ) -> Result<DeviceAuthorizationDetails, RequestTokenError<RE, TE>>
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
+        RE: Error + 'static,
+    {
+        http_client(self.prepare_request()?)
+            .map_err(RequestTokenError::Request)
+            .and_then(device_authorization_response)
+    }
+
+    ///
+    /// Asynchronously sends the request to the authorization server and returns a Future.
+    ///
+    pub async fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> Result<DeviceAuthorizationDetails, RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        RE: Error + 'static,
+    {
+        let http_request = self.prepare_request()?;
+        let http_response = http_client(http_request)
+            .await
+            .map_err(RequestTokenError::Request)?;
+        device_authorization_response(http_response)
+    }
+}
+
+///
+/// Maps an HTTP response to Device Code authorization details.  These details
+/// are used to display the verification URI and the user code to the user.
+///
+fn device_authorization_response<RE, TE>(
+    http_response: HttpResponse,
+) -> Result<DeviceAuthorizationDetails, RequestTokenError<RE, TE>>
+where
+    RE: Error + 'static,
+    TE: ErrorResponse,
+{
+    // Clone the body for any parser error response.
+    let body = http_response.body.clone();
+
+    endpoint_response(http_response).and_then(|rsp| {
+        let val: Result<DeviceAuthorizationDetails, serde_json::Error> =
+            serde_json::from_value(rsp);
+        val.map_err(|err| RequestTokenError::Parse(err, body))
+    })
+}
+
+///
+/// Maps from an HTTP response to a DeviceCodeAction, as some HTTP responses
+/// indicate that further request attempts should be made.
+///
+fn device_token_action(
+    http_response: HttpResponse,
+) -> Result<HttpResponse, DeviceCodeAction<HttpResponse>> {
+    if http_response.status_code != StatusCode::OK {
+        let reason = http_response.body.as_slice();
+        if reason.is_empty() {
+            Err(DeviceCodeAction::NoFurtherRequests(
+                http_response,
+            ))
+        } else {
+            match serde_json::from_slice::<DeviceCodeErrorResponse>(reason) {
+                Ok(error) => Err(error.to_action(http_response)),
+                Err(_) => Err(DeviceCodeAction::NoFurtherRequests(
+                    http_response,
+                )),
+            }
+        }
+    } else {
+        Ok(http_response)
+    }
+}
+
+///
+/// The request for an device access token from the authorization server.
+///
+/// See https://tools.ietf.org/html/rfc8628#section-3.4.
+///
+#[derive(Clone, Debug)]
+pub struct DeviceAccessTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    auth_type: &'a AuthType,
+    client_id: &'a ClientId,
+    client_secret: Option<&'a ClientSecret>,
+    extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    token_url: Option<&'a TokenUrl>,
+    device_authorization_details: Option<&'a DeviceAuthorizationDetails>,
+    _phantom: PhantomData<(TE, TR, TT)>,
+}
+
+impl<'a, TE, TR, TT> DeviceAccessTokenRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    ///
+    /// Appends an extra param to the token request.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should follow the security recommendations for any OAuth2 extensions used with
+    /// this function, which are beyond the scope of
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
+    ///
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
+    {
+        self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    ///
+    /// Synchronously polls the authorization server for a response.
+    ///
+    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE> + Copy,
+        RE: Error + 'static,
+    {
+        let details = self.device_authorization_details.ok_or_else(|| {
+            RequestTokenError::Other("no device authorization details provided".to_string())
+        })?;
+
+        let mut elapsed = Duration::new(0, 0);
+        let mut interval = details.interval().clone();
+
+        loop {
+            if elapsed > details.expires_in() {
+                return Err(RequestTokenError::Other("Device code expired".to_string()));
+            }
+
+            // Prepare the request.
+            match http_client(self.prepare_request()?)
+                .map_err(|_| DeviceCodeAction::DoubleIntervalThenRetry)
+                .and_then(device_token_action)
+            {
+                Ok(http_response) => break token_response(http_response),
+                Err(DeviceCodeAction::Retry) => {
+                    // Wait for the current interval.
+                }
+                Err(DeviceCodeAction::IncreaseIntervalThenRetry) => {
+                    // Increase the interval, then wait that long.
+                    interval = interval + Duration::from_secs(5);
+                }
+                Err(DeviceCodeAction::DoubleIntervalThenRetry) => {
+                    // Double the interval, then wait that long.
+                    interval = interval.checked_mul(2).ok_or(RequestTokenError::Other(
+                        "Failed to increase interval".to_string(),
+                    ))?;
+                }
+                Err(DeviceCodeAction::NoFurtherRequests(req)) => {
+                    break token_response(req)
+                }
+            };
+
+            // Actually sleep here.
+            std::thread::sleep(interval);
+            elapsed = elapsed + interval;
+        }
+    }
+
+    ///
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub async fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F + Copy,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        RE: Error + 'static,
+    {
+        let details = self.device_authorization_details.ok_or_else(|| {
+            RequestTokenError::Other("no device authorization details provided".to_string())
+        })?;
+
+        let mut elapsed = Duration::new(0, 0);
+        let mut interval = details.interval().clone();
+
+        loop {
+            if elapsed > details.expires_in() {
+                return Err(RequestTokenError::Other("Device code expired".to_string()));
+            }
+
+            // Prepare the request.
+            match http_client(self.prepare_request()?)
+                .await
+                .map_err(|_| DeviceCodeAction::DoubleIntervalThenRetry)
+                .and_then(device_token_action)
+            {
+                Ok(http_response) => break token_response(http_response),
+                Err(DeviceCodeAction::Retry) => {
+                    // Wait for the current interval.
+                }
+                Err(DeviceCodeAction::IncreaseIntervalThenRetry) => {
+                    // Increase the interval, then wait that long.
+                    interval = interval + Duration::from_secs(5);
+                }
+                Err(DeviceCodeAction::DoubleIntervalThenRetry) => {
+                    // Double the interval, then wait that long.
+                    interval = interval.checked_mul(2).ok_or(RequestTokenError::Other(
+                        "Failed to increase interval".to_string(),
+                    ))?;
+                }
+                Err(DeviceCodeAction::NoFurtherRequests(req)) => {
+                    break token_response(req)
+                }
+            };
+
+            // Use async-std to sleep asynchronously.
+            async_std::task::sleep(interval).await;
+            elapsed = elapsed + interval;
+        }
+    }
+
+    fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Error + 'static,
+    {
+        let details = self.device_authorization_details.ok_or_else(|| {
+            RequestTokenError::Other("no device authorization details provided".to_string())
+        })?;
+
+        Ok(endpoint_request(
+            self.auth_type,
+            self.client_id,
+            self.client_secret,
+            &self.extra_params,
+            None,
+            None,
+            self.token_url
+                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
+            vec![
+                ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+                ("device_code", details.device_code().secret()),
+            ],
+        ))
     }
 }
 

@@ -255,6 +255,11 @@ macro_rules! new_url_type {
                 &self.1
             }
         }
+        impl <'a> Into<&'a Url> for &'a $name {
+            fn into(self) -> &'a Url {
+                self.url()
+            }
+        }
         impl ::std::fmt::Debug for $name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
                 let mut debug_trait_builder = f.debug_tuple(stringify!($name));
@@ -346,6 +351,18 @@ new_url_type![
     /// URL of the client's redirection endpoint.
     ///
     RedirectUrl
+];
+new_url_type![
+    ///
+    /// URL of the client's device authorization endpoint.
+    ///
+    DeviceAuthorizationUrl
+];
+new_url_type![
+    ///
+    /// URL of the end-user verification URI on the authorization server.
+    ///
+    EndUserVerificationUrl
 ];
 new_type![
     ///
@@ -546,4 +563,19 @@ new_secret_type![
     ///
     #[derive(Clone)]
     ResourceOwnerPassword(String)
+];
+new_secret_type![
+    ///
+    /// Device code returned by the device authorization endpoint and used to query the token endpoint.
+    ///
+    #[derive(Clone, Deserialize, Serialize)]
+    DeviceCode(String)
+];
+new_type![
+    ///
+    /// User code returned by the device authorization endpoint and used by the user to authorize at
+    /// the verification URI.
+    ///
+    #[derive(Deserialize, Serialize)]
+    UserCode(String)
 ];

@@ -1,11 +1,13 @@
+use std::collections::HashMap;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
-use std::collections::HashMap;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use super::{ErrorResponseType, StandardErrorResponse, DeviceCode, UserCode, EndUserVerificationUrl, };
+use super::{
+    DeviceCode, EndUserVerificationUrl, ErrorResponseType, StandardErrorResponse, UserCode,
+};
 
 /// The minimum amount of time in seconds that the client SHOULD wait
 /// between polling requests to the token endpoint.  If no value is

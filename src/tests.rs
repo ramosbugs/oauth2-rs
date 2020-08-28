@@ -5,6 +5,7 @@ use url::form_urlencoded::byte_serialize;
 use url::Url;
 
 use super::basic::*;
+use super::devicecode::*;
 use super::*;
 
 fn new_client() -> BasicClient {
@@ -19,12 +20,15 @@ fn new_client() -> BasicClient {
 fn mock_http_client(
     request_headers: Vec<(HeaderName, &'static str)>,
     request_body: &'static str,
+    request_url: Option<Url>,
     response: HttpResponse,
-) -> impl FnOnce(HttpRequest) -> Result<HttpResponse, FakeError> {
+) -> impl Fn(HttpRequest) -> Result<HttpResponse, FakeError> {
     move |request: HttpRequest| {
         assert_eq!(
-            request.url,
-            Url::parse("https://example.com/token").unwrap()
+            &request.url,
+            request_url
+                .as_ref()
+                .unwrap_or(&Url::parse("https://example.com/token").unwrap())
         );
         assert_eq!(
             request.headers,
@@ -35,7 +39,7 @@ fn mock_http_client(
         );
         assert_eq!(&String::from_utf8(request.body).unwrap(), request_body);
 
-        Ok(response)
+        Ok(response.clone())
     }
 }
 
@@ -293,6 +297,7 @@ fn test_exchange_code_successful_with_minimal_json_response() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: HeaderMap::new(),
@@ -330,6 +335,7 @@ fn test_exchange_code_successful_with_complete_json_response() {
                 (CONTENT_TYPE, "application/x-www-form-urlencoded"),
             ],
             "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -394,6 +400,7 @@ fn test_exchange_client_credentials_with_basic_auth() {
                 (AUTHORIZATION, "Basic YWFhJTJGJTNCJTI2OmJiYiUyRiUzQiUyNg=="),
             ],
             "grant_type=client_credentials",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: HeaderMap::new(),
@@ -434,6 +441,7 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
                 (CONTENT_TYPE, "application/x-www-form-urlencoded"),
             ],
             "grant_type=client_credentials&scope=read+write&client_id=aaa&client_secret=bbb",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -478,6 +486,7 @@ fn test_exchange_refresh_token_with_basic_auth() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=refresh_token&refresh_token=ccc",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: HeaderMap::new(),
@@ -516,6 +525,7 @@ fn test_exchange_refresh_token_with_json_response() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=refresh_token&refresh_token=ccc",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: HeaderMap::new(),
@@ -560,6 +570,7 @@ fn test_exchange_password_with_json_response() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=password&username=user&password=pass&scope=read+write",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -607,6 +618,7 @@ fn test_exchange_code_successful_with_redirect_url() {
             ],
             "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb&\
              redirect_uri=https%3A%2F%2Fredirect%2Fhere",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -654,6 +666,7 @@ fn test_exchange_code_successful_with_basic_auth() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc&redirect_uri=https%3A%2F%2Fredirect%2Fhere",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -709,6 +722,7 @@ fn test_exchange_code_successful_with_pkce_and_extension() {
              &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\
              &redirect_uri=https%3A%2F%2Fredirect%2Fhere\
              &foo=bar",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -757,6 +771,7 @@ fn test_exchange_refresh_token_successful_with_extension() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=refresh_token&refresh_token=ccc&foo=bar",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -801,6 +816,7 @@ fn test_exchange_code_with_simple_json_error() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
+            None,
             HttpResponse {
                 status_code: StatusCode::BAD_REQUEST,
                 headers: vec![(
@@ -887,6 +903,7 @@ fn test_exchange_code_with_json_parse_error() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -923,6 +940,7 @@ fn test_exchange_code_with_unexpected_content_type() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(CONTENT_TYPE, HeaderValue::from_str("text/plain").unwrap())]
@@ -963,6 +981,7 @@ fn test_exchange_code_with_invalid_token_type() {
                 (AUTHORIZATION, "Basic YWFhOg=="),
             ],
             "grant_type=authorization_code&code=ccc",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -1001,6 +1020,7 @@ fn test_exchange_code_with_400_status_code() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
+            None,
             HttpResponse {
                 status_code: StatusCode::BAD_REQUEST,
                 headers: vec![(
@@ -1145,6 +1165,7 @@ fn test_extension_successful_with_minimal_json_response() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -1197,6 +1218,7 @@ fn test_extension_successful_with_complete_json_response() {
                 (CONTENT_TYPE, "application/x-www-form-urlencoded"),
             ],
             "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb",
+            None,
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -1266,6 +1288,7 @@ fn test_extension_with_simple_json_error() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
+            None,
             HttpResponse {
                 status_code: StatusCode::BAD_REQUEST,
                 headers: vec![(
@@ -1372,6 +1395,7 @@ fn test_extension_with_custom_json_error() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "grant_type=authorization_code&code=ccc",
+            None,
             HttpResponse {
                 status_code: StatusCode::BAD_REQUEST,
                 headers: vec![(
@@ -1456,6 +1480,149 @@ fn test_secret_redaction() {
     assert_eq!("ClientSecret([redacted])", format!("{:?}", secret));
 }
 
+fn new_device_auth_details(expires_in: u32) -> DeviceAuthorizationDetails {
+    let body = format!(
+        "{{\
+        \"device_code\": \"12345\", \
+        \"verification_uri\": \"https://verify/here\", \
+        \"user_code\": \"abcde\", \
+        \"verification_uri_complete\": \"https://verify/here?abcde\", \
+        \"expires_in\": {}, \
+        \"interval\": 1 \
+        }}",
+        expires_in
+    );
+
+    let device_auth_url =
+        DeviceAuthorizationUrl::new("https://deviceauth/here".to_string()).unwrap();
+
+    let client = new_client().set_device_authorization_url(device_auth_url.clone());
+    client
+        .exchange_device_code()
+        .add_extra_param("foo", "bar")
+        .add_scope(Scope::new("openid".to_string()))
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+            ],
+            "scope=openid&client_id=aaa&foo=bar",
+            Some(device_auth_url.url().to_owned()),
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: body.into_bytes(),
+            },
+        ))
+        .unwrap()
+}
+
+#[test]
+fn test_exchange_device_code_and_token() {
+    let details = new_device_auth_details(3600);
+    assert_eq!("12345", details.device_code().secret());
+    assert_eq!("https://verify/here", details.verification_uri().as_str());
+    assert_eq!("abcde", details.user_code().as_str());
+    assert_eq!(
+        "https://verify/here?abcde",
+        details.verification_uri_complete().unwrap().as_str()
+    );
+    assert_eq!(Duration::from_secs(3600), details.expires_in());
+    assert_eq!(Duration::from_secs(1), details.interval());
+
+    let token = new_client()
+        .set_device_authorization_details(details)
+        .exchange_device_access_token()
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+            None,
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: "{\
+                    \"access_token\": \"12/34\", \
+                    \"token_type\": \"bearer\", \
+                    \"scope\": \"openid\"\
+                    }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
+        .unwrap();
+
+    assert_eq!("12/34", token.access_token().secret());
+    assert_eq!(BasicTokenType::Bearer, *token.token_type());
+    assert_eq!(
+        Some(&vec![Scope::new("openid".to_string()),]),
+        token.scopes()
+    );
+    assert_eq!(None, token.expires_in());
+    assert!(token.refresh_token().is_none());
+}
+
+#[test]
+fn test_device_token_authorization_timeout() {
+    let details = new_device_auth_details(2);
+    assert_eq!("12345", details.device_code().secret());
+    assert_eq!("https://verify/here", details.verification_uri().as_str());
+    assert_eq!("abcde", details.user_code().as_str());
+    assert_eq!(
+        "https://verify/here?abcde",
+        details.verification_uri_complete().unwrap().as_str()
+    );
+    assert_eq!(Duration::from_secs(2), details.expires_in());
+    assert_eq!(Duration::from_secs(1), details.interval());
+
+    let token = new_client()
+        .set_device_authorization_details(details)
+        .exchange_device_access_token()
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+            None,
+            HttpResponse {
+                status_code: StatusCode::from_u16(400).unwrap(),
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: "{\
+                    \"error\": \"authorization_pending\", \
+                    \"error_description\": \"Still waiting for user\"\
+                    }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
+        .err()
+        .unwrap();
+    match token {
+        RequestTokenError::Other(msg) => assert_eq!(msg, "Device code expired"),
+        _ => unreachable!("Error should be an expiry"),
+    }
+}
+
 #[test]
 fn test_send_sync_impl() {
     fn is_sync_and_send<T: Sync + Send>() {};
@@ -1531,6 +1698,23 @@ fn test_send_sync_impl() {
     is_sync_and_send::<BasicTokenType>();
     is_sync_and_send::<RequestTokenError<TestError, StandardErrorResponse<BasicErrorResponseType>>>(
     );
+
+    is_sync_and_send::<DeviceCode>();
+    is_sync_and_send::<EndUserVerificationUrl>();
+    is_sync_and_send::<UserCode>();
+    is_sync_and_send::<DeviceAuthorizationUrl>();
+    is_sync_and_send::<DeviceAuthorizationDetails>();
+    is_sync_and_send::<
+        DeviceAccessTokenRequest<
+            StandardErrorResponse<BasicErrorResponseType>,
+            StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
+            BasicTokenType,
+        >,
+    >();
+    is_sync_and_send::<DeviceAuthorizationRequest<StandardErrorResponse<BasicErrorResponseType>>>();
+    is_sync_and_send::<DeviceCodeAction<HttpResponse>>();
+    is_sync_and_send::<DeviceCodeErrorResponseType>();
+    is_sync_and_send::<DeviceCodeErrorResponse>();
 
     #[cfg(feature = "curl")]
     is_sync_and_send::<super::curl::Error>();

@@ -11,6 +11,7 @@
 //! * [Implicit Grant](#implicit-grant)
 //! * [Resource Owner Password Credentials Grant](#resource-owner-password-credentials-grant)
 //! * [Client Credentials Grant](#client-credentials-grant)
+//! * [Device Code Flow](#device-code-flow)
 //! * [Other examples](#other-examples)
 //!   * [Contributed Examples](#contributed-examples)
 //!
@@ -55,13 +56,13 @@
 //!    ```
 //!
 //!    Synchronous HTTP clients should implement the following trait:
-//!    ```ignore
+//!    ```rust,ignore
 //!    FnOnce(HttpRequest) -> Result<HttpResponse, RE>
 //!    where RE: std::error::Error + 'static
 //!    ```
 //!
 //!    Async/await HTTP clients should implement the following trait:
-//!    ```ignore
+//!    ```rust,ignore
 //!    FnOnce(HttpRequest) -> F
 //!    where
 //!      F: Future<Output = Result<HttpResponse, RE>>,
@@ -344,6 +345,68 @@
 //! # }
 //! ```
 //!
+//! # Device Code Flow
+//!
+//! Device Code Flow allows users to sign in on browserless or input-constrained
+//! devices.  This is a two-stage process; first a user-code and verification
+//! URL are obtained by using the `Client::exchange_client_credentials`
+//! method. Those are displayed to the user, then are used in a second client
+//! to poll the token endpoint for a token.
+//!
+//! ## Example
+//!
+//! ```rust,no_run
+//! use anyhow;
+//! use oauth2::{
+//!     AuthUrl,
+//!     ClientId,
+//!     ClientSecret,
+//!     DeviceAuthorizationUrl,
+//!     Scope,
+//!     TokenResponse,
+//!     TokenUrl
+//! };
+//! use oauth2::basic::BasicClient;
+//! use oauth2::reqwest::http_client;
+//! use url::Url;
+//!
+//! # fn err_wrapper() -> Result<(), anyhow::Error> {
+//! let client =
+//!     BasicClient::new(
+//!         ClientId::new("client_id".to_string()),
+//!         Some(ClientSecret::new("client_secret".to_string())),
+//!         AuthUrl::new("http://authorize".to_string())?,
+//!         Some(TokenUrl::new("http://token".to_string())?),
+//!     );
+//!
+//! let device_auth_url = DeviceAuthorizationUrl::new("http://deviceauth".to_string())?;
+//! let details = client
+//!     .set_device_authorization_url(device_auth_url)
+//!     .exchange_device_code()
+//!     .add_scope(Scope::new("read".to_string()))
+//!     .request(http_client)?;
+//!
+//! println!(
+//!     "Open this URL in your browser:\n{}\nand enter the code: {}",
+//!     details.verification_uri().to_string(),
+//!     details.user_code().to_string()
+//! );
+//!
+//! let token_result =
+//!     BasicClient::new(
+//!         ClientId::new("client_id".to_string()),
+//!         Some(ClientSecret::new("client_secret".to_string())),
+//!         AuthUrl::new("http://authorize".to_string())?,
+//!         Some(TokenUrl::new("http://token".to_string())?),
+//!     )
+//!     .set_device_authorization_details(details)
+//!     .exchange_device_access_token()
+//!     .request(http_client)?;
+//!
+//! # Ok(())
+//! # }
+//! ```
+//!
 //! # Other examples
 //!
 //! More specific implementations are available as part of the examples:
@@ -389,7 +452,7 @@ pub mod curl;
 /// ([RFC 8628](https://tools.ietf.org/html/rfc8628)).
 ///
 pub mod devicecode;
-use devicecode::{DeviceCodeAction, DeviceAuthorizationDetails, DeviceCodeErrorResponse};
+use devicecode::{DeviceAuthorizationDetails, DeviceCodeAction, DeviceCodeErrorResponse};
 
 ///
 /// Helper methods used by OAuth2 implementations/extensions.
@@ -1631,15 +1694,11 @@ fn device_token_action(
     if http_response.status_code != StatusCode::OK {
         let reason = http_response.body.as_slice();
         if reason.is_empty() {
-            Err(DeviceCodeAction::NoFurtherRequests(
-                http_response,
-            ))
+            Err(DeviceCodeAction::NoFurtherRequests(http_response))
         } else {
             match serde_json::from_slice::<DeviceCodeErrorResponse>(reason) {
                 Ok(error) => Err(error.to_action(http_response)),
-                Err(_) => Err(DeviceCodeAction::NoFurtherRequests(
-                    http_response,
-                )),
+                Err(_) => Err(DeviceCodeAction::NoFurtherRequests(http_response)),
             }
         }
     } else {
@@ -1703,7 +1762,7 @@ where
     ///
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
-        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE> + Copy,
+        F: Fn(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,
     {
         let details = self.device_authorization_details.ok_or_else(|| {
@@ -1737,9 +1796,7 @@ where
                         "Failed to increase interval".to_string(),
                     ))?;
                 }
-                Err(DeviceCodeAction::NoFurtherRequests(req)) => {
-                    break token_response(req)
-                }
+                Err(DeviceCodeAction::NoFurtherRequests(req)) => break token_response(req),
             };
 
             // Actually sleep here.
@@ -1756,7 +1813,7 @@ where
         http_client: C,
     ) -> Result<TR, RequestTokenError<RE, TE>>
     where
-        C: FnOnce(HttpRequest) -> F + Copy,
+        C: Fn(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
     {
@@ -1792,9 +1849,7 @@ where
                         "Failed to increase interval".to_string(),
                     ))?;
                 }
-                Err(DeviceCodeAction::NoFurtherRequests(req)) => {
-                    break token_response(req)
-                }
+                Err(DeviceCodeAction::NoFurtherRequests(req)) => break token_response(req),
             };
 
             // Use async-std to sleep asynchronously.

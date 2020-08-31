@@ -7,8 +7,11 @@ sudo: false
 #cache: cargo
 before_script:
   - cargo install --force cargo-audit
+  - rustup component add clippy
+  - rustup component add rustfmt
 script:
-  # Tests should run on all supported rustc versions
+  - cargo clippy --all --all-targets --offline -- --deny warnings
+  - cargo fmt --all -- --check
   - cargo test --tests --examples
   - cargo test --doc
   - cargo test --all-features

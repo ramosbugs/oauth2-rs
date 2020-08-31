@@ -1529,7 +1529,8 @@ fn test_send_sync_impl() {
     is_sync_and_send::<AuthType>();
     is_sync_and_send::<BasicErrorResponseType>();
     is_sync_and_send::<BasicTokenType>();
-    is_sync_and_send::<RequestTokenError<TestError, StandardErrorResponse<BasicErrorResponseType>>>();
+    is_sync_and_send::<RequestTokenError<TestError, StandardErrorResponse<BasicErrorResponseType>>>(
+    );
 
     #[cfg(feature = "curl")]
     is_sync_and_send::<super::curl::Error>();

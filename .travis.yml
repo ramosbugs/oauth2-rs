@@ -1,5 +1,6 @@
 language: rust
 rust:
+  - 1.41.0
   - stable
   - beta
   - nightly
@@ -7,11 +8,12 @@ sudo: false
 #cache: cargo
 before_script:
   - cargo install --force cargo-audit
+  - cargo install --force cargo-when
   - rustup component add clippy
   - rustup component add rustfmt
 script:
-  - cargo clippy --all --all-features -- --deny warnings
-  - cargo fmt --all -- --check
+  - cargo when -v =1.41.0 clippy --all --all-features -- --deny warnings
+  - cargo when -v =1.41.0 fmt --all -- --check
   - cargo test --tests --examples
   - cargo test --doc
   - cargo test --all-features

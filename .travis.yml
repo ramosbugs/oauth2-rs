@@ -10,7 +10,7 @@ before_script:
   - rustup component add clippy
   - rustup component add rustfmt
 script:
-  - cargo clippy --all --all-targets --offline -- --deny warnings
+  - cargo clippy --all --all-features -- --deny warnings
   - cargo fmt --all -- --check
   - cargo test --tests --examples
   - cargo test --doc

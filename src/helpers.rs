@@ -1,5 +1,3 @@
-use std;
-
 use serde::ser;
 use serde::ser::{Impossible, SerializeStructVariant, SerializeTupleVariant};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};

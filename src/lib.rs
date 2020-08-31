@@ -58,6 +58,7 @@
 //!    ```ignore
 //!    FnOnce(HttpRequest) -> Result<HttpResponse, RE>
 //!    where RE: std::error::Error + 'static
+//!    ```
 //!
 //!    Async/await HTTP clients should implement the following trait:
 //!    ```ignore
@@ -1315,10 +1316,7 @@ fn token_request<'a>(
             let b64_credential = base64::encode(&format!(
                 "{}:{}",
                 &urlencoded_id,
-                urlencoded_secret
-                    .as_ref()
-                    .map(|secret| secret.as_str())
-                    .unwrap_or("")
+                urlencoded_secret.as_deref().unwrap_or("")
             ));
             headers.append(
                 AUTHORIZATION,

@@ -1480,7 +1480,7 @@ fn test_secret_redaction() {
     assert_eq!("ClientSecret([redacted])", format!("{:?}", secret));
 }
 
-fn new_device_auth_details(expires_in: u32) -> DeviceAuthorizationDetails {
+fn new_device_auth_details(expires_in: u32) -> DeviceAuthorizationResponse {
     let body = format!(
         "{{\
         \"device_code\": \"12345\", \
@@ -1505,6 +1505,7 @@ fn new_device_auth_details(expires_in: u32) -> DeviceAuthorizationDetails {
             vec![
                 (ACCEPT, "application/json"),
                 (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "scope=openid&client_id=aaa&foo=bar",
             Some(device_auth_url.url().to_owned()),
@@ -1705,7 +1706,7 @@ fn test_send_sync_impl() {
     is_sync_and_send::<EndUserVerificationUrl>();
     is_sync_and_send::<UserCode>();
     is_sync_and_send::<DeviceAuthorizationUrl>();
-    is_sync_and_send::<DeviceAuthorizationDetails>();
+    is_sync_and_send::<DeviceAuthorizationResponse>();
     is_sync_and_send::<
         DeviceAccessTokenRequest<
             StandardErrorResponse<BasicErrorResponseType>,

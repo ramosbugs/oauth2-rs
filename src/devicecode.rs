@@ -20,7 +20,7 @@ fn default_devicecode_interval() -> u64 {
 /// Standard OAuth2 device authorization response.
 ///
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct DeviceAuthorizationDetails {
+pub struct DeviceAuthorizationResponse {
     /// The device verification code.
     device_code: DeviceCode,
 
@@ -52,7 +52,7 @@ pub struct DeviceAuthorizationDetails {
     extra_fields: HashMap<String, serde_json::Value>,
 }
 
-impl DeviceAuthorizationDetails {
+impl DeviceAuthorizationResponse {
     /// The device verification code.
     pub fn device_code(&self) -> &DeviceCode {
         return &self.device_code;

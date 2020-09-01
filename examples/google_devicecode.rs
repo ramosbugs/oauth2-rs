@@ -16,7 +16,7 @@
 use oauth2::basic::BasicClient;
 // Alternatively, this can be oauth2::curl::http_client or a custom.
 use oauth2::reqwest::http_client;
-use oauth2::{AuthUrl, ClientId, ClientSecret, DeviceAuthorizationUrl, Scope, TokenUrl};
+use oauth2::{AuthType, AuthUrl, ClientId, ClientSecret, DeviceAuthorizationUrl, Scope, TokenUrl};
 use std::env;
 
 fn main() {
@@ -36,13 +36,17 @@ fn main() {
             .expect("Invalid device authorization endpoint URL");
 
     // Set up the config for the Google OAuth2 process.
+    //
+    // Google's OAuth endpoint expects the client_id to be in the request body,
+    // so ensure that option is set.
     let device_client = BasicClient::new(
         google_client_id.clone(),
         Some(google_client_secret.clone()),
         auth_url.clone(),
         Some(token_url.clone()),
     )
-    .set_device_authorization_url(device_auth_url);
+    .set_device_authorization_url(device_auth_url)
+    .set_auth_type(AuthType::RequestBody);
 
     // Request the set of codes from the Device Authorization endpoint.
     let details = device_client

@@ -452,7 +452,7 @@ pub mod curl;
 /// ([RFC 8628](https://tools.ietf.org/html/rfc8628)).
 ///
 pub mod devicecode;
-use devicecode::{DeviceAuthorizationDetails, DeviceCodeAction, DeviceCodeErrorResponse};
+use devicecode::{DeviceAuthorizationResponse, DeviceCodeAction, DeviceCodeErrorResponse};
 
 ///
 /// Helper methods used by OAuth2 implementations/extensions.
@@ -519,7 +519,7 @@ where
     token_url: Option<TokenUrl>,
     redirect_url: Option<RedirectUrl>,
     device_authorization_url: Option<DeviceAuthorizationUrl>,
-    device_authorization_details: Option<DeviceAuthorizationDetails>,
+    device_authorization_details: Option<DeviceAuthorizationResponse>,
     phantom_te: PhantomData<TE>,
     phantom_tr: PhantomData<TR>,
     phantom_tt: PhantomData<TT>,
@@ -613,7 +613,7 @@ where
     ///
     pub fn set_device_authorization_details(
         mut self,
-        device_authorization_details: DeviceAuthorizationDetails,
+        device_authorization_details: DeviceAuthorizationResponse,
     ) -> Self {
         self.device_authorization_details = Some(device_authorization_details);
 
@@ -1606,7 +1606,7 @@ where
         Ok(endpoint_request(
             self.auth_type,
             self.client_id,
-            None,
+            self.client_secret,
             &self.extra_params,
             None,
             Some(&self.scopes),
@@ -1625,7 +1625,7 @@ where
     pub fn request<F, RE>(
         self,
         http_client: F,
-    ) -> Result<DeviceAuthorizationDetails, RequestTokenError<RE, TE>>
+    ) -> Result<DeviceAuthorizationResponse, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,
@@ -1641,7 +1641,7 @@ where
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> Result<DeviceAuthorizationDetails, RequestTokenError<RE, TE>>
+    ) -> Result<DeviceAuthorizationResponse, RequestTokenError<RE, TE>>
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
@@ -1661,7 +1661,7 @@ where
 ///
 fn device_authorization_response<RE, TE>(
     http_response: HttpResponse,
-) -> Result<DeviceAuthorizationDetails, RequestTokenError<RE, TE>>
+) -> Result<DeviceAuthorizationResponse, RequestTokenError<RE, TE>>
 where
     RE: Error + 'static,
     TE: ErrorResponse,
@@ -1670,7 +1670,7 @@ where
     let body = http_response.body.clone();
 
     endpoint_response(http_response).and_then(|rsp| {
-        let val: Result<DeviceAuthorizationDetails, serde_json::Error> =
+        let val: Result<DeviceAuthorizationResponse, serde_json::Error> =
             serde_json::from_value(rsp);
         val.map_err(|err| RequestTokenError::Parse(err, body))
     })
@@ -1715,7 +1715,7 @@ where
     client_secret: Option<&'a ClientSecret>,
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     token_url: Option<&'a TokenUrl>,
-    device_authorization_details: Option<&'a DeviceAuthorizationDetails>,
+    device_authorization_details: Option<&'a DeviceAuthorizationResponse>,
     _phantom: PhantomData<(TE, TR, TT)>,
 }
 

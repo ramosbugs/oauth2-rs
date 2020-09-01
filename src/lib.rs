@@ -1021,7 +1021,8 @@ where
             self.redirect_url,
             None,
             self.token_url
-                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
+                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?
+                .url(),
             params,
         ))
     }
@@ -1161,7 +1162,8 @@ where
             None,
             Some(&self.scopes),
             self.token_url
-                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
+                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?
+                .url(),
             vec![
                 ("grant_type", "refresh_token"),
                 ("refresh_token", self.refresh_token.secret()),
@@ -1274,7 +1276,8 @@ where
             None,
             Some(&self.scopes),
             self.token_url
-                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
+                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?
+                .url(),
             vec![
                 ("grant_type", "password"),
                 ("username", self.username),
@@ -1386,21 +1389,22 @@ where
             None,
             Some(&self.scopes),
             self.token_url
-                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
+                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?
+                .url(),
             vec![("grant_type", "client_credentials")],
         ))
     }
 }
 
 #[allow(clippy::too_many_arguments)]
-fn endpoint_request<'a, U: Into<&'a Url>>(
+fn endpoint_request<'a>(
     auth_type: &'a AuthType,
     client_id: &'a ClientId,
     client_secret: Option<&'a ClientSecret>,
     extra_params: &'a [(Cow<'a, str>, Cow<'a, str>)],
     redirect_url: Option<&'a RedirectUrl>,
     scopes: Option<&'a Vec<Cow<'a, Scope>>>,
-    url: U,
+    url: &'a Url,
     params: Vec<(&'a str, &'a str)>,
 ) -> HttpRequest {
     let mut headers = HeaderMap::new();
@@ -1477,7 +1481,7 @@ fn endpoint_request<'a, U: Into<&'a Url>>(
         .into_bytes();
 
     HttpRequest {
-        url: url.into().to_owned(),
+        url: url.to_owned(),
         method: http::method::Method::POST,
         headers,
         body,
@@ -1608,9 +1612,11 @@ where
             &self.extra_params,
             None,
             Some(&self.scopes),
-            self.device_authorization_url.ok_or_else(|| {
-                RequestTokenError::Other("no device authorization_url provided".to_string())
-            })?,
+            self.device_authorization_url
+                .ok_or_else(|| {
+                    RequestTokenError::Other("no device authorization_url provided".to_string())
+                })?
+                .url(),
             vec![],
         ))
     }
@@ -1811,7 +1817,7 @@ where
         C: Fn(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         S: Fn(Duration) -> SF,
-        SF: Future<Output=()>,
+        SF: Future<Output = ()>,
         RE: Error + 'static,
     {
         let details = self.device_authorization_details.ok_or_else(|| {
@@ -1871,7 +1877,8 @@ where
             None,
             None,
             self.token_url
-                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?,
+                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?
+                .url(),
             vec![
                 ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
                 ("device_code", details.device_code().secret()),

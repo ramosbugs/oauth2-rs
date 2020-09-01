@@ -1632,7 +1632,7 @@ where
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
-            .and_then(device_authorization_response)
+            .and_then(endpoint_response)
     }
 
     ///
@@ -1651,29 +1651,8 @@ where
         let http_response = http_client(http_request)
             .await
             .map_err(RequestTokenError::Request)?;
-        device_authorization_response(http_response)
+        endpoint_response(http_response)
     }
-}
-
-///
-/// Maps an HTTP response to Device Code authorization details.  These details
-/// are used to display the verification URI and the user code to the user.
-///
-fn device_authorization_response<RE, TE>(
-    http_response: HttpResponse,
-) -> Result<DeviceAuthorizationResponse, RequestTokenError<RE, TE>>
-where
-    RE: Error + 'static,
-    TE: ErrorResponse,
-{
-    // Clone the body for any parser error response.
-    let body = http_response.body.clone();
-
-    endpoint_response(http_response).and_then(|rsp| {
-        let val: Result<DeviceAuthorizationResponse, serde_json::Error> =
-            serde_json::from_value(rsp);
-        val.map_err(|err| RequestTokenError::Parse(err, body))
-    })
 }
 
 ///

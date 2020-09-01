@@ -1036,7 +1036,7 @@ where
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
-            .and_then(token_response)
+            .and_then(endpoint_response)
     }
 
     ///
@@ -1055,7 +1055,7 @@ where
         let http_response = http_client(http_request)
             .await
             .map_err(RequestTokenError::Request)?;
-        token_response(http_response)
+        endpoint_response(http_response)
     }
 }
 
@@ -1128,7 +1128,7 @@ where
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
-            .and_then(token_response)
+            .and_then(endpoint_response)
     }
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
@@ -1146,7 +1146,7 @@ where
         let http_response = http_client(http_request)
             .await
             .map_err(RequestTokenError::Request)?;
-        token_response(http_response)
+        endpoint_response(http_response)
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
@@ -1240,7 +1240,7 @@ where
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
-            .and_then(token_response)
+            .and_then(endpoint_response)
     }
 
     ///
@@ -1259,7 +1259,7 @@ where
         let http_response = http_client(http_request)
             .await
             .map_err(RequestTokenError::Request)?;
-        token_response(http_response)
+        endpoint_response(http_response)
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
@@ -1352,7 +1352,7 @@ where
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
-            .and_then(token_response)
+            .and_then(endpoint_response)
     }
 
     ///
@@ -1371,7 +1371,7 @@ where
         let http_response = http_client(http_request)
             .await
             .map_err(RequestTokenError::Request)?;
-        token_response(http_response)
+        endpoint_response(http_response)
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
@@ -1539,18 +1539,6 @@ where
         serde_json::from_slice(response_body)
             .map_err(|e| RequestTokenError::Parse(e, response_body.to_vec()))
     }
-}
-
-fn token_response<RE, TE, TR, TT>(
-    http_response: HttpResponse,
-) -> Result<TR, RequestTokenError<RE, TE>>
-where
-    RE: Error + 'static,
-    TE: ErrorResponse,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-{
-    endpoint_response(http_response)
 }
 
 ///
@@ -1788,7 +1776,7 @@ where
                 .map_err(|_| DeviceCodeAction::DoubleIntervalThenRetry)
                 .and_then(device_token_action)
             {
-                Ok(http_response) => break token_response(http_response),
+                Ok(http_response) => break endpoint_response(http_response),
                 Err(DeviceCodeAction::Retry) => {
                     // Wait for the current interval.
                 }
@@ -1802,7 +1790,7 @@ where
                         "Failed to increase interval".to_string(),
                     ))?;
                 }
-                Err(DeviceCodeAction::NoFurtherRequests(req)) => break token_response(req),
+                Err(DeviceCodeAction::NoFurtherRequests(req)) => break endpoint_response(req),
             };
 
             // Sleep here using the provided sleep function.
@@ -1844,7 +1832,7 @@ where
                 .map_err(|_| DeviceCodeAction::DoubleIntervalThenRetry)
                 .and_then(device_token_action)
             {
-                Ok(http_response) => break token_response(http_response),
+                Ok(http_response) => break endpoint_response(http_response),
                 Err(DeviceCodeAction::Retry) => {
                     // Wait for the current interval.
                 }
@@ -1858,7 +1846,7 @@ where
                         "Failed to increase interval".to_string(),
                     ))?;
                 }
-                Err(DeviceCodeAction::NoFurtherRequests(req)) => break token_response(req),
+                Err(DeviceCodeAction::NoFurtherRequests(req)) => break endpoint_response(req),
             };
 
             // Use the user-defined function to sleep asynchronously.

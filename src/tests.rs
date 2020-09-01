@@ -1528,10 +1528,14 @@ fn test_exchange_device_code_and_token() {
     let details = new_device_auth_details(3600);
     assert_eq!("12345", details.device_code().secret());
     assert_eq!("https://verify/here", details.verification_uri().as_str());
-    assert_eq!("abcde", details.user_code().as_str());
+    assert_eq!("abcde", details.user_code().secret().as_str());
     assert_eq!(
         "https://verify/here?abcde",
-        details.verification_uri_complete().unwrap().as_str()
+        details
+            .verification_uri_complete()
+            .unwrap()
+            .secret()
+            .as_str()
     );
     assert_eq!(Duration::from_secs(3600), details.expires_in());
     assert_eq!(Duration::from_secs(1), details.interval());
@@ -1581,10 +1585,14 @@ fn test_device_token_authorization_timeout() {
     let details = new_device_auth_details(2);
     assert_eq!("12345", details.device_code().secret());
     assert_eq!("https://verify/here", details.verification_uri().as_str());
-    assert_eq!("abcde", details.user_code().as_str());
+    assert_eq!("abcde", details.user_code().secret().as_str());
     assert_eq!(
         "https://verify/here?abcde",
-        details.verification_uri_complete().unwrap().as_str()
+        details
+            .verification_uri_complete()
+            .unwrap()
+            .secret()
+            .as_str()
     );
     assert_eq!(Duration::from_secs(2), details.expires_in());
     assert_eq!(Duration::from_secs(1), details.interval());

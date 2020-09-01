@@ -389,7 +389,7 @@
 //! println!(
 //!     "Open this URL in your browser:\n{}\nand enter the code: {}",
 //!     details.verification_uri().to_string(),
-//!     details.user_code().to_string()
+//!     details.user_code().secret().to_string()
 //! );
 //!
 //! let token_result =

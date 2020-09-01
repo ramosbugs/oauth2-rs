@@ -5,10 +5,11 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use super::basic::BasicErrorResponseType;
 use super::{
     DeviceCode, EndUserVerificationUrl, ErrorResponseType, StandardErrorResponse, UserCode,
 };
+use crate::basic::BasicErrorResponseType;
+use crate::types::VerificationUriComplete;
 
 /// The minimum amount of time in seconds that the client SHOULD wait
 /// between polling requests to the token endpoint.  If no value is
@@ -38,7 +39,7 @@ pub struct DeviceAuthorizationResponse {
     /// with the same function as the "user_code"), which is designed for
     /// non-textual transmission.
     #[serde(skip_serializing_if = "Option::is_none")]
-    verification_uri_complete: Option<EndUserVerificationUrl>,
+    verification_uri_complete: Option<VerificationUriComplete>,
 
     /// The lifetime in seconds of the "device_code" and "user_code".
     expires_in: u64,
@@ -74,7 +75,7 @@ impl DeviceAuthorizationResponse {
     /// A verification URI that includes the "user_code" (or other information
     /// with the same function as the "user_code"), which is designed for
     /// non-textual transmission.
-    pub fn verification_uri_complete(&self) -> Option<&EndUserVerificationUrl> {
+    pub fn verification_uri_complete(&self) -> Option<&VerificationUriComplete> {
         return self.verification_uri_complete.as_ref();
     }
 

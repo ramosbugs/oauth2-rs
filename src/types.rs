@@ -566,11 +566,19 @@ new_secret_type![
     #[derive(Clone, Deserialize, Serialize)]
     DeviceCode(String)
 ];
-new_type![
+new_secret_type![
+    ///
+    /// Verification URI returned by the device authorization endpoint and visited by the user
+    /// to authorize.  Contains the user code.
+    ///
+    #[derive(Clone, Deserialize, Serialize)]
+    VerificationUriComplete(String)
+];
+new_secret_type![
     ///
     /// User code returned by the device authorization endpoint and used by the user to authorize at
     /// the verification URI.
     ///
-    #[derive(Deserialize, Serialize)]
+    #[derive(Clone, Deserialize, Serialize)]
     UserCode(String)
 ];

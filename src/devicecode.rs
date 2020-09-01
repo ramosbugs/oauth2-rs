@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     DeviceCode, EndUserVerificationUrl, ErrorResponseType, StandardErrorResponse, UserCode,
 };
+use super::basic::BasicErrorResponseType;
 
 /// The minimum amount of time in seconds that the client SHOULD wait
 /// between polling requests to the token endpoint.  If no value is
@@ -160,71 +161,32 @@ pub enum DeviceCodeErrorResponseType {
     /// unnecessary polling.
     ExpiredToken,
     ///
-    /// Client authentication failed (e.g., unknown client, no client authentication included,
-    /// or unsupported authentication method).
+    /// A Basic response type
     ///
-    InvalidClient,
-    ///
-    /// The provided authorization grant (e.g., authorization code, resource owner credentials)
-    /// or refresh token is invalid, expired, revoked, does not match the redirection URI used
-    /// in the authorization request, or was issued to another client.
-    ///
-    InvalidGrant,
-    ///
-    /// The request is missing a required parameter, includes an unsupported parameter value
-    /// (other than grant type), repeats a parameter, includes multiple credentials, utilizes
-    /// more than one mechanism for authenticating the client, or is otherwise malformed.
-    ///
-    InvalidRequest,
-    ///
-    /// The requested scope is invalid, unknown, malformed, or exceeds the scope granted by the
-    /// resource owner.
-    ///
-    InvalidScope,
-    ///
-    /// The authenticated client is not authorized to use this authorization grant type.
-    ///
-    UnauthorizedClient,
-    ///
-    /// The authorization grant type is not supported by the authorization server.
-    ///
-    UnsupportedGrantType,
-    ///
-    /// An extension not defined by RFC 6749 or RFC 8628
-    ///
-    Extension(String),
+    Basic(BasicErrorResponseType),
 }
 impl DeviceCodeErrorResponseType {
     fn from_str(s: &str) -> Self {
-        match s {
-            "authorization_pending" => DeviceCodeErrorResponseType::AuthorizationPending,
-            "slow_down" => DeviceCodeErrorResponseType::SlowDown,
-            "access_denied" => DeviceCodeErrorResponseType::AccessDenied,
-            "expired_token" => DeviceCodeErrorResponseType::ExpiredToken,
-            "invalid_client" => DeviceCodeErrorResponseType::InvalidClient,
-            "invalid_grant" => DeviceCodeErrorResponseType::InvalidGrant,
-            "invalid_request" => DeviceCodeErrorResponseType::InvalidRequest,
-            "invalid_scope" => DeviceCodeErrorResponseType::InvalidScope,
-            "unauthorized_client" => DeviceCodeErrorResponseType::UnauthorizedClient,
-            "unsupported_grant_type" => DeviceCodeErrorResponseType::UnsupportedGrantType,
-            ext => DeviceCodeErrorResponseType::Extension(ext.to_string()),
+        match BasicErrorResponseType::from_str(s) {
+            BasicErrorResponseType::Extension(ext) => match ext.as_str() {
+                "authorization_pending" => DeviceCodeErrorResponseType::AuthorizationPending,
+                "slow_down" => DeviceCodeErrorResponseType::SlowDown,
+                "access_denied" => DeviceCodeErrorResponseType::AccessDenied,
+                "expired_token" => DeviceCodeErrorResponseType::ExpiredToken,
+                _ => DeviceCodeErrorResponseType::Basic(BasicErrorResponseType::Extension(ext)),
+            }
+            basic => DeviceCodeErrorResponseType::Basic(basic),
         }
     }
 }
 impl AsRef<str> for DeviceCodeErrorResponseType {
     fn as_ref(&self) -> &str {
-        match *self {
+        match self {
             DeviceCodeErrorResponseType::AuthorizationPending => "authorization_pending",
             DeviceCodeErrorResponseType::SlowDown => "slow_down",
             DeviceCodeErrorResponseType::AccessDenied => "access_denied",
             DeviceCodeErrorResponseType::ExpiredToken => "expired_token",
-            DeviceCodeErrorResponseType::InvalidClient => "invalid_client",
-            DeviceCodeErrorResponseType::InvalidGrant => "invalid_grant",
-            DeviceCodeErrorResponseType::InvalidRequest => "invalid_request",
-            DeviceCodeErrorResponseType::InvalidScope => "invalid_scope",
-            DeviceCodeErrorResponseType::UnauthorizedClient => "unauthorized_client",
-            DeviceCodeErrorResponseType::UnsupportedGrantType => "unsupported_grant_type",
-            DeviceCodeErrorResponseType::Extension(ref ext) => ext.as_str(),
+            DeviceCodeErrorResponseType::Basic(basic) => basic.as_ref(),
         }
     }
 }

@@ -101,7 +101,7 @@ impl DeviceAuthorizationResponse {
 /// The action that the device code flow should currently be taking.
 ///
 #[derive(Debug, thiserror::Error)]
-pub enum DeviceCodeAction<T: Debug> {
+pub(crate) enum DeviceCodeAction<T: Debug> {
     ///
     /// Retry the current request, waiting for the current interval value.
     ///
@@ -231,7 +231,7 @@ impl DeviceCodeErrorResponse {
     /// Convert a device code error response to the next action that should
     /// be taken.
     ///
-    pub fn to_action<T: Debug>(&self, req: T) -> DeviceCodeAction<T> {
+    pub(crate) fn to_action<T: Debug>(&self, req: T) -> DeviceCodeAction<T> {
         match &self.error {
             DeviceCodeErrorResponseType::AuthorizationPending => DeviceCodeAction::Retry,
             DeviceCodeErrorResponseType::SlowDown => DeviceCodeAction::IncreaseIntervalThenRetry,

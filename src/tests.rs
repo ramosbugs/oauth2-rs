@@ -1537,8 +1537,7 @@ fn test_exchange_device_code_and_token() {
     assert_eq!(Duration::from_secs(1), details.interval());
 
     let token = new_client()
-        .set_device_authorization_details(details)
-        .exchange_device_access_token()
+        .exchange_device_access_token(&details)
         .request(mock_http_client(
             vec![
                 (ACCEPT, "application/json"),
@@ -1591,8 +1590,7 @@ fn test_device_token_authorization_timeout() {
     assert_eq!(Duration::from_secs(1), details.interval());
 
     let token = new_client()
-        .set_device_authorization_details(details)
-        .exchange_device_access_token()
+        .exchange_device_access_token(&details)
         .request(mock_http_client(
             vec![
                 (ACCEPT, "application/json"),

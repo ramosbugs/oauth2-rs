@@ -5,10 +5,10 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
+use super::basic::BasicErrorResponseType;
 use super::{
     DeviceCode, EndUserVerificationUrl, ErrorResponseType, StandardErrorResponse, UserCode,
 };
-use super::basic::BasicErrorResponseType;
 
 /// The minimum amount of time in seconds that the client SHOULD wait
 /// between polling requests to the token endpoint.  If no value is
@@ -174,7 +174,7 @@ impl DeviceCodeErrorResponseType {
                 "access_denied" => DeviceCodeErrorResponseType::AccessDenied,
                 "expired_token" => DeviceCodeErrorResponseType::ExpiredToken,
                 _ => DeviceCodeErrorResponseType::Basic(BasicErrorResponseType::Extension(ext)),
-            }
+            },
             basic => DeviceCodeErrorResponseType::Basic(basic),
         }
     }

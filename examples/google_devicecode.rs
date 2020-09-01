@@ -40,10 +40,10 @@ fn main() {
     // Google's OAuth endpoint expects the client_id to be in the request body,
     // so ensure that option is set.
     let device_client = BasicClient::new(
-        google_client_id.clone(),
-        Some(google_client_secret.clone()),
-        auth_url.clone(),
-        Some(token_url.clone()),
+        google_client_id,
+        Some(google_client_secret),
+        auth_url,
+        Some(token_url),
     )
     .set_device_authorization_url(device_auth_url)
     .set_auth_type(AuthType::RequestBody);
@@ -63,16 +63,10 @@ fn main() {
     );
 
     // Now poll for the token
-    let token = BasicClient::new(
-        google_client_id,
-        Some(google_client_secret),
-        auth_url,
-        Some(token_url),
-    )
-    .set_device_authorization_details(details)
-    .exchange_device_access_token()
-    .request(http_client, std::thread::sleep)
-    .expect("Failed to get token");
+    let token = device_client
+        .exchange_device_access_token(&details)
+        .request(http_client, std::thread::sleep)
+        .expect("Failed to get token");
 
     println!("Google returned the following token:\n{:?}\n", token);
 }

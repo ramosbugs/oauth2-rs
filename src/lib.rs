@@ -371,17 +371,17 @@
 //! use url::Url;
 //!
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
+//! let device_auth_url = DeviceAuthorizationUrl::new("http://deviceauth".to_string())?;
 //! let client =
 //!     BasicClient::new(
 //!         ClientId::new("client_id".to_string()),
 //!         Some(ClientSecret::new("client_secret".to_string())),
 //!         AuthUrl::new("http://authorize".to_string())?,
 //!         Some(TokenUrl::new("http://token".to_string())?),
-//!     );
+//!     )
+//!     .set_device_authorization_url(device_auth_url);
 //!
-//! let device_auth_url = DeviceAuthorizationUrl::new("http://deviceauth".to_string())?;
 //! let details = client
-//!     .set_device_authorization_url(device_auth_url)
 //!     .exchange_device_code()
 //!     .add_scope(Scope::new("read".to_string()))
 //!     .request(http_client)?;
@@ -393,14 +393,8 @@
 //! );
 //!
 //! let token_result =
-//!     BasicClient::new(
-//!         ClientId::new("client_id".to_string()),
-//!         Some(ClientSecret::new("client_secret".to_string())),
-//!         AuthUrl::new("http://authorize".to_string())?,
-//!         Some(TokenUrl::new("http://token".to_string())?),
-//!     )
-//!     .set_device_authorization_details(details)
-//!     .exchange_device_access_token()
+//!     client
+//!     .exchange_device_access_token(&details)
 //!     .request(http_client, std::thread::sleep)?;
 //!
 //! # Ok(())
@@ -519,7 +513,6 @@ where
     token_url: Option<TokenUrl>,
     redirect_url: Option<RedirectUrl>,
     device_authorization_url: Option<DeviceAuthorizationUrl>,
-    device_authorization_details: Option<DeviceAuthorizationResponse>,
     phantom_te: PhantomData<TE>,
     phantom_tr: PhantomData<TR>,
     phantom_tt: PhantomData<TT>,
@@ -565,7 +558,6 @@ where
             token_url,
             redirect_url: None,
             device_authorization_url: None,
-            device_authorization_details: None,
             phantom_te: PhantomData,
             phantom_tr: PhantomData,
             phantom_tt: PhantomData,
@@ -603,19 +595,6 @@ where
         device_authorization_url: DeviceAuthorizationUrl,
     ) -> Self {
         self.device_authorization_url = Some(device_authorization_url);
-
-        self
-    }
-
-    ///
-    /// Sets the the device codes, returned from the device authorization endpoint.
-    /// Used for Device Code Flow, as per [RFC 8628](https://tools.ietf.org/html/rfc8628).
-    ///
-    pub fn set_device_authorization_details(
-        mut self,
-        device_authorization_details: DeviceAuthorizationResponse,
-    ) -> Self {
-        self.device_authorization_details = Some(device_authorization_details);
 
         self
     }
@@ -763,14 +742,20 @@ where
     /// Perform a device access token request as per
     /// https://tools.ietf.org/html/rfc8628#section-3.4
     ///
-    pub fn exchange_device_access_token(&self) -> DeviceAccessTokenRequest<TE, TR, TT> {
+    pub fn exchange_device_access_token<'a, 'b>(
+        &'a self,
+        auth_response: &'b DeviceAuthorizationResponse,
+    ) -> DeviceAccessTokenRequest<'b, TE, TR, TT>
+    where
+        'a: 'b,
+    {
         DeviceAccessTokenRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
             client_secret: self.client_secret.as_ref(),
             extra_params: Vec::new(),
             token_url: self.token_url.as_ref(),
-            device_authorization_details: self.device_authorization_details.as_ref(),
+            dev_auth_resp: auth_response,
             _phantom: PhantomData,
         }
     }
@@ -1694,7 +1679,7 @@ where
     client_secret: Option<&'a ClientSecret>,
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     token_url: Option<&'a TokenUrl>,
-    device_authorization_details: Option<&'a DeviceAuthorizationResponse>,
+    dev_auth_resp: &'a DeviceAuthorizationResponse,
     _phantom: PhantomData<(TE, TR, TT)>,
 }
 
@@ -1742,9 +1727,7 @@ where
         S: Fn(Duration) -> (),
         RE: Error + 'static,
     {
-        let details = self.device_authorization_details.ok_or_else(|| {
-            RequestTokenError::Other("no device authorization details provided".to_string())
-        })?;
+        let details = self.dev_auth_resp;
 
         let mut elapsed = Duration::new(0, 0);
         let mut interval = details.interval().clone();
@@ -1797,9 +1780,7 @@ where
         SF: Future<Output = ()>,
         RE: Error + 'static,
     {
-        let details = self.device_authorization_details.ok_or_else(|| {
-            RequestTokenError::Other("no device authorization details provided".to_string())
-        })?;
+        let details = self.dev_auth_resp;
 
         let mut elapsed = Duration::new(0, 0);
         let mut interval = details.interval().clone();
@@ -1842,10 +1823,6 @@ where
     where
         RE: Error + 'static,
     {
-        let details = self.device_authorization_details.ok_or_else(|| {
-            RequestTokenError::Other("no device authorization details provided".to_string())
-        })?;
-
         Ok(endpoint_request(
             self.auth_type,
             self.client_id,
@@ -1858,7 +1835,7 @@ where
                 .url(),
             vec![
                 ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-                ("device_code", details.device_code().secret()),
+                ("device_code", self.dev_auth_resp.device_code().secret()),
             ],
         ))
     }

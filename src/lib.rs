@@ -754,7 +754,6 @@ where
             client_secret: self.client_secret.as_ref(),
             extra_params: Vec::new(),
             scopes: Vec::new(),
-            token_url: self.token_url.as_ref(),
             device_authorization_url: self.device_authorization_url.as_ref(),
             _phantom: PhantomData,
         }
@@ -1560,7 +1559,6 @@ where
     client_secret: Option<&'a ClientSecret>,
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     scopes: Vec<Cow<'a, Scope>>,
-    token_url: Option<&'a TokenUrl>,
     device_authorization_url: Option<&'a DeviceAuthorizationUrl>,
     _phantom: PhantomData<TE>,
 }
@@ -1606,7 +1604,7 @@ where
         RE: Error + 'static,
     {
         Ok(endpoint_request(
-            &AuthType::RequestBody,
+            self.auth_type,
             self.client_id,
             None,
             &self.extra_params,

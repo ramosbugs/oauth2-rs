@@ -1507,7 +1507,7 @@ fn new_device_auth_details(expires_in: u32) -> DeviceAuthorizationResponse {
                 (CONTENT_TYPE, "application/x-www-form-urlencoded"),
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
-            "scope=openid&client_id=aaa&foo=bar",
+            "scope=openid&foo=bar",
             Some(device_auth_url.url().to_owned()),
             HttpResponse {
                 status_code: StatusCode::OK,

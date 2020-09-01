@@ -401,7 +401,7 @@
 //!     )
 //!     .set_device_authorization_details(details)
 //!     .exchange_device_access_token()
-//!     .request(http_client)?;
+//!     .request(http_client, std::thread::sleep)?;
 //!
 //! # Ok(())
 //! # }
@@ -1758,11 +1758,17 @@ where
     }
 
     ///
-    /// Synchronously polls the authorization server for a response.
+    /// Synchronously polls the authorization server for a response, waiting
+    /// using a user defined sleep function.
     ///
-    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    pub fn request<F, S, RE>(
+        self,
+        http_client: F,
+        sleep_fn: S,
+    ) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: Fn(HttpRequest) -> Result<HttpResponse, RE>,
+        S: Fn(Duration) -> (),
         RE: Error + 'static,
     {
         let details = self.device_authorization_details.ok_or_else(|| {
@@ -1799,8 +1805,8 @@ where
                 Err(DeviceCodeAction::NoFurtherRequests(req)) => break token_response(req),
             };
 
-            // Actually sleep here.
-            std::thread::sleep(interval);
+            // Sleep here using the provided sleep function.
+            sleep_fn(interval);
             elapsed = elapsed + interval;
         }
     }
@@ -1808,13 +1814,16 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub async fn request_async<C, F, RE>(
+    pub async fn request_async<C, F, S, SF, RE>(
         self,
         http_client: C,
+        sleep_fn: S,
     ) -> Result<TR, RequestTokenError<RE, TE>>
     where
         C: Fn(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
+        S: Fn(Duration) -> SF,
+        SF: Future<Output=()>,
         RE: Error + 'static,
     {
         let details = self.device_authorization_details.ok_or_else(|| {
@@ -1852,8 +1861,8 @@ where
                 Err(DeviceCodeAction::NoFurtherRequests(req)) => break token_response(req),
             };
 
-            // Use async-std to sleep asynchronously.
-            async_std::task::sleep(interval).await;
+            // Use the user-defined function to sleep asynchronously.
+            sleep_fn(interval).await;
             elapsed = elapsed + interval;
         }
     }

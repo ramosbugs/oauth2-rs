@@ -1562,7 +1562,8 @@ fn test_exchange_device_code_and_token() {
                 .to_string()
                 .into_bytes(),
             },
-        ))
+        ),
+        std::thread::sleep)
         .unwrap();
 
     assert_eq!("12/34", token.access_token().secret());
@@ -1614,7 +1615,8 @@ fn test_device_token_authorization_timeout() {
                 .to_string()
                 .into_bytes(),
             },
-        ))
+        ),
+        std::thread::sleep)
         .err()
         .unwrap();
     match token {

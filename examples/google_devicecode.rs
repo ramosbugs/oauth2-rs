@@ -67,7 +67,7 @@ fn main() {
     )
     .set_device_authorization_details(details)
     .exchange_device_access_token()
-    .request(http_client)
+    .request(http_client, std::thread::sleep)
     .expect("Failed to get token");
 
     println!("Google returned the following token:\n{:?}\n", token);

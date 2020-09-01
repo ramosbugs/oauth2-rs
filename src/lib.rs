@@ -1730,7 +1730,7 @@ where
         let details = self.dev_auth_resp;
 
         let mut elapsed = Duration::new(0, 0);
-        let mut interval = details.interval().clone();
+        let mut interval = details.interval();
 
         loop {
             if elapsed > details.expires_in() {
@@ -1783,7 +1783,7 @@ where
         let details = self.dev_auth_resp;
 
         let mut elapsed = Duration::new(0, 0);
-        let mut interval = details.interval().clone();
+        let mut interval = details.interval();
 
         loop {
             if elapsed > details.expires_in() {

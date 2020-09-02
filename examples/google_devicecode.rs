@@ -65,7 +65,7 @@ fn main() {
     // Now poll for the token
     let token = device_client
         .exchange_device_access_token(&details)
-        .request(http_client, std::thread::sleep)
+        .request(http_client, std::thread::sleep, None)
         .expect("Failed to get token");
 
     println!("Google returned the following token:\n{:?}\n", token);

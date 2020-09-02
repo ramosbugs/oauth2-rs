@@ -395,7 +395,7 @@
 //! let token_result =
 //!     client
 //!     .exchange_device_access_token(&details)
-//!     .request(http_client, std::thread::sleep)?;
+//!     .request(http_client, std::thread::sleep, None)?;
 //!
 //! # Ok(())
 //! # }
@@ -414,12 +414,14 @@
 //!
 //! - [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
 //!
+use chrono::{DateTime, Utc};
 use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 use std::marker::PhantomData;
+use std::sync::Arc;
 use std::time::Duration;
 
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
@@ -756,6 +758,7 @@ where
             extra_params: Vec::new(),
             token_url: self.token_url.as_ref(),
             dev_auth_resp: auth_response,
+            time_fn: Arc::new(Utc::now),
             _phantom: PhantomData,
         }
     }
@@ -1667,7 +1670,7 @@ fn device_token_action(
 ///
 /// See https://tools.ietf.org/html/rfc8628#section-3.4.
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct DeviceAccessTokenRequest<'a, TE, TR, TT>
 where
     TE: ErrorResponse,
@@ -1680,6 +1683,7 @@ where
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     token_url: Option<&'a TokenUrl>,
     dev_auth_resp: &'a DeviceAuthorizationResponse,
+    time_fn: Arc<dyn Fn() -> DateTime<Utc> + 'a + Send + Sync>,
     _phantom: PhantomData<(TE, TR, TT)>,
 }
 
@@ -1714,6 +1718,19 @@ where
     }
 
     ///
+    /// Specifies a function for returning the current time.
+    ///
+    /// This function is used while polling the authorization server.
+    ///
+    pub fn set_time_fn<T>(mut self, time_fn: T) -> Self
+    where
+        T: Fn() -> DateTime<Utc> + 'a + Send + Sync,
+    {
+        self.time_fn = Arc::new(time_fn);
+        self
+    }
+
+    ///
     /// Synchronously polls the authorization server for a response, waiting
     /// using a user defined sleep function.
     ///
@@ -1721,6 +1738,7 @@ where
         self,
         http_client: F,
         sleep_fn: S,
+        timeout: Option<Duration>,
     ) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: Fn(HttpRequest) -> Result<HttpResponse, RE>,
@@ -1729,11 +1747,23 @@ where
     {
         let details = self.dev_auth_resp;
 
-        let mut elapsed = Duration::new(0, 0);
+        // Calculate the request timeout - if the user specified a timeout,
+        // use that, otherwise use the value given by the device authorization
+        // response.
+        let timeout_dur = timeout.unwrap_or(details.expires_in());
+        let chrono_timeout = chrono::Duration::from_std(timeout_dur)
+            .map_err(|_| RequestTokenError::Other("Failed to convert duration".to_string()))?;
+
+        // Calculate the DateTime at which the request times out.
+        let timeout_dt = (*self.time_fn)().checked_add_signed(chrono_timeout).ok_or(
+            RequestTokenError::Other("Failed to calculate timeout".to_string()),
+        )?;
+
         let mut interval = details.interval();
 
         loop {
-            if elapsed > details.expires_in() {
+            let now = (*self.time_fn)();
+            if now > timeout_dt {
                 return Err(RequestTokenError::Other("Device code expired".to_string()));
             }
 
@@ -1761,7 +1791,6 @@ where
 
             // Sleep here using the provided sleep function.
             sleep_fn(interval);
-            elapsed = elapsed + interval;
         }
     }
 
@@ -1772,6 +1801,7 @@ where
         self,
         http_client: C,
         sleep_fn: S,
+        timeout: Option<Duration>,
     ) -> Result<TR, RequestTokenError<RE, TE>>
     where
         C: Fn(HttpRequest) -> F,
@@ -1782,11 +1812,23 @@ where
     {
         let details = self.dev_auth_resp;
 
-        let mut elapsed = Duration::new(0, 0);
+        // Calculate the request timeout - if the user specified a timeout,
+        // use that, otherwise use the value given by the device authorization
+        // response.
+        let timeout_dur = timeout.unwrap_or(details.expires_in());
+        let chrono_timeout = chrono::Duration::from_std(timeout_dur)
+            .map_err(|_| RequestTokenError::Other("Failed to convert duration".to_string()))?;
+
+        // Calculate the DateTime at which the request times out.
+        let timeout_dt = (*self.time_fn)().checked_add_signed(chrono_timeout).ok_or(
+            RequestTokenError::Other("Failed to calculate timeout".to_string()),
+        )?;
+
         let mut interval = details.interval();
 
         loop {
-            if elapsed > details.expires_in() {
+            let now = (*self.time_fn)();
+            if now > timeout_dt {
                 return Err(RequestTokenError::Other("Device code expired".to_string()));
             }
 
@@ -1815,7 +1857,6 @@ where
 
             // Use the user-defined function to sleep asynchronously.
             sleep_fn(interval).await;
-            elapsed = elapsed + interval;
         }
     }
 

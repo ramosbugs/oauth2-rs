@@ -1480,7 +1480,7 @@ fn test_secret_redaction() {
     assert_eq!("ClientSecret([redacted])", format!("{:?}", secret));
 }
 
-fn new_device_auth_details(expires_in: u32) -> DeviceAuthorizationResponse {
+fn new_device_auth_details(expires_in: u32) -> StandardDeviceAuthorizationResponse {
     let body = format!(
         "{{\
         \"device_code\": \"12345\", \
@@ -1714,12 +1714,13 @@ fn test_send_sync_impl() {
     is_sync_and_send::<EndUserVerificationUrl>();
     is_sync_and_send::<UserCode>();
     is_sync_and_send::<DeviceAuthorizationUrl>();
-    is_sync_and_send::<DeviceAuthorizationResponse>();
+    is_sync_and_send::<StandardDeviceAuthorizationResponse>();
     is_sync_and_send::<
         DeviceAccessTokenRequest<
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
             BasicTokenType,
+            EmptyExtraDeviceAuthorizationFields
         >,
     >();
     is_sync_and_send::<DeviceAuthorizationRequest<StandardErrorResponse<BasicErrorResponseType>>>();

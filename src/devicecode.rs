@@ -1,9 +1,9 @@
-use std::collections::HashMap;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
 
 use super::{
     DeviceCode, EndUserVerificationUrl, ErrorResponseType, StandardErrorResponse, UserCode,
@@ -19,10 +19,25 @@ fn default_devicecode_interval() -> u64 {
 }
 
 ///
+/// Trait for adding extra fields to the `DeviceAuthorizationResponse`.
+///
+pub trait ExtraDeviceAuthorizationFields: DeserializeOwned + Debug + Serialize {}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+///
+/// Empty (default) extra token fields.
+///
+pub struct EmptyExtraDeviceAuthorizationFields{}
+impl ExtraDeviceAuthorizationFields for EmptyExtraDeviceAuthorizationFields {}
+
+///
 /// Standard OAuth2 device authorization response.
 ///
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct DeviceAuthorizationResponse {
+pub struct DeviceAuthorizationResponse<EF>
+where
+    EF: ExtraDeviceAuthorizationFields
+{
     /// The device verification code.
     device_code: DeviceCode,
 
@@ -53,11 +68,14 @@ pub struct DeviceAuthorizationResponse {
     #[serde(default = "default_devicecode_interval")]
     interval: u64,
 
-    #[serde(flatten)]
-    extra_fields: HashMap<String, serde_json::Value>,
+    #[serde(bound = "EF: ExtraDeviceAuthorizationFields", flatten)]
+    extra_fields: EF,
 }
 
-impl DeviceAuthorizationResponse {
+impl<EF> DeviceAuthorizationResponse<EF>
+where
+    EF: ExtraDeviceAuthorizationFields
+{
     /// The device verification code.
     pub fn device_code(&self) -> &DeviceCode {
         return &self.device_code;
@@ -93,12 +111,13 @@ impl DeviceAuthorizationResponse {
     pub fn interval(&self) -> Duration {
         return Duration::from_secs(self.interval);
     }
-
-    /// Any extra fields that were added to the response.
-    pub fn extra_fields(&self) -> &HashMap<String, serde_json::Value> {
-        return &self.extra_fields;
-    }
 }
+
+///
+/// Standard implementation of DeviceAuthorizationResponse which throws away
+/// extra received response fields.
+///
+pub type StandardDeviceAuthorizationResponse = DeviceAuthorizationResponse<EmptyExtraDeviceAuthorizationFields>;
 
 ///
 /// The action that the device code flow should currently be taking.

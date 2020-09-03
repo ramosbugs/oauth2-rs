@@ -363,6 +363,7 @@
 //!     ClientSecret,
 //!     DeviceAuthorizationUrl,
 //!     Scope,
+//!     StandardDeviceAuthorizationResponse,
 //!     TokenResponse,
 //!     TokenUrl
 //! };
@@ -381,7 +382,7 @@
 //!     )
 //!     .set_device_authorization_url(device_auth_url);
 //!
-//! let details = client
+//! let details: StandardDeviceAuthorizationResponse = client
 //!     .exchange_device_code()
 //!     .add_scope(Scope::new("read".to_string()))
 //!     .request(http_client)?;
@@ -448,7 +449,8 @@ pub mod curl;
 /// ([RFC 8628](https://tools.ietf.org/html/rfc8628)).
 ///
 pub mod devicecode;
-use devicecode::{DeviceAuthorizationResponse, DeviceCodeAction, DeviceCodeErrorResponse};
+use devicecode::{DeviceAuthorizationResponse, DeviceCodeAction, DeviceCodeErrorResponse, ExtraDeviceAuthorizationFields};
+pub use devicecode::StandardDeviceAuthorizationResponse;
 
 ///
 /// Helper methods used by OAuth2 implementations/extensions.
@@ -744,12 +746,13 @@ where
     /// Perform a device access token request as per
     /// https://tools.ietf.org/html/rfc8628#section-3.4
     ///
-    pub fn exchange_device_access_token<'a, 'b>(
+    pub fn exchange_device_access_token<'a, 'b, EF>(
         &'a self,
-        auth_response: &'b DeviceAuthorizationResponse,
-    ) -> DeviceAccessTokenRequest<'b, TE, TR, TT>
+        auth_response: &'b DeviceAuthorizationResponse<EF>,
+    ) -> DeviceAccessTokenRequest<'b, TE, TR, TT, EF>
     where
         'a: 'b,
+        EF: ExtraDeviceAuthorizationFields
     {
         DeviceAccessTokenRequest {
             auth_type: &self.auth_type,
@@ -1610,13 +1613,14 @@ where
     ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
-    pub fn request<F, RE>(
+    pub fn request<F, RE, EF>(
         self,
         http_client: F,
-    ) -> Result<DeviceAuthorizationResponse, RequestTokenError<RE, TE>>
+    ) -> Result<DeviceAuthorizationResponse<EF>, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,
+        EF: ExtraDeviceAuthorizationFields
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
@@ -1626,14 +1630,15 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
-    pub async fn request_async<C, F, RE>(
+    pub async fn request_async<C, F, RE, EF>(
         self,
         http_client: C,
-    ) -> Result<DeviceAuthorizationResponse, RequestTokenError<RE, TE>>
+    ) -> Result<DeviceAuthorizationResponse<EF>, RequestTokenError<RE, TE>>
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
+        EF: ExtraDeviceAuthorizationFields
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)
@@ -1671,27 +1676,29 @@ fn device_token_action(
 /// See https://tools.ietf.org/html/rfc8628#section-3.4.
 ///
 #[derive(Clone)]
-pub struct DeviceAccessTokenRequest<'a, TE, TR, TT>
+pub struct DeviceAccessTokenRequest<'a, TE, TR, TT, EF>
 where
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
+    EF: ExtraDeviceAuthorizationFields
 {
     auth_type: &'a AuthType,
     client_id: &'a ClientId,
     client_secret: Option<&'a ClientSecret>,
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     token_url: Option<&'a TokenUrl>,
-    dev_auth_resp: &'a DeviceAuthorizationResponse,
+    dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
     time_fn: Arc<dyn Fn() -> DateTime<Utc> + 'a + Send + Sync>,
-    _phantom: PhantomData<(TE, TR, TT)>,
+    _phantom: PhantomData<(TE, TR, TT, EF)>,
 }
 
-impl<'a, TE, TR, TT> DeviceAccessTokenRequest<'a, TE, TR, TT>
+impl<'a, TE, TR, TT, EF> DeviceAccessTokenRequest<'a, TE, TR, TT, EF>
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
+    EF: ExtraDeviceAuthorizationFields
 {
     ///
     /// Appends an extra param to the token request.

@@ -17,7 +17,16 @@ use oauth2::basic::BasicClient;
 // Alternatively, this can be oauth2::curl::http_client or a custom.
 use oauth2::reqwest::http_client;
 use oauth2::{AuthType, AuthUrl, ClientId, ClientSecret, DeviceAuthorizationUrl, Scope, TokenUrl};
+use oauth2::devicecode::{DeviceAuthorizationResponse, ExtraDeviceAuthorizationFields};
 use std::env;
+use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct StoringFields(HashMap<String, serde_json::Value>);
+
+impl ExtraDeviceAuthorizationFields for StoringFields {}
+type StoringDeviceAuthorizationResponse = DeviceAuthorizationResponse<StoringFields>;
 
 fn main() {
     let google_client_id = ClientId::new(
@@ -49,7 +58,7 @@ fn main() {
     .set_auth_type(AuthType::RequestBody);
 
     // Request the set of codes from the Device Authorization endpoint.
-    let details = device_client
+    let details: StoringDeviceAuthorizationResponse = device_client
         .exchange_device_code()
         .add_scope(Scope::new("profile".to_string()))
         .request(http_client)

@@ -32,6 +32,9 @@ pub struct DeviceAuthorizationResponse {
     /// The end-user verification URI on the authorization The URI should be
     /// short and easy to remember as end users will be asked to manually type
     /// it into their user agent.
+    ///
+    /// The `verification_url` alias here is a deviation from the RFC, as
+    /// implementations of device code flow predate RFC 8628.
     #[serde(alias = "verification_url")]
     verification_uri: EndUserVerificationUrl,
 

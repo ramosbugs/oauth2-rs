@@ -15,12 +15,12 @@
 
 use oauth2::basic::BasicClient;
 // Alternatively, this can be oauth2::curl::http_client or a custom.
+use oauth2::devicecode::{DeviceAuthorizationResponse, ExtraDeviceAuthorizationFields};
 use oauth2::reqwest::http_client;
 use oauth2::{AuthType, AuthUrl, ClientId, ClientSecret, DeviceAuthorizationUrl, Scope, TokenUrl};
-use oauth2::devicecode::{DeviceAuthorizationResponse, ExtraDeviceAuthorizationFields};
-use std::env;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
+use std::env;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct StoringFields(HashMap<String, serde_json::Value>);

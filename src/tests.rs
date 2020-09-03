@@ -1720,7 +1720,7 @@ fn test_send_sync_impl() {
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
             BasicTokenType,
-            EmptyExtraDeviceAuthorizationFields
+            EmptyExtraDeviceAuthorizationFields,
         >,
     >();
     is_sync_and_send::<DeviceAuthorizationRequest<StandardErrorResponse<BasicErrorResponseType>>>();

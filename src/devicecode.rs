@@ -2,8 +2,8 @@ use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 use super::{
     DeviceCode, EndUserVerificationUrl, ErrorResponseType, StandardErrorResponse, UserCode,
@@ -27,7 +27,7 @@ pub trait ExtraDeviceAuthorizationFields: DeserializeOwned + Debug + Serialize {
 ///
 /// Empty (default) extra token fields.
 ///
-pub struct EmptyExtraDeviceAuthorizationFields{}
+pub struct EmptyExtraDeviceAuthorizationFields {}
 impl ExtraDeviceAuthorizationFields for EmptyExtraDeviceAuthorizationFields {}
 
 ///
@@ -36,7 +36,7 @@ impl ExtraDeviceAuthorizationFields for EmptyExtraDeviceAuthorizationFields {}
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeviceAuthorizationResponse<EF>
 where
-    EF: ExtraDeviceAuthorizationFields
+    EF: ExtraDeviceAuthorizationFields,
 {
     /// The device verification code.
     device_code: DeviceCode,
@@ -74,7 +74,7 @@ where
 
 impl<EF> DeviceAuthorizationResponse<EF>
 where
-    EF: ExtraDeviceAuthorizationFields
+    EF: ExtraDeviceAuthorizationFields,
 {
     /// The device verification code.
     pub fn device_code(&self) -> &DeviceCode {
@@ -117,7 +117,8 @@ where
 /// Standard implementation of DeviceAuthorizationResponse which throws away
 /// extra received response fields.
 ///
-pub type StandardDeviceAuthorizationResponse = DeviceAuthorizationResponse<EmptyExtraDeviceAuthorizationFields>;
+pub type StandardDeviceAuthorizationResponse =
+    DeviceAuthorizationResponse<EmptyExtraDeviceAuthorizationFields>;
 
 ///
 /// The action that the device code flow should currently be taking.

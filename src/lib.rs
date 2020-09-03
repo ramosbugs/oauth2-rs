@@ -449,8 +449,11 @@ pub mod curl;
 /// ([RFC 8628](https://tools.ietf.org/html/rfc8628)).
 ///
 pub mod devicecode;
-use devicecode::{DeviceAuthorizationResponse, DeviceCodeAction, DeviceCodeErrorResponse, ExtraDeviceAuthorizationFields};
 pub use devicecode::StandardDeviceAuthorizationResponse;
+use devicecode::{
+    DeviceAuthorizationResponse, DeviceCodeAction, DeviceCodeErrorResponse,
+    ExtraDeviceAuthorizationFields,
+};
 
 ///
 /// Helper methods used by OAuth2 implementations/extensions.
@@ -752,7 +755,7 @@ where
     ) -> DeviceAccessTokenRequest<'b, TE, TR, TT, EF>
     where
         'a: 'b,
-        EF: ExtraDeviceAuthorizationFields
+        EF: ExtraDeviceAuthorizationFields,
     {
         DeviceAccessTokenRequest {
             auth_type: &self.auth_type,
@@ -1620,7 +1623,7 @@ where
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,
-        EF: ExtraDeviceAuthorizationFields
+        EF: ExtraDeviceAuthorizationFields,
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
@@ -1638,7 +1641,7 @@ where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
-        EF: ExtraDeviceAuthorizationFields
+        EF: ExtraDeviceAuthorizationFields,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)
@@ -1681,7 +1684,7 @@ where
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
-    EF: ExtraDeviceAuthorizationFields
+    EF: ExtraDeviceAuthorizationFields,
 {
     auth_type: &'a AuthType,
     client_id: &'a ClientId,
@@ -1698,7 +1701,7 @@ where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
-    EF: ExtraDeviceAuthorizationFields
+    EF: ExtraDeviceAuthorizationFields,
 {
     ///
     /// Appends an extra param to the token request.

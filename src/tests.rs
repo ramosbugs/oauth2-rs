@@ -1717,14 +1717,12 @@ fn test_send_sync_impl() {
     is_sync_and_send::<StandardDeviceAuthorizationResponse>();
     is_sync_and_send::<
         DeviceAccessTokenRequest<
-            StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
             BasicTokenType,
             EmptyExtraDeviceAuthorizationFields,
         >,
     >();
     is_sync_and_send::<DeviceAuthorizationRequest<StandardErrorResponse<BasicErrorResponseType>>>();
-    is_sync_and_send::<DeviceCodeAction<HttpResponse>>();
     is_sync_and_send::<DeviceCodeErrorResponseType>();
     is_sync_and_send::<DeviceCodeErrorResponse>();
 

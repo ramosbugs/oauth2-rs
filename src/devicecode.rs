@@ -1,12 +1,15 @@
+use std::error::Error;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
+use std::marker::PhantomData;
 use std::time::Duration;
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    DeviceCode, EndUserVerificationUrl, ErrorResponseType, StandardErrorResponse, UserCode,
+    DeviceCode, EndUserVerificationUrl, ErrorResponse, ErrorResponseType, RequestTokenError,
+    StandardErrorResponse, TokenResponse, TokenType, UserCode,
 };
 use crate::basic::BasicErrorResponseType;
 use crate::types::VerificationUriComplete;
@@ -121,36 +124,6 @@ pub type StandardDeviceAuthorizationResponse =
     DeviceAuthorizationResponse<EmptyExtraDeviceAuthorizationFields>;
 
 ///
-/// The action that the device code flow should currently be taking.
-///
-#[derive(Debug, thiserror::Error)]
-pub(crate) enum DeviceCodeAction<T: Debug> {
-    ///
-    /// Retry the current request, waiting for the current interval value.
-    ///
-    #[error("Request failed, retry after waiting")]
-    Retry,
-    ///
-    /// Increase the interval by 5 seconds as per
-    /// https://tools.ietf.org/html/rfc8628#section-3.5, then retry the current
-    /// request.
-    ///
-    #[error("Request failed, increase interval then retry after waiting")]
-    IncreaseIntervalThenRetry,
-    ///
-    /// Double the interval to back off the server on a failure, then retry the
-    /// current request.
-    ///
-    #[error("Request failed, double interval then retry after waiting")]
-    DoubleIntervalThenRetry,
-    ///
-    /// Do not do any more requests.
-    ///
-    #[error("Request failed")]
-    NoFurtherRequests(T),
-}
-
-///
 /// Basic access token error types.
 ///
 /// These error types are defined in
@@ -249,16 +222,43 @@ impl Display for DeviceCodeErrorResponseType {
 ///
 pub type DeviceCodeErrorResponse = StandardErrorResponse<DeviceCodeErrorResponseType>;
 
-impl DeviceCodeErrorResponse {
-    ///
-    /// Convert a device code error response to the next action that should
-    /// be taken.
-    ///
-    pub(crate) fn to_action<T: Debug>(&self, req: T) -> DeviceCodeAction<T> {
-        match &self.error {
-            DeviceCodeErrorResponseType::AuthorizationPending => DeviceCodeAction::Retry,
-            DeviceCodeErrorResponseType::SlowDown => DeviceCodeAction::IncreaseIntervalThenRetry,
-            _ => DeviceCodeAction::NoFurtherRequests(req),
+pub(crate) struct DeviceAccessResult<TR, RE, TE, TT>
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    RE: Error + 'static,
+{
+    res: Result<TR, RequestTokenError<RE, TE>>,
+    _phantom: PhantomData<TT>,
+}
+
+impl<TR, RE, TE, TT> DeviceAccessResult<TR, RE, TE, TT>
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    RE: Error + 'static,
+{
+    pub fn new(res: Result<TR, RequestTokenError<RE, TE>>) -> Self {
+        Self {
+            res,
+            _phantom: PhantomData,
         }
     }
+
+    pub fn result(self) -> Result<TR, RequestTokenError<RE, TE>> {
+        self.res
+    }
+}
+
+pub(crate) enum DeviceAccessTokenPollResult<TR, RE, TE, TT>
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    RE: Error + 'static,
+{
+    ContinueWithNewPollInterval(Duration),
+    Done(DeviceAccessResult<TR, RE, TE, TT>),
 }

@@ -451,8 +451,8 @@ pub mod curl;
 pub mod devicecode;
 pub use devicecode::StandardDeviceAuthorizationResponse;
 use devicecode::{
-    DeviceAuthorizationResponse, DeviceCodeAction, DeviceCodeErrorResponse,
-    ExtraDeviceAuthorizationFields,
+    DeviceAccessResult, DeviceAccessTokenPollResult, DeviceAuthorizationResponse,
+    DeviceCodeErrorResponse, DeviceCodeErrorResponseType, ExtraDeviceAuthorizationFields,
 };
 
 ///
@@ -752,7 +752,7 @@ where
     pub fn exchange_device_access_token<'a, 'b, EF>(
         &'a self,
         auth_response: &'b DeviceAuthorizationResponse<EF>,
-    ) -> DeviceAccessTokenRequest<'b, TE, TR, TT, EF>
+    ) -> DeviceAccessTokenRequest<'b, TR, TT, EF>
     where
         'a: 'b,
         EF: ExtraDeviceAuthorizationFields,
@@ -1652,36 +1652,13 @@ where
 }
 
 ///
-/// Maps from an HTTP response to a DeviceCodeAction, as some HTTP responses
-/// indicate that further request attempts should be made.
-///
-fn device_token_action(
-    http_response: HttpResponse,
-) -> Result<HttpResponse, DeviceCodeAction<HttpResponse>> {
-    if http_response.status_code != StatusCode::OK {
-        let reason = http_response.body.as_slice();
-        if reason.is_empty() {
-            Err(DeviceCodeAction::NoFurtherRequests(http_response))
-        } else {
-            match serde_json::from_slice::<DeviceCodeErrorResponse>(reason) {
-                Ok(error) => Err(error.to_action(http_response)),
-                Err(_) => Err(DeviceCodeAction::NoFurtherRequests(http_response)),
-            }
-        }
-    } else {
-        Ok(http_response)
-    }
-}
-
-///
 /// The request for an device access token from the authorization server.
 ///
 /// See https://tools.ietf.org/html/rfc8628#section-3.4.
 ///
 #[derive(Clone)]
-pub struct DeviceAccessTokenRequest<'a, TE, TR, TT, EF>
+pub struct DeviceAccessTokenRequest<'a, TR, TT, EF>
 where
-    TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
     EF: ExtraDeviceAuthorizationFields,
@@ -1693,12 +1670,11 @@ where
     token_url: Option<&'a TokenUrl>,
     dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
     time_fn: Arc<dyn Fn() -> DateTime<Utc> + 'a + Send + Sync>,
-    _phantom: PhantomData<(TE, TR, TT, EF)>,
+    _phantom: PhantomData<(TR, TT, EF)>,
 }
 
-impl<'a, TE, TR, TT, EF> DeviceAccessTokenRequest<'a, TE, TR, TT, EF>
+impl<'a, TR, TT, EF> DeviceAccessTokenRequest<'a, TR, TT, EF>
 where
-    TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
     EF: ExtraDeviceAuthorizationFields,
@@ -1749,7 +1725,7 @@ where
         http_client: F,
         sleep_fn: S,
         timeout: Option<Duration>,
-    ) -> Result<TR, RequestTokenError<RE, TE>>
+    ) -> Result<TR, RequestTokenError<RE, DeviceCodeErrorResponse>>
     where
         F: Fn(HttpRequest) -> Result<HttpResponse, RE>,
         S: Fn(Duration) -> (),
@@ -1771,33 +1747,19 @@ where
 
         let mut interval = details.interval();
 
+        // Loop while requesting a token.
         loop {
             let now = (*self.time_fn)();
             if now > timeout_dt {
-                return Err(RequestTokenError::Other("Device code expired".to_string()));
+                break Err(RequestTokenError::Other("Device code expired".to_string()));
             }
 
-            // Prepare the request.
-            match http_client(self.prepare_request()?)
-                .map_err(|_| DeviceCodeAction::DoubleIntervalThenRetry)
-                .and_then(device_token_action)
-            {
-                Ok(http_response) => break endpoint_response(http_response),
-                Err(DeviceCodeAction::Retry) => {
-                    // Wait for the current interval.
+            match self.process_response(http_client(self.prepare_request()?), interval) {
+                DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
+                    interval = new_interval
                 }
-                Err(DeviceCodeAction::IncreaseIntervalThenRetry) => {
-                    // Increase the interval, then wait that long.
-                    interval = interval + Duration::from_secs(5);
-                }
-                Err(DeviceCodeAction::DoubleIntervalThenRetry) => {
-                    // Double the interval, then wait that long.
-                    interval = interval.checked_mul(2).ok_or(RequestTokenError::Other(
-                        "Failed to increase interval".to_string(),
-                    ))?;
-                }
-                Err(DeviceCodeAction::NoFurtherRequests(req)) => break endpoint_response(req),
-            };
+                DeviceAccessTokenPollResult::Done(res) => break res.result(),
+            }
 
             // Sleep here using the provided sleep function.
             sleep_fn(interval);
@@ -1812,7 +1774,7 @@ where
         http_client: C,
         sleep_fn: S,
         timeout: Option<Duration>,
-    ) -> Result<TR, RequestTokenError<RE, TE>>
+    ) -> Result<TR, RequestTokenError<RE, DeviceCodeErrorResponse>>
     where
         C: Fn(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
@@ -1836,41 +1798,28 @@ where
 
         let mut interval = details.interval();
 
+        // Loop while requesting a token.
         loop {
             let now = (*self.time_fn)();
             if now > timeout_dt {
-                return Err(RequestTokenError::Other("Device code expired".to_string()));
+                break Err(RequestTokenError::Other("Device code expired".to_string()));
             }
 
-            // Prepare the request.
-            match http_client(self.prepare_request()?)
-                .await
-                .map_err(|_| DeviceCodeAction::DoubleIntervalThenRetry)
-                .and_then(device_token_action)
-            {
-                Ok(http_response) => break endpoint_response(http_response),
-                Err(DeviceCodeAction::Retry) => {
-                    // Wait for the current interval.
+            match self.process_response(http_client(self.prepare_request()?).await, interval) {
+                DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
+                    interval = new_interval
                 }
-                Err(DeviceCodeAction::IncreaseIntervalThenRetry) => {
-                    // Increase the interval, then wait that long.
-                    interval = interval + Duration::from_secs(5);
-                }
-                Err(DeviceCodeAction::DoubleIntervalThenRetry) => {
-                    // Double the interval, then wait that long.
-                    interval = interval.checked_mul(2).ok_or(RequestTokenError::Other(
-                        "Failed to increase interval".to_string(),
-                    ))?;
-                }
-                Err(DeviceCodeAction::NoFurtherRequests(req)) => break endpoint_response(req),
-            };
+                DeviceAccessTokenPollResult::Done(res) => break res.result(),
+            }
 
-            // Use the user-defined function to sleep asynchronously.
-            sleep_fn(interval).await;
+            // Sleep here using the provided sleep function.
+            sleep_fn(interval);
         }
     }
 
-    fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    fn prepare_request<RE>(
+        &self,
+    ) -> Result<HttpRequest, RequestTokenError<RE, DeviceCodeErrorResponse>>
     where
         RE: Error + 'static,
     {
@@ -1889,6 +1838,53 @@ where
                 ("device_code", self.dev_auth_resp.device_code().secret()),
             ],
         ))
+    }
+
+    fn process_response<RE>(
+        &self,
+        res: Result<HttpResponse, RE>,
+        current_interval: Duration,
+    ) -> DeviceAccessTokenPollResult<TR, RE, DeviceCodeErrorResponse, TT>
+    where
+        RE: Error + 'static,
+    {
+        let http_response = match res {
+            Ok(inner) => inner,
+            Err(_) => {
+                // Try and double the current interval. If that fails, just use the current one.
+                let new_interval = current_interval.checked_mul(2).unwrap_or(current_interval);
+                return DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval);
+            }
+        };
+
+        // Explicitly process the response with a DeviceCodeErrorResponse
+        let res = endpoint_response::<RE, DeviceCodeErrorResponse, TR>(http_response);
+        match res {
+            // On a ServerResponse error, the error needs inspecting as a DeviceCodeErrorResponse
+            // to work out whether a retry needs to happen.
+            Err(RequestTokenError::ServerResponse(dcer)) => {
+                match dcer.error() {
+                    // On AuthorizationPending, a retry needs to happen with the same poll interval.
+                    DeviceCodeErrorResponseType::AuthorizationPending => {
+                        DeviceAccessTokenPollResult::ContinueWithNewPollInterval(current_interval)
+                    }
+                    // On SlowDown, a retry needs to happen with a larger poll interval.
+                    DeviceCodeErrorResponseType::SlowDown => {
+                        DeviceAccessTokenPollResult::ContinueWithNewPollInterval(
+                            current_interval + Duration::from_secs(5),
+                        )
+                    }
+
+                    // On any other error, just return the error.
+                    _ => DeviceAccessTokenPollResult::Done(DeviceAccessResult::new(Err(
+                        RequestTokenError::ServerResponse(dcer),
+                    ))),
+                }
+            }
+
+            // On any other success or failure, return the failure.
+            res => DeviceAccessTokenPollResult::Done(DeviceAccessResult::new(res)),
+        }
     }
 }
 

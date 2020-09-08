@@ -451,8 +451,8 @@ pub mod curl;
 pub mod devicecode;
 pub use devicecode::StandardDeviceAuthorizationResponse;
 use devicecode::{
-    DeviceAccessResult, DeviceAccessTokenPollResult, DeviceAuthorizationResponse,
-    DeviceCodeErrorResponse, DeviceCodeErrorResponseType, ExtraDeviceAuthorizationFields,
+    DeviceAccessTokenPollResult, DeviceAuthorizationResponse, DeviceCodeErrorResponse,
+    DeviceCodeErrorResponseType, ExtraDeviceAuthorizationFields,
 };
 
 ///
@@ -1758,7 +1758,7 @@ where
                 DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
                     interval = new_interval
                 }
-                DeviceAccessTokenPollResult::Done(res) => break res.result(),
+                DeviceAccessTokenPollResult::Done(res, _) => break res,
             }
 
             // Sleep here using the provided sleep function.
@@ -1809,7 +1809,7 @@ where
                 DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
                     interval = new_interval
                 }
-                DeviceAccessTokenPollResult::Done(res) => break res.result(),
+                DeviceAccessTokenPollResult::Done(res, _) => break res,
             }
 
             // Sleep here using the provided sleep function.
@@ -1876,14 +1876,15 @@ where
                     }
 
                     // On any other error, just return the error.
-                    _ => DeviceAccessTokenPollResult::Done(DeviceAccessResult::new(Err(
-                        RequestTokenError::ServerResponse(dcer),
-                    ))),
+                    _ => DeviceAccessTokenPollResult::Done(
+                        Err(RequestTokenError::ServerResponse(dcer)),
+                        PhantomData,
+                    ),
                 }
             }
 
             // On any other success or failure, return the failure.
-            res => DeviceAccessTokenPollResult::Done(DeviceAccessResult::new(res)),
+            res => DeviceAccessTokenPollResult::Done(res, PhantomData),
         }
     }
 }

@@ -227,36 +227,6 @@ impl Display for DeviceCodeErrorResponseType {
 ///
 pub type DeviceCodeErrorResponse = StandardErrorResponse<DeviceCodeErrorResponseType>;
 
-pub(crate) struct DeviceAccessResult<TR, RE, TE, TT>
-where
-    TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    RE: Error + 'static,
-{
-    res: Result<TR, RequestTokenError<RE, TE>>,
-    _phantom: PhantomData<TT>,
-}
-
-impl<TR, RE, TE, TT> DeviceAccessResult<TR, RE, TE, TT>
-where
-    TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    RE: Error + 'static,
-{
-    pub fn new(res: Result<TR, RequestTokenError<RE, TE>>) -> Self {
-        Self {
-            res,
-            _phantom: PhantomData,
-        }
-    }
-
-    pub fn result(self) -> Result<TR, RequestTokenError<RE, TE>> {
-        self.res
-    }
-}
-
 pub(crate) enum DeviceAccessTokenPollResult<TR, RE, TE, TT>
 where
     TE: ErrorResponse + 'static,
@@ -265,5 +235,5 @@ where
     RE: Error + 'static,
 {
     ContinueWithNewPollInterval(Duration),
-    Done(DeviceAccessResult<TR, RE, TE, TT>),
+    Done(Result<TR, RequestTokenError<RE, TE>>, PhantomData<TT>),
 }

@@ -1545,9 +1545,7 @@ fn mock_time_fn() -> impl Fn() -> DateTime<Utc> + Send + Sync {
 }
 
 /// Mock sleep function that doesn't actually sleep.
-fn mock_sleep_fn(dur: Duration) {
-    println!("Mock sleep for {:?}", dur);
-}
+fn mock_sleep_fn(_: Duration) {}
 
 #[test]
 fn test_exchange_device_code_and_token() {
@@ -1782,10 +1780,10 @@ fn mock_http_client_success_fail(
     num_failures: usize,
     success_response: HttpResponse,
 ) -> impl Fn(HttpRequest) -> Result<HttpResponse, FakeError> {
-    let mut responses: Vec<HttpResponse> = std::iter::repeat(failure_response)
+    let responses: Vec<HttpResponse> = std::iter::repeat(failure_response)
         .take(num_failures)
+        .chain(std::iter::once(success_response))
         .collect();
-    responses.push(success_response);
     let sync_responses = std::sync::Mutex::new(responses);
 
     move |request: HttpRequest| {

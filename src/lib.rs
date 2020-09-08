@@ -363,11 +363,11 @@
 //!     ClientSecret,
 //!     DeviceAuthorizationUrl,
 //!     Scope,
-//!     StandardDeviceAuthorizationResponse,
 //!     TokenResponse,
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
+//! use oauth2::devicecode::StandardDeviceAuthorizationResponse;
 //! use oauth2::reqwest::http_client;
 //! use url::Url;
 //!
@@ -449,7 +449,6 @@ pub mod curl;
 /// ([RFC 8628](https://tools.ietf.org/html/rfc8628)).
 ///
 pub mod devicecode;
-pub use devicecode::StandardDeviceAuthorizationResponse;
 use devicecode::{
     DeviceAccessTokenPollResult, DeviceAuthorizationResponse, DeviceCodeErrorResponse,
     DeviceCodeErrorResponseType, ExtraDeviceAuthorizationFields,

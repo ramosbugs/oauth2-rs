@@ -114,6 +114,11 @@ where
     pub fn interval(&self) -> Duration {
         Duration::from_secs(self.interval)
     }
+
+    /// Any extra fields returned on the response.
+    pub fn extra_fields(&self) -> &EF {
+        &self.extra_fields
+    }
 }
 
 ///

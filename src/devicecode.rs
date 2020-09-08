@@ -81,38 +81,38 @@ where
 {
     /// The device verification code.
     pub fn device_code(&self) -> &DeviceCode {
-        return &self.device_code;
+        &self.device_code
     }
 
     /// The end-user verification code.
     pub fn user_code(&self) -> &UserCode {
-        return &self.user_code;
+        &self.user_code
     }
 
     /// The end-user verification URI on the authorization The URI should be
     /// short and easy to remember as end users will be asked to manually type
     /// it into their user agent.
     pub fn verification_uri(&self) -> &EndUserVerificationUrl {
-        return &self.verification_uri;
+        &self.verification_uri
     }
 
     /// A verification URI that includes the "user_code" (or other information
     /// with the same function as the "user_code"), which is designed for
     /// non-textual transmission.
     pub fn verification_uri_complete(&self) -> Option<&VerificationUriComplete> {
-        return self.verification_uri_complete.as_ref();
+        self.verification_uri_complete.as_ref()
     }
 
     /// The lifetime in seconds of the "device_code" and "user_code".
     pub fn expires_in(&self) -> Duration {
-        return Duration::from_secs(self.expires_in);
+        Duration::from_secs(self.expires_in)
     }
 
     /// The minimum amount of time in seconds that the client SHOULD wait
     /// between polling requests to the token endpoint.  If no value is
     /// provided, clients MUST use 5 as the default.
     pub fn interval(&self) -> Duration {
-        return Duration::from_secs(self.interval);
+        Duration::from_secs(self.interval)
     }
 }
 

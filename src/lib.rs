@@ -1730,21 +1730,9 @@ where
         S: Fn(Duration),
         RE: Error + 'static,
     {
-        let details = self.dev_auth_resp;
-
-        // Calculate the request timeout - if the user specified a timeout,
-        // use that, otherwise use the value given by the device authorization
-        // response.
-        let timeout_dur = timeout.unwrap_or_else(|| details.expires_in());
-        let chrono_timeout = chrono::Duration::from_std(timeout_dur)
-            .map_err(|_| RequestTokenError::Other("Failed to convert duration".to_string()))?;
-
-        // Calculate the DateTime at which the request times out.
-        let timeout_dt = (*self.time_fn)()
-            .checked_add_signed(chrono_timeout)
-            .ok_or_else(|| RequestTokenError::Other("Failed to calculate timeout".to_string()))?;
-
-        let mut interval = details.interval();
+        // Get the request timeout and starting interval
+        let timeout_dt = self.compute_timeout(timeout)?;
+        let mut interval = self.dev_auth_resp.interval();
 
         // Loop while requesting a token.
         loop {
@@ -1781,21 +1769,9 @@ where
         SF: Future<Output = ()>,
         RE: Error + 'static,
     {
-        let details = self.dev_auth_resp;
-
-        // Calculate the request timeout - if the user specified a timeout,
-        // use that, otherwise use the value given by the device authorization
-        // response.
-        let timeout_dur = timeout.unwrap_or_else(|| details.expires_in());
-        let chrono_timeout = chrono::Duration::from_std(timeout_dur)
-            .map_err(|_| RequestTokenError::Other("Failed to convert duration".to_string()))?;
-
-        // Calculate the DateTime at which the request times out.
-        let timeout_dt = (*self.time_fn)()
-            .checked_add_signed(chrono_timeout)
-            .ok_or_else(|| RequestTokenError::Other("Failed to calculate timeout".to_string()))?;
-
-        let mut interval = details.interval();
+        // Get the request timeout and starting interval
+        let timeout_dt = self.compute_timeout(timeout)?;
+        let mut interval = self.dev_auth_resp.interval();
 
         // Loop while requesting a token.
         loop {
@@ -1885,6 +1861,28 @@ where
             // On any other success or failure, return the failure.
             res => DeviceAccessTokenPollResult::Done(res, PhantomData),
         }
+    }
+
+    fn compute_timeout<RE>(
+        &self,
+        timeout: Option<Duration>,
+    ) -> Result<DateTime<Utc>, RequestTokenError<RE, DeviceCodeErrorResponse>>
+    where
+        RE: Error + 'static,
+    {
+        // Calculate the request timeout - if the user specified a timeout,
+        // use that, otherwise use the value given by the device authorization
+        // response.
+        let timeout_dur = timeout.unwrap_or_else(|| self.dev_auth_resp.expires_in());
+        let chrono_timeout = chrono::Duration::from_std(timeout_dur)
+            .map_err(|_| RequestTokenError::Other("Failed to convert duration".to_string()))?;
+
+        // Calculate the DateTime at which the request times out.
+        let timeout_dt = (*self.time_fn)()
+            .checked_add_signed(chrono_timeout)
+            .ok_or_else(|| RequestTokenError::Other("Failed to calculate timeout".to_string()))?;
+
+        Ok(timeout_dt)
     }
 }
 

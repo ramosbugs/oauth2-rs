@@ -748,10 +748,10 @@ where
     /// Perform a device access token request as per
     /// https://tools.ietf.org/html/rfc8628#section-3.4
     ///
-    pub fn exchange_device_access_token<'a, 'b, EF>(
+    pub fn exchange_device_access_token<'a, 'b, 'c, EF>(
         &'a self,
         auth_response: &'b DeviceAuthorizationResponse<EF>,
-    ) -> DeviceAccessTokenRequest<'b, TR, TT, EF>
+    ) -> DeviceAccessTokenRequest<'b, 'c, TR, TT, EF>
     where
         'a: 'b,
         EF: ExtraDeviceAuthorizationFields,
@@ -1656,7 +1656,7 @@ where
 /// See https://tools.ietf.org/html/rfc8628#section-3.4.
 ///
 #[derive(Clone)]
-pub struct DeviceAccessTokenRequest<'a, TR, TT, EF>
+pub struct DeviceAccessTokenRequest<'a, 'b, TR, TT, EF>
 where
     TR: TokenResponse<TT>,
     TT: TokenType,
@@ -1668,11 +1668,11 @@ where
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     token_url: Option<&'a TokenUrl>,
     dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
-    time_fn: Arc<dyn Fn() -> DateTime<Utc> + 'a + Send + Sync>,
+    time_fn: Arc<dyn Fn() -> DateTime<Utc> + 'b + Send + Sync>,
     _phantom: PhantomData<(TR, TT, EF)>,
 }
 
-impl<'a, TR, TT, EF> DeviceAccessTokenRequest<'a, TR, TT, EF>
+impl<'a, 'b, TR, TT, EF> DeviceAccessTokenRequest<'a, 'b, TR, TT, EF>
 where
     TR: TokenResponse<TT>,
     TT: TokenType,
@@ -1709,7 +1709,7 @@ where
     ///
     pub fn set_time_fn<T>(mut self, time_fn: T) -> Self
     where
-        T: Fn() -> DateTime<Utc> + 'a + Send + Sync,
+        T: Fn() -> DateTime<Utc> + 'b + Send + Sync,
     {
         self.time_fn = Arc::new(time_fn);
         self

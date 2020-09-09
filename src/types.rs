@@ -347,6 +347,18 @@ new_url_type![
     ///
     RedirectUrl
 ];
+new_url_type![
+    ///
+    /// URL of the client's device authorization endpoint.
+    ///
+    DeviceAuthorizationUrl
+];
+new_url_type![
+    ///
+    /// URL of the end-user verification URI on the authorization server.
+    ///
+    EndUserVerificationUrl
+];
 new_type![
     ///
     /// Authorization endpoint response (grant) type defined in
@@ -546,4 +558,27 @@ new_secret_type![
     ///
     #[derive(Clone)]
     ResourceOwnerPassword(String)
+];
+new_secret_type![
+    ///
+    /// Device code returned by the device authorization endpoint and used to query the token endpoint.
+    ///
+    #[derive(Clone, Deserialize, Serialize)]
+    DeviceCode(String)
+];
+new_secret_type![
+    ///
+    /// Verification URI returned by the device authorization endpoint and visited by the user
+    /// to authorize.  Contains the user code.
+    ///
+    #[derive(Clone, Deserialize, Serialize)]
+    VerificationUriComplete(String)
+];
+new_secret_type![
+    ///
+    /// User code returned by the device authorization endpoint and used by the user to authorize at
+    /// the verification URI.
+    ///
+    #[derive(Clone, Deserialize, Serialize)]
+    UserCode(String)
 ];

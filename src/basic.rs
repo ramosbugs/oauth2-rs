@@ -117,7 +117,7 @@ pub enum BasicErrorResponseType {
     Extension(String),
 }
 impl BasicErrorResponseType {
-    fn from_str(s: &str) -> Self {
+    pub(crate) fn from_str(s: &str) -> Self {
         match s {
             "invalid_client" => BasicErrorResponseType::InvalidClient,
             "invalid_grant" => BasicErrorResponseType::InvalidGrant,

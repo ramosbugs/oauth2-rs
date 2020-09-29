@@ -428,7 +428,7 @@ impl PkceCodeChallenge {
     }
 
     ///
-    /// Generate a new random, base64-encoded SHA-256 PKCE code.
+    /// Generate a new random, base64-encoded SHA-256 PKCE challenge code and verifier.
     ///
     /// # Arguments
     ///
@@ -442,19 +442,37 @@ impl PkceCodeChallenge {
     /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
     ///
     pub fn new_random_sha256_len(num_bytes: u32) -> (Self, PkceCodeVerifier) {
+        let code_verifier = Self::new_random_len(num_bytes);
+        (
+            Self::from_code_verifier_sha256(&code_verifier),
+            code_verifier,
+        )
+    }
+
+    ///
+    /// Generate a new random, base64-encoded PKCE code verifier.
+    ///
+    /// # Arguments
+    ///
+    /// * `num_bytes` - Number of random bytes to generate, prior to base64-encoding.
+    ///   The value must be in the range 32 to 96 inclusive in order to generate a verifier
+    ///   with a suitable length.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if the resulting PKCE code verifier is not of a suitable length
+    /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    fn new_random_len(num_bytes: u32) -> PkceCodeVerifier {
         // The RFC specifies that the code verifier must have "a minimum length of 43
         // characters and a maximum length of 128 characters".
         // This implies 32-96 octets of random data to be base64 encoded.
         assert!(num_bytes >= 32 && num_bytes <= 96);
         let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
-        let code_verifier = PkceCodeVerifier::new(base64::encode_config(
+        PkceCodeVerifier::new(base64::encode_config(
             &random_bytes,
             base64::URL_SAFE_NO_PAD,
-        ));
-        (
-            Self::from_code_verifier_sha256(&code_verifier),
-            code_verifier,
-        )
+        ))
     }
 
     ///
@@ -476,6 +494,47 @@ impl PkceCodeChallenge {
         Self {
             code_challenge,
             code_challenge_method: PkceCodeChallengeMethod::new("S256".to_string()),
+        }
+    }
+
+    ///
+    /// Generate a new random, base64-encoded PKCE code.
+    /// Use is discouraged unless the endpoint does not support SHA-256.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if the supplied PKCE code verifier is not of a suitable length
+    /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    #[cfg(feature = "pkce-plain")]
+    pub fn new_random_plain() -> (Self, PkceCodeVerifier) {
+        let code_verifier = Self::new_random_len(32);
+        (
+            Self::from_code_verifier_plain(&code_verifier),
+            code_verifier,
+        )
+    }
+
+    ///
+    /// Generate a plain PKCE code challenge from the supplied PKCE code verifier.
+    /// Use is discouraged unless the endpoint does not support SHA-256.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if the supplied PKCE code verifier is not of a suitable length
+    /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    #[cfg(feature = "pkce-plain")]
+    pub fn from_code_verifier_plain(code_verifier: &PkceCodeVerifier) -> Self {
+        // The RFC specifies that the code verifier must have "a minimum length of 43
+        // characters and a maximum length of 128 characters".
+        assert!(code_verifier.secret().len() >= 43 && code_verifier.secret().len() <= 128);
+
+        let code_challenge = code_verifier.secret().clone();
+
+        Self {
+            code_challenge,
+            code_challenge_method: PkceCodeChallengeMethod::new("plain".to_string()),
         }
     }
 

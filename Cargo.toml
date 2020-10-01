@@ -16,6 +16,7 @@ maintenance = { status = "actively-developed" }
 
 [features]
 default = ["reqwest-010"]
+pkce-plain = []
 reqwest-010 = ["reqwest-0-10"]
 
 [dependencies]

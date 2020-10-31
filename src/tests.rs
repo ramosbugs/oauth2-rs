@@ -1082,6 +1082,7 @@ mod colorful_extension {
         StandardErrorResponse<ColorfulErrorResponseType>,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
+        StandardTokenInspectionResponse<ColorfulFields, ColorfulTokenType>
     >;
 
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -1373,6 +1374,7 @@ mod custom_errors {
         CustomErrorResponse,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
+        StandardTokenInspectionResponse<ColorfulFields, ColorfulTokenType>
     >;
 }
 
@@ -1984,6 +1986,7 @@ fn test_send_sync_impl() {
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
             BasicTokenType,
+            StandardTokenInspectionResponse<EmptyExtraTokenFields, BasicTokenType>
         >,
     >();
     is_sync_and_send::<

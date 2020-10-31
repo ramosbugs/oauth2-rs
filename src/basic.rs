@@ -5,11 +5,12 @@ use super::{
     Client, EmptyExtraTokenFields, ErrorResponseType, RequestTokenError, StandardErrorResponse,
     StandardTokenResponse, TokenType,
 };
+use crate::StandardTokenInspectionResponse;
 
 ///
 /// Basic OAuth2 client specialization, suitable for most applications.
 ///
-pub type BasicClient = Client<BasicErrorResponse, BasicTokenResponse, BasicTokenType>;
+pub type BasicClient = Client<BasicErrorResponse, BasicTokenResponse, BasicTokenType, BasicTokenInspectionResponse>;
 
 ///
 /// Basic OAuth2 authorization token types.
@@ -72,6 +73,11 @@ impl TokenType for BasicTokenType {}
 /// Basic OAuth2 token response.
 ///
 pub type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>;
+
+///
+/// Basic OAuth2 token inspection response.
+///
+pub type BasicTokenInspectionResponse = StandardTokenInspectionResponse<EmptyExtraTokenFields, BasicTokenType>;
 
 ///
 /// Basic access token error types.

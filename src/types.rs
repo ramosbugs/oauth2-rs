@@ -349,6 +349,12 @@ new_url_type![
 ];
 new_url_type![
     ///
+    /// URL of the client's introspect endpoint.
+    ///
+    IntrospectUrl
+];
+new_url_type![
+    ///
     /// URL of the client's device authorization endpoint.
     ///
     DeviceAuthorizationUrl

@@ -1469,7 +1469,7 @@ impl<'a, TE, TIR, TT> IntrospectRequest<'a, TE, TIR, TT>
     ///      field are defined in the "OAuth Token Type Hints" registry defined
     ///      in OAuth Token Revocation [RFC7009](https://tools.ietf.org/html/rfc7009).
     ///
-    pub fn set_token_type_hint<N, V>(mut self, value: V) -> Self
+    pub fn set_token_type_hint<V>(mut self, value: V) -> Self
         where
             V: Into<Cow<'a, str>>,
     {
@@ -2348,7 +2348,7 @@ pub trait TokenInspectionResponse<TT>: Debug + DeserializeOwned + Serialize
     /// identifiers representing the intended audience for this token, as
     /// defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     ///
-    fn aud(&self) -> Option<&String>;
+    fn aud(&self) -> Option<&Vec<String>>;
     ///
     /// OPTIONAL.  String representing the issuer of this token, as
     /// defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
@@ -2379,6 +2379,7 @@ pub struct StandardTokenInspectionResponse<EF, TT>
     #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
     #[serde(serialize_with = "helpers::serialize_space_delimited_vec")]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "none_field")]
     scopes: Option<Vec<Scope>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default = "none_field")]
@@ -2408,7 +2409,8 @@ pub struct StandardTokenInspectionResponse<EF, TT>
     sub: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default = "none_field")]
-    aud: Option<String>,
+    #[serde(deserialize_with = "helpers::deserialize_optional_string_or_vec_string")]
+    aud: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default = "none_field")]
     iss: Option<String>,
@@ -2509,7 +2511,7 @@ impl<EF, TT> StandardTokenInspectionResponse<EF, TT>
     ///
     /// Sets the `set_aud` field.
     ///
-    pub fn set_aud(&mut self, aud: Option<String>) {
+    pub fn set_aud(&mut self, aud: Option<Vec<String>>) {
         self.aud = aud;
     }
     ///
@@ -2572,7 +2574,7 @@ impl<EF, TT> TokenInspectionResponse<TT> for StandardTokenInspectionResponse<EF,
         self.sub.as_ref()
     }
 
-    fn aud(&self) -> Option<&String> {
+    fn aud(&self) -> Option<&Vec<String>> {
         self.aud.as_ref()
     }
 

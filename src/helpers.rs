@@ -1,8 +1,8 @@
-use serde::{ser, de};
 use serde::ser::{Impossible, SerializeStructVariant, SerializeTupleVariant};
+use serde::{de, ser};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::marker::PhantomData;
 use std::fmt;
+use std::marker::PhantomData;
 
 ///
 /// Serde case-insensitive deserializer for an untagged `enum`.
@@ -110,8 +110,11 @@ where
 ///
 /// Deserializes a string or array of strings into an array of strings
 ///
-pub fn deserialize_optional_string_or_vec_string<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
-    where D: Deserializer<'de>
+pub fn deserialize_optional_string_or_vec_string<'de, D>(
+    deserializer: D,
+) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: Deserializer<'de>,
 {
     struct StringOrVec(PhantomData<Vec<String>>);
 
@@ -123,23 +126,29 @@ pub fn deserialize_optional_string_or_vec_string<'de, D>(deserializer: D) -> Res
         }
 
         fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-            where E: de::Error
+        where
+            E: de::Error,
         {
             Ok(Some(vec![value.to_owned()]))
         }
 
         fn visit_none<E>(self) -> Result<Self::Value, E>
-            where E: de::Error, {
+        where
+            E: de::Error,
+        {
             Ok(None)
         }
 
-        fn visit_unit<E>(self) -> Result<Self::Value, E> where
-            E: de::Error, {
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
             Ok(None)
         }
 
         fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
-            where S: de::SeqAccess<'de>
+        where
+            S: de::SeqAccess<'de>,
         {
             Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor)).map(Some)
         }

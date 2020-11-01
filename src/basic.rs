@@ -10,7 +10,8 @@ use crate::StandardTokenInspectionResponse;
 ///
 /// Basic OAuth2 client specialization, suitable for most applications.
 ///
-pub type BasicClient = Client<BasicErrorResponse, BasicTokenResponse, BasicTokenType, BasicTokenInspectionResponse>;
+pub type BasicClient =
+    Client<BasicErrorResponse, BasicTokenResponse, BasicTokenType, BasicTokenInspectionResponse>;
 
 ///
 /// Basic OAuth2 authorization token types.
@@ -77,7 +78,8 @@ pub type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields, Basic
 ///
 /// Basic OAuth2 token inspection response.
 ///
-pub type BasicTokenInspectionResponse = StandardTokenInspectionResponse<EmptyExtraTokenFields, BasicTokenType>;
+pub type BasicTokenInspectionResponse =
+    StandardTokenInspectionResponse<EmptyExtraTokenFields, BasicTokenType>;
 
 ///
 /// Basic access token error types.

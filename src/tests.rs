@@ -1083,7 +1083,7 @@ mod colorful_extension {
         StandardErrorResponse<ColorfulErrorResponseType>,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
-        StandardTokenInspectionResponse<ColorfulFields, ColorfulTokenType>
+        StandardTokenInspectionResponse<ColorfulFields, ColorfulTokenType>,
     >;
 
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -1375,7 +1375,7 @@ mod custom_errors {
         CustomErrorResponse,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
-        StandardTokenInspectionResponse<ColorfulFields, ColorfulTokenType>
+        StandardTokenInspectionResponse<ColorfulFields, ColorfulTokenType>,
     >;
 }
 
@@ -1485,20 +1485,26 @@ pub struct ObjectWithOpionalStringOrVecString {
 
 #[test]
 fn test_deserialize_optional_string_or_vec_string_none() {
-    let list_of_strings: ObjectWithOpionalStringOrVecString = serde_json::from_str(r#"{ "strings": null }"#).unwrap();
+    let list_of_strings: ObjectWithOpionalStringOrVecString =
+        serde_json::from_str(r#"{ "strings": null }"#).unwrap();
     assert_eq!(None, list_of_strings.strings);
 }
 
 #[test]
 fn test_deserialize_optional_string_or_vec_string_single_value() {
-    let list_of_strings: ObjectWithOpionalStringOrVecString = serde_json::from_str(r#"{ "strings": "v1" }"#).unwrap();
+    let list_of_strings: ObjectWithOpionalStringOrVecString =
+        serde_json::from_str(r#"{ "strings": "v1" }"#).unwrap();
     assert_eq!(Some(vec!["v1".to_string()]), list_of_strings.strings);
 }
 
 #[test]
 fn test_deserialize_optional_string_or_vec_string_vec() {
-    let list_of_strings: ObjectWithOpionalStringOrVecString = serde_json::from_str(r#"{ "strings": ["v1", "v2"] }"#).unwrap();
-    assert_eq!(Some(vec!["v1".to_string(), "v2".to_string()]), list_of_strings.strings);
+    let list_of_strings: ObjectWithOpionalStringOrVecString =
+        serde_json::from_str(r#"{ "strings": ["v1", "v2"] }"#).unwrap();
+    assert_eq!(
+        Some(vec!["v1".to_string(), "v2".to_string()]),
+        list_of_strings.strings
+    );
 }
 
 #[test]
@@ -1524,13 +1530,13 @@ fn test_token_introspection_successful_with_basic_auth_minimal_response() {
                     CONTENT_TYPE,
                     HeaderValue::from_str("application/json").unwrap(),
                 )]
-                    .into_iter()
-                    .collect(),
+                .into_iter()
+                .collect(),
                 body: "{\
                        \"active\": true\
                        }"
-                    .to_string()
-                    .into_bytes(),
+                .to_string()
+                .into_bytes(),
             },
         ))
         .unwrap();
@@ -1573,8 +1579,8 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
                     CONTENT_TYPE,
                     HeaderValue::from_str("application/json").unwrap(),
                 )]
-                    .into_iter()
-                    .collect(),
+                .into_iter()
+                .collect(),
                 body: r#"{
                     "active": true,
                     "scope": "email profile",
@@ -1589,14 +1595,20 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
                     "iss": "http://127.0.0.1:8080/auth/realms/test-realm",
                     "jti": "be1b7da2-fc18-47b3-bdf1-7a4f50bcf53f"
                 }"#
-                    .to_string()
-                    .into_bytes(),
+                .to_string()
+                .into_bytes(),
             },
         ))
         .unwrap();
 
     assert_eq!(true, introspect.active);
-    assert_eq!(Some(vec![Scope::new("email".to_string()), Scope::new("profile".to_string())]), introspect.scopes);
+    assert_eq!(
+        Some(vec![
+            Scope::new("email".to_string()),
+            Scope::new("profile".to_string())
+        ]),
+        introspect.scopes
+    );
     assert_eq!(Some(ClientId::new("aaa".to_string())), introspect.client_id);
     assert_eq!(Some("demo".to_string()), introspect.username);
     assert_eq!(Some(BasicTokenType::Bearer), introspect.token_type);
@@ -1605,8 +1617,14 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
     assert_eq!(Some(Utc.timestamp(1604073317, 0)), introspect.nbf);
     assert_eq!(Some("demo".to_string()), introspect.sub);
     assert_eq!(Some(vec!["demo".to_string()]), introspect.aud);
-    assert_eq!(Some("http://127.0.0.1:8080/auth/realms/test-realm".to_string()), introspect.iss);
-    assert_eq!(Some("be1b7da2-fc18-47b3-bdf1-7a4f50bcf53f".to_string()), introspect.jti);
+    assert_eq!(
+        Some("http://127.0.0.1:8080/auth/realms/test-realm".to_string()),
+        introspect.iss
+    );
+    assert_eq!(
+        Some("be1b7da2-fc18-47b3-bdf1-7a4f50bcf53f".to_string()),
+        introspect.jti
+    );
 }
 
 #[test]
@@ -2119,7 +2137,7 @@ fn test_send_sync_impl() {
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
             BasicTokenType,
-            StandardTokenInspectionResponse<EmptyExtraTokenFields, BasicTokenType>
+            StandardTokenInspectionResponse<EmptyExtraTokenFields, BasicTokenType>,
         >,
     >();
     is_sync_and_send::<

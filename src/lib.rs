@@ -415,8 +415,8 @@
 //!
 //! - [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
 //!
-use chrono::{DateTime, Utc};
 use chrono::serde::ts_seconds_option;
+use chrono::{DateTime, Utc};
 use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::Error as FormatterError;
@@ -532,7 +532,7 @@ where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
-    TIR: TokenInspectionResponse<TT>
+    TIR: TokenInspectionResponse<TT>,
 {
     ///
     /// Initializes an OAuth2 client with the fields common to most OAuth2 flows.
@@ -1431,10 +1431,10 @@ where
 ///
 #[derive(Debug)]
 pub struct IntrospectRequest<'a, TE, TIR, TT>
-    where
-        TE: ErrorResponse,
-        TIR: TokenInspectionResponse<TT>,
-        TT: TokenType,
+where
+    TE: ErrorResponse,
+    TIR: TokenInspectionResponse<TT>,
+    TT: TokenType,
 {
     token: &'a AccessToken,
     token_type_hint: Option<Cow<'a, str>>,
@@ -1449,10 +1449,10 @@ pub struct IntrospectRequest<'a, TE, TIR, TT>
 }
 
 impl<'a, TE, TIR, TT> IntrospectRequest<'a, TE, TIR, TT>
-    where
-        TE: ErrorResponse + 'static,
-        TIR: TokenInspectionResponse<TT>,
-        TT: TokenType,
+where
+    TE: ErrorResponse + 'static,
+    TIR: TokenInspectionResponse<TT>,
+    TT: TokenType,
 {
     ///
     /// Sets the optional token_type_hint parameter
@@ -1470,8 +1470,8 @@ impl<'a, TE, TIR, TT> IntrospectRequest<'a, TE, TIR, TT>
     ///      in OAuth Token Revocation [RFC7009](https://tools.ietf.org/html/rfc7009).
     ///
     pub fn set_token_type_hint<V>(mut self, value: V) -> Self
-        where
-            V: Into<Cow<'a, str>>,
+    where
+        V: Into<Cow<'a, str>>,
     {
         self.token_type_hint = Some(value.into());
 
@@ -1494,21 +1494,19 @@ impl<'a, TE, TIR, TT> IntrospectRequest<'a, TE, TIR, TT>
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
     ///
     pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
-        where
-            N: Into<Cow<'a, str>>,
-            V: Into<Cow<'a, str>>,
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
     {
         self.extra_params.push((name.into(), value.into()));
         self
     }
 
     fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
-        where
-            RE: Error + 'static,
+    where
+        RE: Error + 'static,
     {
-        let mut params: Vec<(&str, &str)> = vec![
-            ("token", self.token.secret()),
-        ];
+        let mut params: Vec<(&str, &str)> = vec![("token", self.token.secret())];
         if let Some(ref token_type_hint) = self.token_type_hint {
             params.push(("token_type_hint", token_type_hint));
         }
@@ -1531,9 +1529,9 @@ impl<'a, TE, TIR, TT> IntrospectRequest<'a, TE, TIR, TT>
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
     pub fn request<F, RE>(self, http_client: F) -> Result<TIR, RequestTokenError<RE, TE>>
-        where
-            F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-            RE: Error + 'static,
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
+        RE: Error + 'static,
     {
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
@@ -1547,10 +1545,10 @@ impl<'a, TE, TIR, TT> IntrospectRequest<'a, TE, TIR, TT>
         self,
         http_client: C,
     ) -> Result<TIR, RequestTokenError<RE, TE>>
-        where
-            C: FnOnce(HttpRequest) -> F,
-            F: Future<Output = Result<HttpResponse, RE>>,
-            RE: Error + 'static,
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        RE: Error + 'static,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)
@@ -1559,7 +1557,6 @@ impl<'a, TE, TIR, TT> IntrospectRequest<'a, TE, TIR, TT>
         endpoint_response(http_response)
     }
 }
-
 
 #[allow(clippy::too_many_arguments)]
 fn endpoint_request<'a>(
@@ -2278,8 +2275,8 @@ where
 /// such as supporting interoperability with non-standards-complaint OAuth2 providers.
 ///
 pub trait TokenInspectionResponse<TT>: Debug + DeserializeOwned + Serialize
-    where
-        TT: TokenType,
+where
+    TT: TokenType,
 {
     ///
     /// REQUIRED.  Boolean indicator of whether or not the presented token
@@ -2370,9 +2367,9 @@ pub trait TokenInspectionResponse<TT>: Debug + DeserializeOwned + Serialize
 ///
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StandardTokenInspectionResponse<EF, TT>
-    where
-        EF: ExtraTokenFields,
-        TT: TokenType + 'static,
+where
+    EF: ExtraTokenFields,
+    TT: TokenType + 'static,
 {
     active: bool,
     #[serde(rename = "scope")]
@@ -2428,9 +2425,9 @@ fn none_field<T>() -> Option<T> {
 }
 
 impl<EF, TT> StandardTokenInspectionResponse<EF, TT>
-    where
-        EF: ExtraTokenFields,
-        TT: TokenType,
+where
+    EF: ExtraTokenFields,
+    TT: TokenType,
 {
     ///
     /// Instantiate a new OAuth2 token introspection response.
@@ -2450,7 +2447,7 @@ impl<EF, TT> StandardTokenInspectionResponse<EF, TT>
             aud: None,
             iss: None,
             jti: None,
-            extra_fields
+            extra_fields,
         }
     }
 
@@ -2534,9 +2531,9 @@ impl<EF, TT> StandardTokenInspectionResponse<EF, TT>
     }
 }
 impl<EF, TT> TokenInspectionResponse<TT> for StandardTokenInspectionResponse<EF, TT>
-    where
-        EF: ExtraTokenFields,
-        TT: TokenType,
+where
+    EF: ExtraTokenFields,
+    TT: TokenType,
 {
     fn active(&self) -> bool {
         self.active

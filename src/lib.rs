@@ -495,6 +495,7 @@ const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";
 /// [Section 2.3.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-2.3.1).
 ///
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub enum AuthType {
     /// The client_id and client_secret will be included as part of the request body.
     RequestBody,

@@ -7,19 +7,19 @@ rust:
 sudo: false
 #cache: cargo
 before_script:
-  - cargo install --force cargo-audit
   - cargo install --force cargo-when
+  - cargo when -c stable install --force cargo-audit
   - rustup component add clippy
   - rustup component add rustfmt
 script:
-  - cargo when -v =1.41.0 clippy --all --all-features -- --deny warnings
-  - cargo when -v =1.41.0 fmt --all -- --check
+  - cargo when -c stable clippy --all --all-features -- --deny warnings
+  - cargo when -c stable fmt --all -- --check
   - cargo test --tests --examples
   - cargo test --doc
   - cargo test --all-features
   # Curl without reqwest (examples will not build)
   - cargo test --tests --features curl --no-default-features
-  - cargo audit
+  - cargo when -c stable audit
 notifications:
   email:
     on_success: never

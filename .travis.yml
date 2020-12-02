@@ -8,17 +8,20 @@ sudo: false
 #cache: cargo
 before_script:
   - cargo install --force cargo-when
-  - cargo when --equals TRAVIS_RUST_VERSION=stable install --force cargo-audit
-  - rustup component add clippy
-  - rustup component add rustfmt
+  - |
+    if [ "$TRAVIS_RUST_VERSION" == "stable" ]; then
+      rustup component add clippy
+      rustup component add rustfmt
+      cargo install --force cargo-audit
+    fi
 script:
-  - cargo when --equals TRAVIS_RUST_VERSION=stable clippy --all --all-features -- --deny warnings
-  - cargo when --equals TRAVIS_RUST_VERSION=stable fmt --all -- --check
   - cargo test --tests --examples
   - cargo test --doc
   - cargo test --all-features
   # Curl without reqwest (examples will not build)
   - cargo test --tests --features curl --no-default-features
+  - cargo when --equals TRAVIS_RUST_VERSION=stable fmt --all -- --check
+  - cargo when --equals TRAVIS_RUST_VERSION=stable clippy --all --all-features -- --deny warnings
   - cargo when --equals TRAVIS_RUST_VERSION=stable audit
 notifications:
   email:

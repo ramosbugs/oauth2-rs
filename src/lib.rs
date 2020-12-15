@@ -512,6 +512,7 @@ where
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
+    TIR: TokenInspectionResponse<TT>,
 {
     client_id: ClientId,
     client_secret: Option<ClientSecret>,
@@ -2309,7 +2310,7 @@ where
     /// OPTIONAL.  Human-readable identifier for the resource owner who
     /// authorized this token.
     ///
-    fn username(&self) -> Option<&String>;
+    fn username(&self) -> Option<&str>;
     ///
     /// OPTIONAL.  Type of the token as defined in [Section 5.1](https://tools.ietf.org/html/rfc7662#section-5.1) of OAuth
     /// 2.0 [RFC6749].
@@ -2321,25 +2322,25 @@ where
     /// since January 1 1970 UTC, indicating when this token will expire,
     /// as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     ///
-    fn exp(&self) -> Option<&DateTime<Utc>>;
+    fn exp(&self) -> Option<DateTime<Utc>>;
     ///
     /// OPTIONAL.  Integer timestamp, measured in the number of seconds
     /// since January 1 1970 UTC, indicating when this token was
     /// originally issued, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     ///
-    fn iat(&self) -> Option<&DateTime<Utc>>;
+    fn iat(&self) -> Option<DateTime<Utc>>;
     ///
     /// OPTIONAL.  Integer timestamp, measured in the number of seconds
     /// since January 1 1970 UTC, indicating when this token is not to be
     /// used before, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     ///
-    fn nbf(&self) -> Option<&DateTime<Utc>>;
+    fn nbf(&self) -> Option<DateTime<Utc>>;
     ///
     /// OPTIONAL.  Subject of the token, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     /// Usually a machine-readable identifier of the resource owner who
     /// authorized this token.
     ///
-    fn sub(&self) -> Option<&String>;
+    fn sub(&self) -> Option<&str>;
     ///
     /// OPTIONAL.  Service-specific string identifier or list of string
     /// identifiers representing the intended audience for this token, as
@@ -2350,12 +2351,12 @@ where
     /// OPTIONAL.  String representing the issuer of this token, as
     /// defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     ///
-    fn iss(&self) -> Option<&String>;
+    fn iss(&self) -> Option<&str>;
     ///
     /// OPTIONAL.  String identifier for the token, as defined in JWT
     /// [RFC7519](https://tools.ietf.org/html/rfc7519).
     ///
-    fn jti(&self) -> Option<&String>;
+    fn jti(&self) -> Option<&str>;
 }
 
 ///
@@ -2379,10 +2380,8 @@ where
     #[serde(default = "none_field")]
     scopes: Option<Vec<Scope>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default = "none_field")]
     client_id: Option<ClientId>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default = "none_field")]
     username: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(bound = "TT: TokenType")]
@@ -2402,17 +2401,14 @@ where
     #[serde(default = "none_field")]
     nbf: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default = "none_field")]
     sub: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default = "none_field")]
     #[serde(deserialize_with = "helpers::deserialize_optional_string_or_vec_string")]
     aud: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default = "none_field")]
     iss: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default = "none_field")]
     jti: Option<String>,
 
     #[serde(bound = "EF: ExtraTokenFields")]
@@ -2547,40 +2543,40 @@ where
         self.client_id.as_ref()
     }
 
-    fn username(&self) -> Option<&String> {
-        self.username.as_ref()
+    fn username(&self) -> Option<&str> {
+        self.username.as_deref()
     }
 
     fn token_type(&self) -> Option<&TT> {
         self.token_type.as_ref()
     }
 
-    fn exp(&self) -> Option<&DateTime<Utc>> {
-        self.exp.as_ref()
+    fn exp(&self) -> Option<DateTime<Utc>> {
+        self.exp
     }
 
-    fn iat(&self) -> Option<&DateTime<Utc>> {
-        self.iat.as_ref()
+    fn iat(&self) -> Option<DateTime<Utc>> {
+        self.iat
     }
 
-    fn nbf(&self) -> Option<&DateTime<Utc>> {
-        self.nbf.as_ref()
+    fn nbf(&self) -> Option<DateTime<Utc>> {
+        self.nbf
     }
 
-    fn sub(&self) -> Option<&String> {
-        self.sub.as_ref()
+    fn sub(&self) -> Option<&str> {
+        self.sub.as_deref()
     }
 
     fn aud(&self) -> Option<&Vec<String>> {
         self.aud.as_ref()
     }
 
-    fn iss(&self) -> Option<&String> {
-        self.iss.as_ref()
+    fn iss(&self) -> Option<&str> {
+        self.iss.as_deref()
     }
 
-    fn jti(&self) -> Option<&String> {
-        self.jti.as_ref()
+    fn jti(&self) -> Option<&str> {
+        self.jti.as_deref()
     }
 }
 

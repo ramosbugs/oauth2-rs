@@ -415,6 +415,7 @@
 //!
 //! - [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
 //!
+use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};
 use std::borrow::Cow;
 use std::error::Error;
@@ -479,7 +480,7 @@ pub use url;
 
 pub use types::{
     AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
-    DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl, PkceCodeChallenge,
+    DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl, IntrospectUrl, PkceCodeChallenge,
     PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
     ResourceOwnerUsername, ResponseType, Scope, TokenUrl, UserCode,
 };
@@ -507,11 +508,12 @@ pub enum AuthType {
 /// Stores the configuration for an OAuth2 client.
 ///
 #[derive(Clone, Debug)]
-pub struct Client<TE, TR, TT>
+pub struct Client<TE, TR, TT, TIR>
 where
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
+    TIR: TokenInspectionResponse<TT>,
 {
     client_id: ClientId,
     client_secret: Option<ClientSecret>,
@@ -519,17 +521,20 @@ where
     auth_type: AuthType,
     token_url: Option<TokenUrl>,
     redirect_url: Option<RedirectUrl>,
+    introspect_url: Option<IntrospectUrl>,
     device_authorization_url: Option<DeviceAuthorizationUrl>,
     phantom_te: PhantomData<TE>,
     phantom_tr: PhantomData<TR>,
     phantom_tt: PhantomData<TT>,
+    phantom_tir: PhantomData<TIR>,
 }
 
-impl<TE, TR, TT> Client<TE, TR, TT>
+impl<TE, TR, TT, TIR> Client<TE, TR, TT, TIR>
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
+    TIR: TokenInspectionResponse<TT>,
 {
     ///
     /// Initializes an OAuth2 client with the fields common to most OAuth2 flows.
@@ -564,10 +569,12 @@ where
             auth_type: AuthType::BasicAuth,
             token_url,
             redirect_url: None,
+            introspect_url: None,
             device_authorization_url: None,
             phantom_te: PhantomData,
             phantom_tr: PhantomData,
             phantom_tt: PhantomData,
+            phantom_tir: PhantomData,
         }
     }
 
@@ -589,6 +596,15 @@ where
     ///
     pub fn set_redirect_url(mut self, redirect_url: RedirectUrl) -> Self {
         self.redirect_url = Some(redirect_url);
+
+        self
+    }
+
+    ///
+    /// Sets the introspect URL used by the introspect endpoint.
+    ///
+    pub fn set_introspection_url(mut self, introspect_url: IntrospectUrl) -> Self {
+        self.introspect_url = Some(introspect_url);
 
         self
     }
@@ -765,6 +781,27 @@ where
             token_url: self.token_url.as_ref(),
             dev_auth_resp: auth_response,
             time_fn: Arc::new(Utc::now),
+            _phantom: PhantomData,
+        }
+    }
+
+    ///
+    /// Exchanges a code produced by a successful authorization process with an access token.
+    ///
+    /// Acquires ownership of the `code` because authorization codes may only be used once to
+    /// retrieve an access token from the authorization server.
+    ///
+    /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
+    ///
+    pub fn introspect<'a>(&'a self, token: &'a AccessToken) -> IntrospectRequest<'a, TE, TIR, TT> {
+        IntrospectRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            introspect_url: self.introspect_url.as_ref(),
+            token,
+            token_type_hint: None,
             _phantom: PhantomData,
         }
     }
@@ -1386,6 +1423,140 @@ where
                 .url(),
             vec![("grant_type", "client_credentials")],
         ))
+    }
+}
+
+///
+/// A request to introspect an access token.
+///
+/// See https://tools.ietf.org/html/rfc7662#section-2.1
+///
+#[derive(Debug)]
+pub struct IntrospectRequest<'a, TE, TIR, TT>
+where
+    TE: ErrorResponse,
+    TIR: TokenInspectionResponse<TT>,
+    TT: TokenType,
+{
+    token: &'a AccessToken,
+    token_type_hint: Option<Cow<'a, str>>,
+
+    auth_type: &'a AuthType,
+    client_id: &'a ClientId,
+    client_secret: Option<&'a ClientSecret>,
+    extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    introspect_url: Option<&'a IntrospectUrl>,
+
+    _phantom: PhantomData<(TE, TIR, TT)>,
+}
+
+impl<'a, TE, TIR, TT> IntrospectRequest<'a, TE, TIR, TT>
+where
+    TE: ErrorResponse + 'static,
+    TIR: TokenInspectionResponse<TT>,
+    TT: TokenType,
+{
+    ///
+    /// Sets the optional token_type_hint parameter
+    ///
+    /// See: https://tools.ietf.org/html/rfc7662#section-2.1
+    ///
+    /// OPTIONAL.  A hint about the type of the token submitted for
+    ///       introspection.  The protected resource MAY pass this parameter to
+    ///       help the authorization server optimize the token lookup.  If the
+    ///       server is unable to locate the token using the given hint, it MUST
+    ///      extend its search across all of its supported token types.  An
+    ///      authorization server MAY ignore this parameter, particularly if it
+    ///      is able to detect the token type automatically.  Values for this
+    ///      field are defined in the "OAuth Token Type Hints" registry defined
+    ///      in OAuth Token Revocation [RFC7009](https://tools.ietf.org/html/rfc7009).
+    ///
+    pub fn set_token_type_hint<V>(mut self, value: V) -> Self
+    where
+        V: Into<Cow<'a, str>>,
+    {
+        self.token_type_hint = Some(value.into());
+
+        self
+    }
+
+    ///
+    /// Appends an extra param to the token introspect.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7662](https://tools.ietf.org/html/rfc7662).
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should follow the security recommendations for any OAuth2 extensions used with
+    /// this function, which are beyond the scope of
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
+    ///
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
+    {
+        self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Error + 'static,
+    {
+        let mut params: Vec<(&str, &str)> = vec![("token", self.token.secret())];
+        if let Some(ref token_type_hint) = self.token_type_hint {
+            params.push(("token_type_hint", token_type_hint));
+        }
+
+        Ok(endpoint_request(
+            self.auth_type,
+            self.client_id,
+            self.client_secret,
+            &self.extra_params,
+            None,
+            None,
+            self.introspect_url
+                .ok_or_else(|| RequestTokenError::Other("no introspect_url provided".to_string()))?
+                .url(),
+            params,
+        ))
+    }
+
+    ///
+    /// Synchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request<F, RE>(self, http_client: F) -> Result<TIR, RequestTokenError<RE, TE>>
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
+        RE: Error + 'static,
+    {
+        http_client(self.prepare_request()?)
+            .map_err(RequestTokenError::Request)
+            .and_then(endpoint_response)
+    }
+
+    ///
+    /// Asynchronously sends the request to the authorization server and returns a Future.
+    ///
+    pub async fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> Result<TIR, RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        RE: Error + 'static,
+    {
+        let http_request = self.prepare_request()?;
+        let http_response = http_client(http_request)
+            .await
+            .map_err(RequestTokenError::Request)?;
+        endpoint_response(http_response)
     }
 }
 
@@ -2094,6 +2265,319 @@ where
     ///
     fn scopes(&self) -> Option<&Vec<Scope>> {
         self.scopes.as_ref()
+    }
+}
+
+///
+/// Common methods shared by all OAuth2 token inspection implementations.
+///
+/// The methods in this trait are defined in
+/// [Section 2.2 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-2.2). This trait exists
+/// separately from the `StandardTokenInspectionResponse` struct to support customization by clients,
+/// such as supporting interoperability with non-standards-complaint OAuth2 providers.
+///
+pub trait TokenInspectionResponse<TT>: Debug + DeserializeOwned + Serialize
+where
+    TT: TokenType,
+{
+    ///
+    /// REQUIRED.  Boolean indicator of whether or not the presented token
+    /// is currently active.  The specifics of a token's "active" state
+    /// will vary depending on the implementation of the authorization
+    /// server and the information it keeps about its tokens, but a "true"
+    /// value return for the "active" property will generally indicate
+    /// that a given token has been issued by this authorization server,
+    /// has not been revoked by the resource owner, and is within its
+    /// given time window of validity (e.g., after its issuance time and
+    /// before its expiration time).
+    ///
+    fn active(&self) -> bool;
+    ///
+    ///
+    /// OPTIONAL.  A JSON string containing a space-separated list of
+    /// scopes associated with this token, in the format described in
+    /// [Section 3.3 of OAuth 2.0](https://tools.ietf.org/html/rfc7662#section-3.3).
+    /// If included in the response,
+    /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
+    /// the response, this field is `None`.
+    ///
+    fn scopes(&self) -> Option<&Vec<Scope>>;
+    ///
+    /// OPTIONAL.  Client identifier for the OAuth 2.0 client that
+    /// requested this token.
+    ///
+    fn client_id(&self) -> Option<&ClientId>;
+    ///
+    /// OPTIONAL.  Human-readable identifier for the resource owner who
+    /// authorized this token.
+    ///
+    fn username(&self) -> Option<&str>;
+    ///
+    /// OPTIONAL.  Type of the token as defined in [Section 5.1](https://tools.ietf.org/html/rfc7662#section-5.1) of OAuth
+    /// 2.0 [RFC6749].
+    /// Value is case insensitive and deserialized to the generic `TokenType` parameter.
+    ///
+    fn token_type(&self) -> Option<&TT>;
+    ///
+    /// OPTIONAL.  Integer timestamp, measured in the number of seconds
+    /// since January 1 1970 UTC, indicating when this token will expire,
+    /// as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
+    ///
+    fn exp(&self) -> Option<DateTime<Utc>>;
+    ///
+    /// OPTIONAL.  Integer timestamp, measured in the number of seconds
+    /// since January 1 1970 UTC, indicating when this token was
+    /// originally issued, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
+    ///
+    fn iat(&self) -> Option<DateTime<Utc>>;
+    ///
+    /// OPTIONAL.  Integer timestamp, measured in the number of seconds
+    /// since January 1 1970 UTC, indicating when this token is not to be
+    /// used before, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
+    ///
+    fn nbf(&self) -> Option<DateTime<Utc>>;
+    ///
+    /// OPTIONAL.  Subject of the token, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
+    /// Usually a machine-readable identifier of the resource owner who
+    /// authorized this token.
+    ///
+    fn sub(&self) -> Option<&str>;
+    ///
+    /// OPTIONAL.  Service-specific string identifier or list of string
+    /// identifiers representing the intended audience for this token, as
+    /// defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
+    ///
+    fn aud(&self) -> Option<&Vec<String>>;
+    ///
+    /// OPTIONAL.  String representing the issuer of this token, as
+    /// defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
+    ///
+    fn iss(&self) -> Option<&str>;
+    ///
+    /// OPTIONAL.  String identifier for the token, as defined in JWT
+    /// [RFC7519](https://tools.ietf.org/html/rfc7519).
+    ///
+    fn jti(&self) -> Option<&str>;
+}
+
+///
+/// Standard OAuth2 token introspection response.
+///
+/// This struct includes the fields defined in
+/// [Section 2.2 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-2.2), as well as
+/// extensions defined by the `EF` type parameter.
+///
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct StandardTokenInspectionResponse<EF, TT>
+where
+    EF: ExtraTokenFields,
+    TT: TokenType + 'static,
+{
+    active: bool,
+    #[serde(rename = "scope")]
+    #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
+    #[serde(serialize_with = "helpers::serialize_space_delimited_vec")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "none_field")]
+    scopes: Option<Vec<Scope>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    client_id: Option<ClientId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(bound = "TT: TokenType")]
+    #[serde(deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive")]
+    #[serde(default = "none_field")]
+    token_type: Option<TT>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(with = "ts_seconds_option")]
+    #[serde(default = "none_field")]
+    exp: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(with = "ts_seconds_option")]
+    #[serde(default = "none_field")]
+    iat: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(with = "ts_seconds_option")]
+    #[serde(default = "none_field")]
+    nbf: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sub: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "none_field")]
+    #[serde(deserialize_with = "helpers::deserialize_optional_string_or_vec_string")]
+    aud: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    iss: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    jti: Option<String>,
+
+    #[serde(bound = "EF: ExtraTokenFields")]
+    #[serde(flatten)]
+    extra_fields: EF,
+}
+
+fn none_field<T>() -> Option<T> {
+    None
+}
+
+impl<EF, TT> StandardTokenInspectionResponse<EF, TT>
+where
+    EF: ExtraTokenFields,
+    TT: TokenType,
+{
+    ///
+    /// Instantiate a new OAuth2 token introspection response.
+    ///
+    pub fn new(active: bool, extra_fields: EF) -> Self {
+        Self {
+            active,
+
+            scopes: None,
+            client_id: None,
+            username: None,
+            token_type: None,
+            exp: None,
+            iat: None,
+            nbf: None,
+            sub: None,
+            aud: None,
+            iss: None,
+            jti: None,
+            extra_fields,
+        }
+    }
+
+    ///
+    /// Sets the `set_active` field.
+    ///
+    pub fn set_active(&mut self, active: bool) {
+        self.active = active;
+    }
+    ///
+    /// Sets the `set_scopes` field.
+    ///
+    pub fn set_scopes(&mut self, scopes: Option<Vec<Scope>>) {
+        self.scopes = scopes;
+    }
+    ///
+    /// Sets the `set_client_id` field.
+    ///
+    pub fn set_client_id(&mut self, client_id: Option<ClientId>) {
+        self.client_id = client_id;
+    }
+    ///
+    /// Sets the `set_username` field.
+    ///
+    pub fn set_username(&mut self, username: Option<String>) {
+        self.username = username;
+    }
+    ///
+    /// Sets the `set_token_type` field.
+    ///
+    pub fn set_token_type(&mut self, token_type: Option<TT>) {
+        self.token_type = token_type;
+    }
+    ///
+    /// Sets the `set_exp` field.
+    ///
+    pub fn set_exp(&mut self, exp: Option<DateTime<Utc>>) {
+        self.exp = exp;
+    }
+    ///
+    /// Sets the `set_iat` field.
+    ///
+    pub fn set_iat(&mut self, iat: Option<DateTime<Utc>>) {
+        self.iat = iat;
+    }
+    ///
+    /// Sets the `set_nbf` field.
+    ///
+    pub fn set_nbf(&mut self, nbf: Option<DateTime<Utc>>) {
+        self.nbf = nbf;
+    }
+    ///
+    /// Sets the `set_sub` field.
+    ///
+    pub fn set_sub(&mut self, sub: Option<String>) {
+        self.sub = sub;
+    }
+    ///
+    /// Sets the `set_aud` field.
+    ///
+    pub fn set_aud(&mut self, aud: Option<Vec<String>>) {
+        self.aud = aud;
+    }
+    ///
+    /// Sets the `set_iss` field.
+    ///
+    pub fn set_iss(&mut self, iss: Option<String>) {
+        self.iss = iss;
+    }
+    ///
+    /// Sets the `set_jti` field.
+    ///
+    pub fn set_jti(&mut self, jti: Option<String>) {
+        self.jti = jti;
+    }
+    ///
+    /// Sets the `set_extra_fields` field.
+    ///
+    pub fn set_extra_fields(&mut self, extra_fields: EF) {
+        self.extra_fields = extra_fields;
+    }
+}
+impl<EF, TT> TokenInspectionResponse<TT> for StandardTokenInspectionResponse<EF, TT>
+where
+    EF: ExtraTokenFields,
+    TT: TokenType,
+{
+    fn active(&self) -> bool {
+        self.active
+    }
+
+    fn scopes(&self) -> Option<&Vec<Scope>> {
+        self.scopes.as_ref()
+    }
+
+    fn client_id(&self) -> Option<&ClientId> {
+        self.client_id.as_ref()
+    }
+
+    fn username(&self) -> Option<&str> {
+        self.username.as_deref()
+    }
+
+    fn token_type(&self) -> Option<&TT> {
+        self.token_type.as_ref()
+    }
+
+    fn exp(&self) -> Option<DateTime<Utc>> {
+        self.exp
+    }
+
+    fn iat(&self) -> Option<DateTime<Utc>> {
+        self.iat
+    }
+
+    fn nbf(&self) -> Option<DateTime<Utc>> {
+        self.nbf
+    }
+
+    fn sub(&self) -> Option<&str> {
+        self.sub.as_deref()
+    }
+
+    fn aud(&self) -> Option<&Vec<String>> {
+        self.aud.as_ref()
+    }
+
+    fn iss(&self) -> Option<&str> {
+        self.iss.as_deref()
+    }
+
+    fn jti(&self) -> Option<&str> {
+        self.jti.as_deref()
     }
 }
 

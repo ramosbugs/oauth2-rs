@@ -2378,33 +2378,35 @@ where
     #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
     #[serde(serialize_with = "helpers::serialize_space_delimited_vec")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default = "none_field")]
+    #[serde(default)]
     scopes: Option<Vec<Scope>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     client_id: Option<ClientId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     username: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(bound = "TT: TokenType")]
-    #[serde(deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive")]
-    #[serde(default = "none_field")]
+    #[serde(
+        bound = "TT: TokenType",
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "helpers::deserialize_untagged_enum_case_insensitive",
+        default = "none_field"
+    )]
     token_type: Option<TT>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(with = "ts_seconds_option")]
-    #[serde(default = "none_field")]
+    #[serde(default)]
     exp: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(with = "ts_seconds_option")]
-    #[serde(default = "none_field")]
+    #[serde(default)]
     iat: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(with = "ts_seconds_option")]
-    #[serde(default = "none_field")]
+    #[serde(default)]
     nbf: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     sub: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default = "none_field")]
+    #[serde(default)]
     #[serde(deserialize_with = "helpers::deserialize_optional_string_or_vec_string")]
     aud: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]

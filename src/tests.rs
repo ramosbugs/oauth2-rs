@@ -2211,6 +2211,6 @@ fn test_send_sync_impl() {
 
     #[cfg(feature = "curl")]
     is_sync_and_send::<super::curl::Error>();
-    #[cfg(feature = "reqwest-010")]
+    #[cfg(feature = "reqwest-011")]
     is_sync_and_send::<super::reqwest::Error<TestError>>();
 }

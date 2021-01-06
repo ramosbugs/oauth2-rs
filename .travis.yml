@@ -1,6 +1,6 @@
 language: rust
 rust:
-  - 1.41.0
+  - 1.45.0
   - stable
   - beta
   - nightly
@@ -20,8 +20,8 @@ script:
   - cargo test --all-features
   # Curl without reqwest (examples will not build)
   - cargo test --tests --features curl --no-default-features
-  - cargo when --equals TRAVIS_RUST_VERSION=stable fmt --all -- --check
-  - cargo when --equals TRAVIS_RUST_VERSION=stable clippy --all --all-features -- --deny warnings
+  - cargo when --equals TRAVIS_RUST_VERSION=1.45.0 fmt --all -- --check
+  - cargo when --equals TRAVIS_RUST_VERSION=1.45.0 clippy --all --all-features -- --deny warnings
   - cargo when --equals TRAVIS_RUST_VERSION=stable audit
 notifications:
   email:

@@ -33,15 +33,15 @@ pub use async_client::async_http_client;
 ///
 /// Error type returned by failed reqwest async HTTP requests.
 ///
-pub type AsyncHttpClientError = Error<reqwest_0_11::Error>;
+pub type AsyncHttpClientError = Error<reqwest::Error>;
 
 mod blocking {
     use super::super::{HttpRequest, HttpResponse};
     use super::Error;
 
-    pub use reqwest_0_11 as reqwest;
-    use reqwest_0_11::blocking;
-    use reqwest_0_11::redirect::Policy as RedirectPolicy;
+    pub use reqwest;
+    use reqwest::blocking;
+    use reqwest::redirect::Policy as RedirectPolicy;
 
     use std::io::Read;
 
@@ -55,7 +55,7 @@ mod blocking {
             .build()
             .map_err(Error::Reqwest)?;
 
-        #[cfg(feature = "reqwest-011")]
+        #[cfg(feature = "reqwest")]
         let mut request_builder = client
             .request(request.method, request.url.as_str())
             .body(request.body);
@@ -70,7 +70,7 @@ mod blocking {
         let mut body = Vec::new();
         response.read_to_end(&mut body).map_err(Error::Io)?;
 
-        #[cfg(feature = "reqwest-011")]
+        #[cfg(feature = "reqwest")]
         {
             Ok(HttpResponse {
                 status_code: response.status(),
@@ -85,8 +85,8 @@ mod async_client {
     use super::super::{HttpRequest, HttpResponse};
     use super::Error;
 
-    pub use reqwest_0_11 as reqwest;
-    use reqwest_0_11::redirect::Policy as RedirectPolicy;
+    pub use reqwest;
+    use reqwest::redirect::Policy as RedirectPolicy;
 
     ///
     /// Asynchronous HTTP client.

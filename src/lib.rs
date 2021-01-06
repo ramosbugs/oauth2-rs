@@ -163,11 +163,11 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! # #[cfg(feature = "reqwest-011")]
+//! # #[cfg(feature = "reqwest")]
 //! use oauth2::reqwest::async_http_client;
 //! use url::Url;
 //!
-//! # #[cfg(feature = "reqwest-011")]
+//! # #[cfg(feature = "reqwest")]
 //! # async fn err_wrapper() -> Result<(), anyhow::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
@@ -462,9 +462,9 @@ pub mod helpers;
 
 ///
 /// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
-/// Requires "reqwest-011" feature.
+/// Requires "reqwest" feature.
 ///
-#[cfg(feature = "reqwest-011")]
+#[cfg(feature = "reqwest")]
 pub mod reqwest;
 
 #[cfg(test)]

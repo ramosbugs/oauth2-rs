@@ -10,9 +10,10 @@ before_script:
   - cargo install --force cargo-when
   - |
     if [ "$TRAVIS_RUST_VERSION" == "stable" ]; then
+      cargo install --force cargo-audit
+    elif [ "$TRAVIS_RUST_VERSION" == "1.45.0" ]; then
       rustup component add clippy
       rustup component add rustfmt
-      cargo install --force cargo-audit
     fi
 script:
   - cargo test --tests --examples

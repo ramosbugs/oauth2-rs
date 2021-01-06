@@ -67,7 +67,7 @@ async fn main() {
     );
 
     // A very naive implementation of the redirect server.
-    let mut listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
     loop {
         if let Ok((mut stream, _)) = listener.accept().await {
             let code;

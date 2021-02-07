@@ -442,8 +442,11 @@ pub mod basic;
 /// HTTP client backed by the [curl](https://crates.io/crates/curl) crate.
 /// Requires "curl" feature.
 ///
-#[cfg(feature = "curl")]
+#[cfg(all(feature = "curl", not(target_arch = "wasm32")))]
 pub mod curl;
+
+#[cfg(all(feature = "curl", target_arch = "wasm32"))]
+compile_error!("wasm32 is not supported with the `curl` feature. Use the `reqwest` backend or a custom backend for wasm32 support");
 
 ///
 /// Device Code Flow OAuth2 implementation
@@ -2112,7 +2115,7 @@ where
     fn refresh_token(&self) -> Option<&RefreshToken>;
     ///
     /// OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The
-    /// scipe of the access token as described by
+    /// scope of the access token as described by
     /// [Section 3.3](https://tools.ietf.org/html/rfc6749#section-3.3). If included in the response,
     /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
     /// the response, this field is `None`.
@@ -2258,7 +2261,7 @@ where
     }
     ///
     /// OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The
-    /// scipe of the access token as described by
+    /// scope of the access token as described by
     /// [Section 3.3](https://tools.ietf.org/html/rfc6749#section-3.3). If included in the response,
     /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
     /// the response, this field is `None`.

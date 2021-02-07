@@ -22,10 +22,12 @@ where
     Other(String),
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub use blocking::http_client;
 ///
 /// Error type returned by failed reqwest blocking HTTP requests.
 ///
+#[cfg(not(target_arch = "wasm32"))]
 pub type HttpClientError = Error<blocking::reqwest::Error>;
 
 pub use async_client::async_http_client;
@@ -35,6 +37,7 @@ pub use async_client::async_http_client;
 ///
 pub type AsyncHttpClientError = Error<reqwest::Error>;
 
+#[cfg(not(target_arch = "wasm32"))]
 mod blocking {
     use super::super::{HttpRequest, HttpResponse};
     use super::Error;
@@ -86,7 +89,6 @@ mod async_client {
     use super::Error;
 
     pub use reqwest;
-    use reqwest::redirect::Policy as RedirectPolicy;
 
     ///
     /// Asynchronous HTTP client.
@@ -94,11 +96,16 @@ mod async_client {
     pub async fn async_http_client(
         request: HttpRequest,
     ) -> Result<HttpResponse, Error<reqwest::Error>> {
-        let client = reqwest::Client::builder()
+        let client = {
+            let builder = reqwest::Client::builder();
+
             // Following redirects opens the client up to SSRF vulnerabilities.
-            .redirect(RedirectPolicy::none())
-            .build()
-            .map_err(Error::Reqwest)?;
+            // but this is not possible to prevent on wasm targets
+            #[cfg(not(target_arch = "wasm32"))]
+            let builder = builder.redirect(reqwest::redirect::Policy::none());
+
+            builder.build().map_err(Error::Reqwest)?
+        };
 
         let mut request_builder = client
             .request(request.method, request.url.as_str())

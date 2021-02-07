@@ -34,7 +34,7 @@ script:
   - cargo when -v ^1.39 -- test --tests --features futures-03 --no-default-features
   # Futures 0.3 with reqwest 0.9 (included by default)
   - cargo when -v ^1.39 -- test --tests --examples --features futures-03
-  - cargo when -v ^1.39 audit -- --ignore RUSTSEC-2021-0020
+  - cargo when -v ^1.39 -- audit --ignore RUSTSEC-2021-0020
 notifications:
   email:
     on_success: never

@@ -34,8 +34,12 @@ use std::net::TcpListener;
 use url::Url;
 
 type SpecialTokenResponse = NonStandardTokenResponse<EmptyExtraTokenFields>;
-type SpecialClient =
-    Client<BasicErrorResponse, SpecialTokenResponse, BasicTokenType, BasicTokenIntrospectionResponse>;
+type SpecialClient = Client<
+    BasicErrorResponse,
+    SpecialTokenResponse,
+    BasicTokenType,
+    BasicTokenIntrospectionResponse,
+>;
 
 fn default_token_type() -> Option<BasicTokenType> {
     Some(BasicTokenType::Bearer)

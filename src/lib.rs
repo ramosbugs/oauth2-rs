@@ -45,6 +45,11 @@
 //!
 //!    Synchronous client: [`curl::http_client`]
 //!
+//! * **[`ureq`]**
+//!
+//!    The `ureq` HTTP client is a simple HTTP client with minimal dependencies. It only supports
+//!    the synchronous HTTP client mode and can be enabled in `Cargo.toml` via the `ureq` feature flag.
+//!
 //!  * **Custom**
 //!
 //!    In addition to the clients above, users may define their own HTTP clients, which must accept
@@ -474,6 +479,13 @@ pub mod reqwest;
 mod tests;
 
 mod types;
+
+///
+/// HTTP client backed by the [ureq](https://crates.io/crates/ureq) crate.
+/// Requires "ureq" feature.
+///
+#[cfg(feature = "ureq")]
+pub mod ureq;
 
 ///
 /// Public re-exports of types used for HTTP client interfaces.

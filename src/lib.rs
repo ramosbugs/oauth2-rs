@@ -528,7 +528,7 @@ where
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
-    TIR: TokenInspectionResponse<TT>,
+    TIR: TokenIntrospectionResponse<TT>,
 {
     client_id: ClientId,
     client_secret: Option<ClientSecret>,
@@ -549,7 +549,7 @@ where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
-    TIR: TokenInspectionResponse<TT>,
+    TIR: TokenIntrospectionResponse<TT>,
 {
     ///
     /// Initializes an OAuth2 client with the fields common to most OAuth2 flows.
@@ -1450,7 +1450,7 @@ where
 pub struct IntrospectRequest<'a, TE, TIR, TT>
 where
     TE: ErrorResponse,
-    TIR: TokenInspectionResponse<TT>,
+    TIR: TokenIntrospectionResponse<TT>,
     TT: TokenType,
 {
     token: &'a AccessToken,
@@ -1468,7 +1468,7 @@ where
 impl<'a, TE, TIR, TT> IntrospectRequest<'a, TE, TIR, TT>
 where
     TE: ErrorResponse + 'static,
-    TIR: TokenInspectionResponse<TT>,
+    TIR: TokenIntrospectionResponse<TT>,
     TT: TokenType,
 {
     ///
@@ -2284,14 +2284,14 @@ where
 }
 
 ///
-/// Common methods shared by all OAuth2 token inspection implementations.
+/// Common methods shared by all OAuth2 token introspection implementations.
 ///
 /// The methods in this trait are defined in
 /// [Section 2.2 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-2.2). This trait exists
-/// separately from the `StandardTokenInspectionResponse` struct to support customization by clients,
-/// such as supporting interoperability with non-standards-complaint OAuth2 providers.
+/// separately from the `StandardTokenIntrospectionResponse` struct to support customization by
+/// clients, such as supporting interoperability with non-standards-complaint OAuth2 providers.
 ///
-pub trait TokenInspectionResponse<TT>: Debug + DeserializeOwned + Serialize
+pub trait TokenIntrospectionResponse<TT>: Debug + DeserializeOwned + Serialize
 where
     TT: TokenType,
 {
@@ -2383,7 +2383,7 @@ where
 /// extensions defined by the `EF` type parameter.
 ///
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct StandardTokenInspectionResponse<EF, TT>
+pub struct StandardTokenIntrospectionResponse<EF, TT>
 where
     EF: ExtraTokenFields,
     TT: TokenType + 'static,
@@ -2438,7 +2438,7 @@ fn none_field<T>() -> Option<T> {
     None
 }
 
-impl<EF, TT> StandardTokenInspectionResponse<EF, TT>
+impl<EF, TT> StandardTokenIntrospectionResponse<EF, TT>
 where
     EF: ExtraTokenFields,
     TT: TokenType,
@@ -2544,7 +2544,7 @@ where
         self.extra_fields = extra_fields;
     }
 }
-impl<EF, TT> TokenInspectionResponse<TT> for StandardTokenInspectionResponse<EF, TT>
+impl<EF, TT> TokenIntrospectionResponse<TT> for StandardTokenIntrospectionResponse<EF, TT>
 where
     EF: ExtraTokenFields,
     TT: TokenType,

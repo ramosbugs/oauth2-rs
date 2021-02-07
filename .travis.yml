@@ -8,6 +8,7 @@ sudo: false
 #cache: cargo
 before_script:
   - cargo install --force cargo-when
+  - rustup target add wasm32-unknown-unknown
   - |
     if [ "$TRAVIS_RUST_VERSION" == "stable" ]; then
       cargo install --force cargo-audit
@@ -24,6 +25,7 @@ script:
   - cargo when --equals TRAVIS_RUST_VERSION=1.45.0 fmt --all -- --check
   - cargo when --equals TRAVIS_RUST_VERSION=1.45.0 clippy --all --all-features -- --deny warnings
   - cargo when --equals TRAVIS_RUST_VERSION=stable audit
+  - cargo check --target wasm32-unknown-unknown
 notifications:
   email:
     on_success: never

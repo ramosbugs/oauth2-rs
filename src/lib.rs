@@ -45,6 +45,11 @@
 //!
 //!    Synchronous client: [`curl::http_client`]
 //!
+//! * **[`ureq`]**
+//!
+//!    The `ureq` HTTP client is a simple HTTP client with minimal dependencies. It only supports
+//!    the synchronous HTTP client mode and can be enabled in `Cargo.toml` via the `ureq` feature flag.
+//!
 //!  * **Custom**
 //!
 //!    In addition to the clients above, users may define their own HTTP clients, which must accept
@@ -482,6 +487,13 @@ mod tests;
 mod types;
 
 ///
+/// HTTP client backed by the [ureq](https://crates.io/crates/ureq) crate.
+/// Requires "ureq" feature.
+///
+#[cfg(feature = "ureq")]
+pub mod ureq;
+
+///
 /// Public re-exports of types used for HTTP client interfaces.
 ///
 pub use http;
@@ -525,7 +537,7 @@ where
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
-    TIR: TokenInspectionResponse<TT>,
+    TIR: TokenIntrospectionResponse<TT>,
     RER: ErrorResponse,
 {
     client_id: ClientId,
@@ -551,7 +563,7 @@ where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
-    TIR: TokenInspectionResponse<TT>,
+    TIR: TokenIntrospectionResponse<TT>,
     RER: ErrorResponse + 'static,
 {
     ///
@@ -1485,7 +1497,7 @@ where
 pub struct IntrospectRequest<'a, TE, TIR, TT>
 where
     TE: ErrorResponse,
-    TIR: TokenInspectionResponse<TT>,
+    TIR: TokenIntrospectionResponse<TT>,
     TT: TokenType,
 {
     token: &'a AccessToken,
@@ -1503,7 +1515,7 @@ where
 impl<'a, TE, TIR, TT> IntrospectRequest<'a, TE, TIR, TT>
 where
     TE: ErrorResponse + 'static,
-    TIR: TokenInspectionResponse<TT>,
+    TIR: TokenIntrospectionResponse<TT>,
     TT: TokenType,
 {
     ///
@@ -2426,14 +2438,14 @@ where
 }
 
 ///
-/// Common methods shared by all OAuth2 token inspection implementations.
+/// Common methods shared by all OAuth2 token introspection implementations.
 ///
 /// The methods in this trait are defined in
 /// [Section 2.2 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-2.2). This trait exists
-/// separately from the `StandardTokenInspectionResponse` struct to support customization by clients,
-/// such as supporting interoperability with non-standards-complaint OAuth2 providers.
+/// separately from the `StandardTokenIntrospectionResponse` struct to support customization by
+/// clients, such as supporting interoperability with non-standards-complaint OAuth2 providers.
 ///
-pub trait TokenInspectionResponse<TT>: Debug + DeserializeOwned + Serialize
+pub trait TokenIntrospectionResponse<TT>: Debug + DeserializeOwned + Serialize
 where
     TT: TokenType,
 {
@@ -2525,7 +2537,7 @@ where
 /// extensions defined by the `EF` type parameter.
 ///
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct StandardTokenInspectionResponse<EF, TT>
+pub struct StandardTokenIntrospectionResponse<EF, TT>
 where
     EF: ExtraTokenFields,
     TT: TokenType + 'static,
@@ -2580,7 +2592,7 @@ fn none_field<T>() -> Option<T> {
     None
 }
 
-impl<EF, TT> StandardTokenInspectionResponse<EF, TT>
+impl<EF, TT> StandardTokenIntrospectionResponse<EF, TT>
 where
     EF: ExtraTokenFields,
     TT: TokenType,
@@ -2686,7 +2698,7 @@ where
         self.extra_fields = extra_fields;
     }
 }
-impl<EF, TT> TokenInspectionResponse<TT> for StandardTokenInspectionResponse<EF, TT>
+impl<EF, TT> TokenIntrospectionResponse<TT> for StandardTokenIntrospectionResponse<EF, TT>
 where
     EF: ExtraTokenFields,
     TT: TokenType,

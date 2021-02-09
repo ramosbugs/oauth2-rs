@@ -14,7 +14,7 @@
 //! ...and follow the instructions.
 //!
 
-use oauth2::basic::{BasicErrorResponse, BasicRevocableToken, BasicRevocationErrorResponse, BasicTokenInspectionResponse, BasicTokenType};
+use oauth2::basic::{BasicErrorResponse, BasicRevocableToken, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse, BasicTokenType};
 use oauth2::TokenType;
 // Alternatively, this can be `oauth2::curl::http_client` or a custom client.
 use oauth2::helpers;
@@ -34,8 +34,14 @@ use std::net::TcpListener;
 use url::Url;
 
 type SpecialTokenResponse = NonStandardTokenResponse<EmptyExtraTokenFields>;
-type SpecialClient =
-    Client<BasicRevocableToken, BasicErrorResponse, SpecialTokenResponse, BasicTokenType, BasicTokenInspectionResponse, BasicRevocationErrorResponse>;
+type SpecialClient = Client<
+    BasicRevocableToken,
+    BasicErrorResponse,
+    SpecialTokenResponse,
+    BasicTokenType,
+    BasicTokenIntrospectionResponse,
+    BasicRevocationErrorResponse
+>;
 
 fn default_token_type() -> Option<BasicTokenType> {
     Some(BasicTokenType::Bearer)

@@ -1,6 +1,5 @@
 use http::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
-use revocation::{StandardRevocableToken, StandardRevocationResponse};
 use thiserror::Error;
 use url::form_urlencoded::byte_serialize;
 use url::Url;
@@ -1086,7 +1085,7 @@ mod colorful_extension {
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
         StandardTokenIntrospectionResponse<ColorfulFields, ColorfulTokenType>,
-        StandardErrorResponse<ColorfulErrorResponseType>
+        StandardErrorResponse<ColorfulErrorResponseType>,
     >;
 
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

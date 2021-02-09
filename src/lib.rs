@@ -855,8 +855,7 @@ where
     ///
     /// See https://tools.ietf.org/html/rfc7009
     ///
-    pub fn revoke_token<'a>(&'a self, token: RT) -> RevocationRequest<'a, RT, RER>
-    {
+    pub fn revoke_token(&self, token: RT) -> RevocationRequest<RT, RER> {
         RevocationRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
@@ -1697,7 +1696,10 @@ where
     ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
-    pub fn request<F, RE, EF>(self, http_client: F) -> Result<RevocationResponse<EF>, RequestTokenError<RE, TE>>
+    pub fn request<F, RE, EF>(
+        self,
+        http_client: F,
+    ) -> Result<RevocationResponse<EF>, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,

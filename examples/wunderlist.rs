@@ -14,7 +14,10 @@
 //! ...and follow the instructions.
 //!
 
-use oauth2::basic::{BasicErrorResponse, BasicRevocableToken, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse, BasicTokenType};
+use oauth2::basic::{
+    BasicErrorResponse, BasicRevocableToken, BasicRevocationErrorResponse,
+    BasicTokenIntrospectionResponse, BasicTokenType,
+};
 use oauth2::TokenType;
 // Alternatively, this can be `oauth2::curl::http_client` or a custom client.
 use oauth2::helpers;
@@ -40,7 +43,7 @@ type SpecialClient = Client<
     SpecialTokenResponse,
     BasicTokenType,
     BasicTokenIntrospectionResponse,
-    BasicRevocationErrorResponse
+    BasicRevocationErrorResponse,
 >;
 
 fn default_token_type() -> Option<BasicTokenType> {

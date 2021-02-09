@@ -1,8 +1,8 @@
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
-use crate::{ErrorResponseType, StandardErrorResponse, basic::BasicErrorResponseType};
+use crate::{basic::BasicErrorResponseType, ErrorResponseType, StandardErrorResponse};
 use crate::{AccessToken, RefreshToken};
 
 pub trait RevocableToken {
@@ -44,7 +44,7 @@ impl RevocableToken for StandardRevocableToken {
     ///
     /// * refresh_token: A refresh token as defined in [[RFC6749],
     ///   Section 1.5](https://tools.ietf.org/html/rfc6749#section-1.5)
-    /// 
+    ///
     /// Specific implementations, profiles, and extensions of this
     /// specification MAY define other values for this parameter
     /// using the registry defined in [Section 4.1.2](https://tools.ietf.org/html/rfc6749#section-4.1.2).

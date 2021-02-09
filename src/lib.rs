@@ -459,6 +459,12 @@ use devicecode::{
 };
 
 ///
+/// OAuth 2.0 Token Revocation implementation
+/// ([RFC 7009](https://tools.ietf.org/html/rfc7009)).
+///
+pub mod revocation;
+
+///
 /// Helper methods used by OAuth2 implementations/extensions.
 ///
 pub mod helpers;
@@ -485,8 +491,10 @@ pub use types::{
     AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl, IntrospectUrl, PkceCodeChallenge,
     PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
-    ResourceOwnerUsername, ResponseType, Scope, TokenUrl, UserCode,
+    ResourceOwnerUsername, ResponseType, RevocationUrl, Scope, TokenUrl, UserCode,
 };
+
+use crate::revocation::{ExtraRevocationResponseFields, RevocableToken, RevocationResponse};
 
 const CONTENT_TYPE_JSON: &str = "application/json";
 const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";
@@ -511,12 +519,14 @@ pub enum AuthType {
 /// Stores the configuration for an OAuth2 client.
 ///
 #[derive(Clone, Debug)]
-pub struct Client<TE, TR, TT, TIR>
+pub struct Client<RT, TE, TR, TT, TIR, RER>
 where
+    RT: RevocableToken,
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
     TIR: TokenInspectionResponse<TT>,
+    RER: ErrorResponse,
 {
     client_id: ClientId,
     client_secret: Option<ClientSecret>,
@@ -525,19 +535,24 @@ where
     token_url: Option<TokenUrl>,
     redirect_url: Option<RedirectUrl>,
     introspect_url: Option<IntrospectUrl>,
+    revocation_url: Option<RevocationUrl>,
     device_authorization_url: Option<DeviceAuthorizationUrl>,
+    phantom_rer: PhantomData<RER>,
+    phantom_rt: PhantomData<RT>,
     phantom_te: PhantomData<TE>,
     phantom_tr: PhantomData<TR>,
     phantom_tt: PhantomData<TT>,
     phantom_tir: PhantomData<TIR>,
 }
 
-impl<TE, TR, TT, TIR> Client<TE, TR, TT, TIR>
+impl<RT, TE, TR, TT, TIR, RER> Client<RT, TE, TR, TT, TIR, RER>
 where
+    RT: RevocableToken,
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
     TIR: TokenInspectionResponse<TT>,
+    RER: ErrorResponse + 'static,
 {
     ///
     /// Initializes an OAuth2 client with the fields common to most OAuth2 flows.
@@ -573,7 +588,10 @@ where
             token_url,
             redirect_url: None,
             introspect_url: None,
+            revocation_url: None,
             device_authorization_url: None,
+            phantom_rer: PhantomData,
+            phantom_rt: PhantomData,
             phantom_te: PhantomData,
             phantom_tr: PhantomData,
             phantom_tt: PhantomData,
@@ -608,6 +626,15 @@ where
     ///
     pub fn set_introspection_url(mut self, introspect_url: IntrospectUrl) -> Self {
         self.introspect_url = Some(introspect_url);
+
+        self
+    }
+
+    ///
+    /// Sets the revocation URL used by the revocation endpoint.
+    ///
+    pub fn set_revocation_url(mut self, revocation_url: RevocationUrl) -> Self {
+        self.revocation_url = Some(revocation_url);
 
         self
     }
@@ -805,6 +832,26 @@ where
             introspect_url: self.introspect_url.as_ref(),
             token,
             token_type_hint: None,
+            _phantom: PhantomData,
+        }
+    }
+
+    ///
+    /// Attempts to revoke the given token using an RFC 7009 OAuth 2.0 Token Revocation compatible endpoint.
+    ///
+    /// Requires that `set_revocation_url` have already been called to set the revocation endpoint URL.
+    ///
+    /// See https://tools.ietf.org/html/rfc7009
+    ///
+    pub fn revoke_token<'a>(&'a self, token: RT) -> RevocationRequest<'a, RT, RER>
+    {
+        RevocationRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            revocation_url: self.revocation_url.as_ref(),
+            token,
             _phantom: PhantomData,
         }
     }
@@ -1554,6 +1601,113 @@ where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
+    {
+        let http_request = self.prepare_request()?;
+        let http_response = http_client(http_request)
+            .await
+            .map_err(RequestTokenError::Request)?;
+        endpoint_response(http_response)
+    }
+}
+
+///
+/// A request to revoke a token.
+///
+/// See https://tools.ietf.org/html/rfc7009#section-2.1
+///
+#[derive(Debug)]
+pub struct RevocationRequest<'a, RT, TE>
+where
+    RT: RevocableToken,
+    TE: ErrorResponse,
+{
+    token: RT,
+
+    auth_type: &'a AuthType,
+    client_id: &'a ClientId,
+    client_secret: Option<&'a ClientSecret>,
+    extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    revocation_url: Option<&'a RevocationUrl>,
+
+    _phantom: PhantomData<(RT, TE)>,
+}
+
+impl<'a, RT, TE> RevocationRequest<'a, RT, TE>
+where
+    RT: RevocableToken,
+    TE: ErrorResponse + 'static,
+{
+    ///
+    /// Appends an extra param to the token introspect.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7662](https://tools.ietf.org/html/rfc7662).
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should follow the security recommendations for any OAuth2 extensions used with
+    /// this function, which are beyond the scope of
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
+    ///
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
+    {
+        self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Error + 'static,
+    {
+        let mut params: Vec<(&str, &str)> = vec![("token", self.token.secret())];
+        params.push(("token_type_hint", self.token.token_type_hint()));
+
+        Ok(endpoint_request(
+            self.auth_type,
+            self.client_id,
+            self.client_secret,
+            &self.extra_params,
+            None,
+            None,
+            self.revocation_url
+                .ok_or_else(|| RequestTokenError::Other("no revocation_url provided".to_string()))?
+                .url(),
+            params,
+        ))
+    }
+
+    ///
+    /// Synchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request<F, RE, EF>(self, http_client: F) -> Result<RevocationResponse<EF>, RequestTokenError<RE, TE>>
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
+        RE: Error + 'static,
+        EF: ExtraRevocationResponseFields,
+    {
+        http_client(self.prepare_request()?)
+            .map_err(RequestTokenError::Request)
+            .and_then(endpoint_response)
+    }
+
+    ///
+    /// Asynchronously sends the request to the authorization server and returns a Future.
+    ///
+    pub async fn request_async<C, F, RE, EF>(
+        self,
+        http_client: C,
+    ) -> Result<RevocationResponse<EF>, RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        RE: Error + 'static,
+        EF: ExtraRevocationResponseFields,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)

@@ -355,6 +355,12 @@ new_url_type![
 ];
 new_url_type![
     ///
+    /// URL of the authorization server's RFC 7009 token revocation endpoint.
+    ///
+    RevocationUrl
+];
+new_url_type![
+    ///
     /// URL of the client's device authorization endpoint.
     ///
     DeviceAuthorizationUrl

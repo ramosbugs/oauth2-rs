@@ -1,5 +1,6 @@
 use http::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
+use revocation::{StandardRevocableToken, StandardRevocationResponse};
 use thiserror::Error;
 use url::form_urlencoded::byte_serialize;
 use url::Url;
@@ -1080,10 +1081,12 @@ mod colorful_extension {
     use std::fmt::{Debug, Display, Formatter};
 
     pub type ColorfulClient = Client<
+        ColorfulRevocableToken,
         StandardErrorResponse<ColorfulErrorResponseType>,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
         StandardTokenIntrospectionResponse<ColorfulFields, ColorfulTokenType>,
+        StandardErrorResponse<ColorfulErrorResponseType>
     >;
 
     #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -1147,6 +1150,26 @@ mod colorful_extension {
     }
 
     pub type ColorfulTokenResponse = StandardTokenResponse<ColorfulFields, ColorfulTokenType>;
+
+    pub enum ColorfulRevocableToken {
+        Red(String),
+        Blue(String),
+    }
+    impl RevocableToken for ColorfulRevocableToken {
+        fn secret(&self) -> &String {
+            match self {
+                ColorfulRevocableToken::Red(secret) => &secret,
+                ColorfulRevocableToken::Blue(secret) => &secret,
+            }
+        }
+
+        fn token_type_hint(&self) -> &'static str {
+            match self {
+                ColorfulRevocableToken::Red(_) => "red",
+                ColorfulRevocableToken::Blue(_) => "blue",
+            }
+        }
+    }
 }
 
 #[test]
@@ -1372,10 +1395,12 @@ mod custom_errors {
     impl ErrorResponse for CustomErrorResponse {}
 
     pub type CustomErrorClient = Client<
+        ColorfulRevocableToken,
         CustomErrorResponse,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
         StandardTokenIntrospectionResponse<ColorfulFields, ColorfulTokenType>,
+        CustomErrorResponse,
     >;
 }
 
@@ -2134,10 +2159,12 @@ fn test_send_sync_impl() {
     is_sync_and_send::<AuthorizationRequest>();
     is_sync_and_send::<
         Client<
+            BasicRevocableToken,
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
             BasicTokenType,
             StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
+            BasicRevocationErrorResponse,
         >,
     >();
     is_sync_and_send::<

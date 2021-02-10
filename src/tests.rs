@@ -1155,14 +1155,14 @@ mod colorful_extension {
         Blue(String),
     }
     impl RevocableToken for ColorfulRevocableToken {
-        fn secret(&self) -> &String {
+        fn secret(&self) -> &str {
             match self {
                 ColorfulRevocableToken::Red(secret) => &secret,
                 ColorfulRevocableToken::Blue(secret) => &secret,
             }
         }
 
-        fn token_type_hint(&self) -> &'static str {
+        fn token_type_hint(&self) -> &str {
             match self {
                 ColorfulRevocableToken::Red(_) => "red",
                 ColorfulRevocableToken::Blue(_) => "blue",

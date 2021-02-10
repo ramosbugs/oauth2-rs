@@ -2,13 +2,13 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 
-use crate::{basic::BasicErrorResponseType, ErrorResponseType, StandardErrorResponse};
+use crate::{basic::BasicErrorResponseType, ErrorResponseType};
 use crate::{AccessToken, RefreshToken};
 
 pub trait RevocableToken {
-    fn secret(&self) -> &String;
+    fn secret(&self) -> &str;
 
-    fn token_type_hint(&self) -> &'static str;
+    fn token_type_hint(&self) -> &str;
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -17,7 +17,7 @@ pub enum StandardRevocableToken {
     RefreshToken(RefreshToken),
 }
 impl RevocableToken for StandardRevocableToken {
-    fn secret(&self) -> &String {
+    fn secret(&self) -> &str {
         match self {
             Self::AccessToken(token) => token.secret(),
             Self::RefreshToken(token) => token.secret(),
@@ -49,7 +49,7 @@ impl RevocableToken for StandardRevocableToken {
     /// specification MAY define other values for this parameter
     /// using the registry defined in [Section 4.1.2](https://tools.ietf.org/html/rfc6749#section-4.1.2).
     ///
-    fn token_type_hint(&self) -> &'static str {
+    fn token_type_hint(&self) -> &str {
         match self {
             StandardRevocableToken::AccessToken(_) => "access_token",
             StandardRevocableToken::RefreshToken(_) => "refresh_token",
@@ -126,11 +126,6 @@ impl Display for RevocationErrorResponseType {
         write!(f, "{}", self.as_ref())
     }
 }
-
-///
-/// Error response specialization for device code OAuth2 implementation.
-///
-pub type RevocationErrorResponse = StandardErrorResponse<RevocationErrorResponseType>;
 
 ///
 /// Standard OAuth2 token revocation response.

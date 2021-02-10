@@ -5,10 +5,7 @@ use super::{
     Client, EmptyExtraTokenFields, ErrorResponseType, RequestTokenError, StandardErrorResponse,
     StandardTokenResponse, TokenType,
 };
-use crate::{
-    revocation::{RevocationErrorResponse, StandardRevocableToken},
-    StandardTokenIntrospectionResponse,
-};
+use crate::{StandardTokenIntrospectionResponse, revocation::{RevocationErrorResponseType, StandardRevocableToken}};
 
 ///
 /// Basic OAuth2 client specialization, suitable for most applications.
@@ -207,4 +204,4 @@ pub type BasicRequestTokenError<RE> = RequestTokenError<RE, BasicErrorResponse>;
 ///
 ///
 ///
-pub type BasicRevocationErrorResponse = RevocationErrorResponse;
+pub type BasicRevocationErrorResponse = StandardErrorResponse<RevocationErrorResponseType>;

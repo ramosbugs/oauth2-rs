@@ -549,12 +549,7 @@ where
     introspect_url: Option<IntrospectUrl>,
     revocation_url: Option<RevocationUrl>,
     device_authorization_url: Option<DeviceAuthorizationUrl>,
-    phantom_rer: PhantomData<RER>,
-    phantom_rt: PhantomData<RT>,
-    phantom_te: PhantomData<TE>,
-    phantom_tr: PhantomData<TR>,
-    phantom_tt: PhantomData<TT>,
-    phantom_tir: PhantomData<TIR>,
+    phantom: PhantomData<(RER, RT, TE, TR, TT, TIR)>,
 }
 
 impl<RT, TE, TR, TT, TIR, RER> Client<RT, TE, TR, TT, TIR, RER>
@@ -602,12 +597,7 @@ where
             introspect_url: None,
             revocation_url: None,
             device_authorization_url: None,
-            phantom_rer: PhantomData,
-            phantom_rt: PhantomData,
-            phantom_te: PhantomData,
-            phantom_tr: PhantomData,
-            phantom_tt: PhantomData,
-            phantom_tir: PhantomData,
+            phantom: PhantomData,
         }
     }
 
@@ -1649,7 +1639,7 @@ where
     TE: ErrorResponse + 'static,
 {
     ///
-    /// Appends an extra param to the token introspect.
+    /// Appends an extra param to the token revocation request.
     ///
     /// This method allows extensions to be used without direct support from
     /// this crate. If `name` conflicts with a parameter managed by this crate, the

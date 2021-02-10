@@ -12,6 +12,7 @@ pub trait RevocableToken {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[non_exhaustive]
 pub enum StandardRevocableToken {
     AccessToken(AccessToken),
     RefreshToken(RefreshToken),

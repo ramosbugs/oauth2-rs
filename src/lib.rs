@@ -530,15 +530,42 @@ pub enum AuthType {
 ///
 /// Stores the configuration for an OAuth2 client.
 ///
+/// # Error Types
+///
+/// To enable compile time verification that only the correct and complete set of errors for the `Client` function being
+/// invoked are exposed to the caller, the `Client` type is specialized on multiple implementations of the
+/// [`ErrorResponse`] trait. The exact [`ErrorResponse`] implementation returned varies by the RFC that the invoked
+/// `Client` function implements:
+///
+///   - Generic type `TE` (aka Token Error) for errors defined by [RFC 6749 OAuth 2.0 Authorization Framework](https://tools.ietf.org/html/rfc6749).
+///   - Generic type `TRE` (aka Token Revocation Error) for errors defined by [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009).
+///
+/// For example when revoking a token, error code `unsupported_token_type` (from RFC 7009) may be returned:
+/// ```ignore
+/// let revocation_response = client
+///     .revoke_token(AccessToken::new("some token".to_string()).into())
+///     .request(...)
+///     .unwrap();
+///
+/// assert!(matches!(revocation_response, Err(
+///     RequestTokenError::ServerResponse(
+///         BasicRevocationErrorResponse{
+///             error: RevocationErrorResponseType::UnsupportedTokenType,
+///             ..
+///         })
+///     )
+/// ));
+/// ```
+///
 #[derive(Clone, Debug)]
-pub struct Client<TE, TR, TT, TIR, RT, RTE>
+pub struct Client<TE, TR, TT, TIR, RT, TRE>
 where
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
     TIR: TokenIntrospectionResponse<TT>,
     RT: RevocableToken,
-    RTE: ErrorResponse,
+    TRE: ErrorResponse,
 {
     client_id: ClientId,
     client_secret: Option<ClientSecret>,
@@ -549,17 +576,17 @@ where
     introspect_url: Option<IntrospectUrl>,
     revocation_url: Option<RevocationUrl>,
     device_authorization_url: Option<DeviceAuthorizationUrl>,
-    phantom: PhantomData<(TE, TR, TT, TIR, RT, RTE)>,
+    phantom: PhantomData<(TE, TR, TT, TIR, RT, TRE)>,
 }
 
-impl<TE, TR, TT, TIR, RT, RTE> Client<TE, TR, TT, TIR, RT, RTE>
+impl<TE, TR, TT, TIR, RT, TRE> Client<TE, TR, TT, TIR, RT, TRE>
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
     TIR: TokenIntrospectionResponse<TT>,
     RT: RevocableToken,
-    RTE: ErrorResponse + 'static,
+    TRE: ErrorResponse + 'static,
 {
     ///
     /// Initializes an OAuth2 client with the fields common to most OAuth2 flows.
@@ -845,7 +872,7 @@ where
     ///
     /// See https://tools.ietf.org/html/rfc7009
     ///
-    pub fn revoke_token(&self, token: RT) -> RevocationRequest<RT, RTE> {
+    pub fn revoke_token(&self, token: RT) -> RevocationRequest<RT, TRE> {
         RevocationRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,

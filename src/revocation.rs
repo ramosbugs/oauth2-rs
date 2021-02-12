@@ -26,29 +26,13 @@ impl RevocableToken for StandardRevocableToken {
     }
 
     ///
-    /// Indicate the type of the token.
+    /// Indicates the type of the token to be revoked, as defined by [RFC 7009, Section 2.1](https://tools.ietf.org/html/rfc7009#section-2.1), i.e.:
     ///
-    /// See: https://tools.ietf.org/html/rfc7009#section-2.1
-    ///
-    /// OPTIONAL.  A hint about the type of the token
-    /// submitted for revocation.  Clients MAY pass this parameter in
-    /// order to help the authorization server to optimize the token
-    /// lookup.  If the server is unable to locate the token using
-    /// the given hint, it MUST extend its search across all of its
-    /// supported token types.  An authorization server MAY ignore
-    /// this parameter, particularly if it is able to detect the
-    /// token type automatically.  This specification defines two
-    /// such values:
-    ///
-    /// * access_token: An access token as defined in [[RFC6749],
+    /// * `access_token`: An access token as defined in [RFC 6749,
     ///   Section 1.4](https://tools.ietf.org/html/rfc6749#section-1.4)
     ///
-    /// * refresh_token: A refresh token as defined in [[RFC6749],
+    /// * `refresh_token`: A refresh token as defined in [RFC 6749,
     ///   Section 1.5](https://tools.ietf.org/html/rfc6749#section-1.5)
-    ///
-    /// Specific implementations, profiles, and extensions of this
-    /// specification MAY define other values for this parameter
-    /// using the registry defined in [Section 4.1.2](https://tools.ietf.org/html/rfc6749#section-4.1.2).
     ///
     fn token_type_hint(&self) -> &str {
         match self {

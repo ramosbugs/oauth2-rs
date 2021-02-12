@@ -1,8 +1,11 @@
 use http::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
+use revocation::RevocationErrorResponseType;
 use thiserror::Error;
 use url::form_urlencoded::byte_serialize;
 use url::Url;
+
+use crate::revocation::StandardRevocableToken;
 
 use super::basic::*;
 use super::devicecode::*;
@@ -1152,20 +1155,17 @@ mod colorful_extension {
 
     pub enum ColorfulRevocableToken {
         Red(String),
-        Blue(String),
     }
     impl RevocableToken for ColorfulRevocableToken {
         fn secret(&self) -> &str {
             match self {
                 ColorfulRevocableToken::Red(secret) => &secret,
-                ColorfulRevocableToken::Blue(secret) => &secret,
             }
         }
 
         fn token_type_hint(&self) -> &str {
             match self {
-                ColorfulRevocableToken::Red(_) => "red",
-                ColorfulRevocableToken::Blue(_) => "blue",
+                ColorfulRevocableToken::Red(_) => "red_token",
             }
         }
     }
@@ -1649,6 +1649,117 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
         Some("be1b7da2-fc18-47b3-bdf1-7a4f50bcf53f".to_string()),
         introspect.jti
     );
+}
+
+#[test]
+fn test_token_revocation_with_missing_url() {
+    let client = new_client();
+
+    type TestError = RequestTokenError<std::fmt::Error, BasicRevocationErrorResponse>;
+    type TestResult = Result<(), TestError>;
+
+    let result: TestResult = client
+        .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+        .request(|_| unreachable!());
+
+    match result {
+        Err(RequestTokenError::Other(msg)) => assert_eq!(msg, "no revocation_url provided"),
+        _ => unreachable!("Expected an error"),
+    };
+}
+
+#[test]
+fn test_token_revocation_with_non_https_url() {
+    let client = new_client();
+
+    type TestError = RequestTokenError<std::fmt::Error, BasicRevocationErrorResponse>;
+    type TestResult = Result<(), TestError>;
+
+    let result: TestResult = client
+        .set_revocation_url(RevocationUrl::new("http://revocation/url".to_string()).unwrap())
+        .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+        .request(|_| unreachable!());
+
+    match result {
+        Err(RequestTokenError::Other(msg)) => assert_eq!(msg, "revocation_url is not HTTPS"),
+        _ => unreachable!("Expected an error"),
+    };
+}
+
+#[test]
+fn test_token_revocation_with_unsupported_token_type() {
+    let client = new_client()
+        .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+
+    let revocation_response = client
+        .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+            ],
+            "token=access_token_123&token_type_hint=access_token",
+            Some("https://revocation/url".parse().unwrap()),
+            HttpResponse {
+                status_code: StatusCode::BAD_REQUEST,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: "{\"error\": \"unsupported_token_type\", \"error_description\": \"stuff happened\", \
+                       \"error_uri\": \"https://errors\"}"
+                    .to_string()
+                    .into_bytes(),
+            },
+        ));
+
+    assert!(matches!(revocation_response, Err(
+        RequestTokenError::ServerResponse(
+            BasicRevocationErrorResponse{
+                error: RevocationErrorResponseType::UnsupportedTokenType,
+                ..
+            })
+        )
+    ));
+}
+#[test]
+fn test_extension_token_revocation_successful() {
+    use self::colorful_extension::*;
+    let client = ColorfulClient::new(
+        ClientId::new("aaa".to_string()),
+        Some(ClientSecret::new("bbb".to_string())),
+        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
+    )
+    .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+
+    client
+        .revoke_token(ColorfulRevocableToken::Red(
+            "colorful_token_123".to_string(),
+        ))
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+            ],
+            "token=colorful_token_123&token_type_hint=red_token",
+            Some("https://revocation/url".parse().unwrap()),
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: b"{}".to_vec(),
+            },
+        ))
+        .unwrap();
 }
 
 #[test]
@@ -2158,7 +2269,7 @@ fn test_send_sync_impl() {
     is_sync_and_send::<AuthorizationRequest>();
     is_sync_and_send::<
         Client<
-            BasicRevocableToken,
+            StandardRevocableToken,
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
             BasicTokenType,

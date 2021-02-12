@@ -13,11 +13,7 @@
 //! ...and follow the instructions.
 //!
 
-use oauth2::{
-    basic::BasicClient,
-    revocation::{StandardRevocableToken, StandardRevocationResponse},
-    TokenResponse,
-};
+use oauth2::{basic::BasicClient, revocation::StandardRevocableToken, TokenResponse};
 // Alternatively, this can be oauth2::curl::http_client or a custom.
 use oauth2::reqwest::http_client;
 use oauth2::{
@@ -148,23 +144,17 @@ fn main() {
 
             // Revoke the obtained token
             let token_response = token_response.unwrap();
-            let token_to_revoke = if let Some(token) = token_response.refresh_token() {
-                StandardRevocableToken::RefreshToken(token.clone())
-            } else {
-                StandardRevocableToken::AccessToken(token_response.access_token().clone())
+            let token_to_revoke: StandardRevocableToken = match token_response.refresh_token() {
+                Some(token) => token.into(),
+                None => token_response.access_token().into(),
             };
 
-            let revocation_response: StandardRevocationResponse = client
+            client
                 .revoke_token(token_to_revoke)
                 .request(http_client)
                 .expect("Failed to revoke token");
 
-            println!(
-                "Google returned the following revocation response:\n{:?}\n",
-                revocation_response
-            );
-
-            // The server will terminate itself after collecting the first code.
+            // The server will terminate itself after revoking the token.
             break;
         }
     }

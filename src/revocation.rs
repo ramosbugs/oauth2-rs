@@ -1,4 +1,4 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -55,6 +55,30 @@ impl RevocableToken for StandardRevocableToken {
             StandardRevocableToken::AccessToken(_) => "access_token",
             StandardRevocableToken::RefreshToken(_) => "refresh_token",
         }
+    }
+}
+
+impl From<AccessToken> for StandardRevocableToken {
+    fn from(token: AccessToken) -> Self {
+        Self::AccessToken(token)
+    }
+}
+
+impl From<&AccessToken> for StandardRevocableToken {
+    fn from(token: &AccessToken) -> Self {
+        Self::AccessToken(token.clone())
+    }
+}
+
+impl From<RefreshToken> for StandardRevocableToken {
+    fn from(token: RefreshToken) -> Self {
+        Self::RefreshToken(token)
+    }
+}
+
+impl From<&RefreshToken> for StandardRevocableToken {
+    fn from(token: &RefreshToken) -> Self {
+        Self::RefreshToken(token.clone())
     }
 }
 
@@ -127,33 +151,3 @@ impl Display for RevocationErrorResponseType {
         write!(f, "{}", self.as_ref())
     }
 }
-
-///
-/// Standard OAuth2 token revocation response.
-///
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct RevocationResponse<EF>
-where
-    EF: ExtraRevocationResponseFields,
-{
-    #[serde(bound = "EF: ExtraRevocationResponseFields", flatten)]
-    extra_fields: EF,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-///
-/// Empty (default) extra token fields.
-///
-pub struct EmptyExtraRevocationResponseFields {}
-impl ExtraRevocationResponseFields for EmptyExtraRevocationResponseFields {}
-
-///
-/// Trait for adding extra fields to the `RevocationResponse`.
-///
-pub trait ExtraRevocationResponseFields: DeserializeOwned + Debug + Serialize {}
-
-///
-/// Standard implementation of RevocationResponse which throws away
-/// extra received response fields.
-///
-pub type StandardRevocationResponse = RevocationResponse<EmptyExtraRevocationResponseFields>;

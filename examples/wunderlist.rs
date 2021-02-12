@@ -14,11 +14,14 @@
 //! ...and follow the instructions.
 //!
 
-use oauth2::basic::{
-    BasicErrorResponse, BasicRevocableToken, BasicRevocationErrorResponse,
-    BasicTokenIntrospectionResponse, BasicTokenType,
-};
 use oauth2::TokenType;
+use oauth2::{
+    basic::{
+        BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse,
+        BasicTokenType,
+    },
+    revocation::StandardRevocableToken,
+};
 // Alternatively, this can be `oauth2::curl::http_client` or a custom client.
 use oauth2::helpers;
 use oauth2::reqwest::http_client;
@@ -38,7 +41,7 @@ use url::Url;
 
 type SpecialTokenResponse = NonStandardTokenResponse<EmptyExtraTokenFields>;
 type SpecialClient = Client<
-    BasicRevocableToken,
+    StandardRevocableToken,
     BasicErrorResponse,
     SpecialTokenResponse,
     BasicTokenType,

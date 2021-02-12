@@ -506,7 +506,7 @@ pub use types::{
     ResourceOwnerUsername, ResponseType, RevocationUrl, Scope, TokenUrl, UserCode,
 };
 
-use crate::revocation::{ExtraRevocationResponseFields, RevocableToken, RevocationResponse};
+use crate::revocation::RevocableToken;
 
 const CONTENT_TYPE_JSON: &str = "application/json";
 const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";
@@ -1666,6 +1666,21 @@ where
     where
         RE: Error + 'static,
     {
+        // https://tools.ietf.org/html/rfc7009#section-2 states:
+        //   "The client requests the revocation of a particular token by making an
+        //    HTTP POST request to the token revocation endpoint URL.  This URL
+        //    MUST conform to the rules given in [RFC6749], Section 3.1.  Clients
+        //    MUST verify that the URL is an HTTPS URL."
+        let revocation_url = match self.revocation_url {
+            Some(url) if url.url().scheme() == "https" => Ok(url.url()),
+            Some(_) => Err(RequestTokenError::Other(
+                "revocation_url is not HTTPS".to_string(),
+            )),
+            None => Err(RequestTokenError::Other(
+                "no revocation_url provided".to_string(),
+            )),
+        }?;
+
         let mut params: Vec<(&str, &str)> = vec![("token", self.token.secret())];
         params.push(("token_type_hint", self.token.token_type_hint()));
 
@@ -1676,9 +1691,7 @@ where
             &self.extra_params,
             None,
             None,
-            self.revocation_url
-                .ok_or_else(|| RequestTokenError::Other("no revocation_url provided".to_string()))?
-                .url(),
+            revocation_url,
             params,
         ))
     }
@@ -1686,38 +1699,36 @@ where
     ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
-    pub fn request<F, RE, EF>(
-        self,
-        http_client: F,
-    ) -> Result<RevocationResponse<EF>, RequestTokenError<RE, TE>>
+    pub fn request<F, RE>(self, http_client: F) -> Result<(), RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,
-        EF: ExtraRevocationResponseFields,
     {
+        // From https://tools.ietf.org/html/rfc7009#section-2.2:
+        //   "The content of the response body is ignored by the client as all
+        //    necessary information is conveyed in the response code."
         http_client(self.prepare_request()?)
             .map_err(RequestTokenError::Request)
-            .and_then(endpoint_response)
+            .and_then(endpoint_response_status_only)
     }
 
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
-    pub async fn request_async<C, F, RE, EF>(
+    pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> Result<RevocationResponse<EF>, RequestTokenError<RE, TE>>
+    ) -> Result<(), RequestTokenError<RE, TE>>
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
-        EF: ExtraRevocationResponseFields,
     {
         let http_request = self.prepare_request()?;
         let http_response = http_client(http_request)
             .await
             .map_err(RequestTokenError::Request)?;
-        endpoint_response(http_response)
+        endpoint_response_status_only(http_response)
     }
 }
 
@@ -1821,6 +1832,32 @@ where
     TE: ErrorResponse,
     DO: DeserializeOwned,
 {
+    check_response_status(&http_response)?;
+
+    check_response_body(&http_response)?;
+
+    let response_body = http_response.body.as_slice();
+    serde_json::from_slice(response_body)
+        .map_err(|e| RequestTokenError::Parse(e, response_body.to_vec()))
+}
+
+fn endpoint_response_status_only<RE, TE>(
+    http_response: HttpResponse,
+) -> Result<(), RequestTokenError<RE, TE>>
+where
+    RE: Error + 'static,
+    TE: ErrorResponse,
+{
+    check_response_status(&http_response)
+}
+
+fn check_response_status<RE, TE>(
+    http_response: &HttpResponse,
+) -> Result<(), RequestTokenError<RE, TE>>
+where
+    RE: Error + 'static,
+    TE: ErrorResponse,
+{
     if http_response.status_code != StatusCode::OK {
         let reason = http_response.body.as_slice();
         if reason.is_empty() {
@@ -1836,6 +1873,16 @@ where
         }
     }
 
+    Ok(())
+}
+
+fn check_response_body<RE, TE>(
+    http_response: &HttpResponse,
+) -> Result<(), RequestTokenError<RE, TE>>
+where
+    RE: Error + 'static,
+    TE: ErrorResponse,
+{
     // Validate that the response Content-Type is JSON.
     http_response
         .headers
@@ -1860,14 +1907,12 @@ where
         )?;
 
     if http_response.body.is_empty() {
-        Err(RequestTokenError::Other(
+        return Err(RequestTokenError::Other(
             "Server returned empty response body".to_string(),
-        ))
-    } else {
-        let response_body = http_response.body.as_slice();
-        serde_json::from_slice(response_body)
-            .map_err(|e| RequestTokenError::Parse(e, response_body.to_vec()))
+        ));
     }
+
+    Ok(())
 }
 
 ///

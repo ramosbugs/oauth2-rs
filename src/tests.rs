@@ -1751,7 +1751,8 @@ fn test_token_revocation_with_access_token() {
                 .collect(),
                 body: b"{}".to_vec(),
             },
-        )).unwrap();
+        ))
+        .unwrap();
 }
 
 #[test]
@@ -1779,7 +1780,8 @@ fn test_token_revocation_with_refresh_token() {
                 .collect(),
                 body: b"{}".to_vec(),
             },
-        )).unwrap();
+        ))
+        .unwrap();
 }
 
 #[test]

@@ -1725,6 +1725,63 @@ fn test_token_revocation_with_unsupported_token_type() {
         )
     ));
 }
+
+#[test]
+fn test_token_revocation_with_access_token() {
+    let client = new_client()
+        .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+
+    client
+        .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+            ],
+            "token=access_token_123&token_type_hint=access_token",
+            Some("https://revocation/url".parse().unwrap()),
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: b"{}".to_vec(),
+            },
+        )).unwrap();
+}
+
+#[test]
+fn test_token_revocation_with_refresh_token() {
+    let client = new_client()
+        .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+
+    client
+        .revoke_token(RefreshToken::new("refresh_token_123".to_string()).into())
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+            ],
+            "token=refresh_token_123&token_type_hint=refresh_token",
+            Some("https://revocation/url".parse().unwrap()),
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: b"{}".to_vec(),
+            },
+        )).unwrap();
+}
+
 #[test]
 fn test_extension_token_revocation_successful() {
     use self::colorful_extension::*;

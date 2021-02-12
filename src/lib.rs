@@ -1,7 +1,8 @@
 #![warn(missing_docs)]
 //!
 //! An extensible, strongly-typed implementation of OAuth2
-//! ([RFC 6749](https://tools.ietf.org/html/rfc6749)).
+//! ([RFC 6749](https://tools.ietf.org/html/rfc6749)) including token introspection ([RFC 7662](https://tools.ietf.org/html/rfc7662))
+//! and token revocation ([RFC 7009](https://tools.ietf.org/html/rfc7009)).
 //!
 //! # Contents
 //! * [Importing `oauth2`: selecting an HTTP client interface](#importing-oauth2-selecting-an-http-client-interface)
@@ -411,7 +412,7 @@
 //!
 //! More specific implementations are available as part of the examples:
 //!
-//! - [Google](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/google.rs)
+//! - [Google](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/google.rs) (includes token revocation)
 //! - [Github](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/github.rs)
 //! - [Microsoft Graph](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/msgraph.rs)
 //! - [Wunderlist](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/wunderlist.rs)
@@ -660,7 +661,9 @@ where
     }
 
     ///
-    /// Sets the revocation URL used by the revocation endpoint.
+    /// Sets the revocation URL for contacting the revocation endpoint ([RFC 7009](https://tools.ietf.org/html/rfc7009)).
+    ///
+    /// See: [`revoke_token()`](Self::revoke_token())
     ///
     pub fn set_revocation_url(mut self, revocation_url: RevocationUrl) -> Self {
         self.revocation_url = Some(revocation_url);
@@ -845,12 +848,8 @@ where
     }
 
     ///
-    /// Exchanges a code produced by a successful authorization process with an access token.
-    ///
-    /// Acquires ownership of the `code` because authorization codes may only be used once to
-    /// retrieve an access token from the authorization server.
-    ///
-    /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
+    /// Query the authorization server [`RFC 7662 compatible`](https://tools.ietf.org/html/rfc7662) endpoint to
+    /// determine the set of metadata for a given previously received token.
     ///
     pub fn introspect<'a>(&'a self, token: &'a AccessToken) -> IntrospectRequest<'a, TE, TIR, TT> {
         IntrospectRequest {
@@ -866,11 +865,13 @@ where
     }
 
     ///
-    /// Attempts to revoke the given token using an RFC 7009 OAuth 2.0 Token Revocation compatible endpoint.
+    /// Attempts to revoke the given previously received token using an [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009)
+    /// compatible endpoint.
     ///
-    /// Requires that `set_revocation_url` have already been called to set the revocation endpoint URL.
+    /// Requires that [`set_revocation_url()`](Self::set_revocation_url()) have already been called to set the revocation endpoint URL.
     ///
-    /// See https://tools.ietf.org/html/rfc7009
+    /// Attempting to submit the generated request without calling [`set_revocation_url()`](Self::set_revocation_url())
+    /// first will result in an error.
     ///
     pub fn revoke_token(&self, token: RT) -> RevocationRequest<RT, TRE> {
         RevocationRequest {
@@ -1639,9 +1640,8 @@ where
 }
 
 ///
-/// A request to revoke a token.
-///
-/// See https://tools.ietf.org/html/rfc7009#section-2.1
+/// A request to revoke a token via an [`RFC 7009`](https://tools.ietf.org/html/rfc7009#section-2.1) compatible
+/// endpoint.
 ///
 #[derive(Debug)]
 pub struct RevocationRequest<'a, RT, TE>
@@ -1709,7 +1709,9 @@ where
         }?;
 
         let mut params: Vec<(&str, &str)> = vec![("token", self.token.secret())];
-        params.push(("token_type_hint", self.token.token_type_hint()));
+        if let Some(type_hint) = self.token.type_hint() {
+            params.push(("token_type_hint", type_hint));
+        }
 
         Ok(endpoint_request(
             self.auth_type,
@@ -1725,6 +1727,12 @@ where
 
     ///
     /// Synchronously sends the request to the authorization server and awaits a response.
+    ///
+    /// A successful response indicates that the server either revoked the token or the token was not known to the
+    /// server.
+    ///
+    /// Error [`UnsupportedTokenType`](crate::revocation::RevocationErrorResponseType::UnsupportedTokenType) will be returned if the
+    /// type of token type given is not supported by the server.
     ///
     pub fn request<F, RE>(self, http_client: F) -> Result<(), RequestTokenError<RE, TE>>
     where

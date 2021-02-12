@@ -200,6 +200,6 @@ pub type BasicErrorResponse = StandardErrorResponse<BasicErrorResponseType>;
 pub type BasicRequestTokenError<RE> = RequestTokenError<RE, BasicErrorResponse>;
 
 ///
-///
+/// Revocation error response specialization for basic OAuth2 implementation.
 ///
 pub type BasicRevocationErrorResponse = StandardErrorResponse<RevocationErrorResponseType>;

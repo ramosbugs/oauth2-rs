@@ -33,7 +33,7 @@ pub trait RevocableToken {
 ///
 /// Automatically reports the correct RFC 7009 [`token_type_hint`](https://tools.ietf.org/html/rfc7009#section-2.1) value corresponding to the token type variant used, i.e.
 /// `access_token` for [`AccessToken`] and `secret_token` for [`RefreshToken`].
-/// 
+///
 /// # Example
 ///
 /// Per [RFC 7009, Section 2](https://tools.ietf.org/html/rfc7009#section-2) prefer revocation by refresh token which,
@@ -45,7 +45,7 @@ pub trait RevocableToken {
 ///     Some(token) => token.into(),
 ///     None => token_response.access_token().into(),
 /// };
-/// 
+///
 /// client
 ///     .revoke_token(token_to_revoke)
 ///     .request(http_client)

@@ -1163,9 +1163,9 @@ mod colorful_extension {
             }
         }
 
-        fn token_type_hint(&self) -> &str {
+        fn type_hint(&self) -> Option<&str> {
             match self {
-                ColorfulRevocableToken::Red(_) => "red_token",
+                ColorfulRevocableToken::Red(_) => Some("red_token"),
             }
         }
     }

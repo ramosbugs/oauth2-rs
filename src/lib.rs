@@ -531,14 +531,14 @@ pub enum AuthType {
 /// Stores the configuration for an OAuth2 client.
 ///
 #[derive(Clone, Debug)]
-pub struct Client<RT, TE, TR, TT, TIR, RER>
+pub struct Client<TE, TR, TT, TIR, RT, RTE>
 where
-    RT: RevocableToken,
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
     TT: TokenType,
     TIR: TokenIntrospectionResponse<TT>,
-    RER: ErrorResponse,
+    RT: RevocableToken,
+    RTE: ErrorResponse,
 {
     client_id: ClientId,
     client_secret: Option<ClientSecret>,
@@ -549,17 +549,17 @@ where
     introspect_url: Option<IntrospectUrl>,
     revocation_url: Option<RevocationUrl>,
     device_authorization_url: Option<DeviceAuthorizationUrl>,
-    phantom: PhantomData<(RER, RT, TE, TR, TT, TIR)>,
+    phantom: PhantomData<(TE, TR, TT, TIR, RT, RTE)>,
 }
 
-impl<RT, TE, TR, TT, TIR, RER> Client<RT, TE, TR, TT, TIR, RER>
+impl<TE, TR, TT, TIR, RT, RTE> Client<TE, TR, TT, TIR, RT, RTE>
 where
-    RT: RevocableToken,
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
     TIR: TokenIntrospectionResponse<TT>,
-    RER: ErrorResponse + 'static,
+    RT: RevocableToken,
+    RTE: ErrorResponse + 'static,
 {
     ///
     /// Initializes an OAuth2 client with the fields common to most OAuth2 flows.
@@ -845,7 +845,7 @@ where
     ///
     /// See https://tools.ietf.org/html/rfc7009
     ///
-    pub fn revoke_token(&self, token: RT) -> RevocationRequest<RT, RER> {
+    pub fn revoke_token(&self, token: RT) -> RevocationRequest<RT, RTE> {
         RevocationRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,

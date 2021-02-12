@@ -14,11 +14,11 @@ use crate::{
 /// Basic OAuth2 client specialization, suitable for most applications.
 ///
 pub type BasicClient = Client<
-    StandardRevocableToken,
     BasicErrorResponse,
     BasicTokenResponse,
     BasicTokenType,
     BasicTokenIntrospectionResponse,
+    StandardRevocableToken,
     BasicRevocationErrorResponse,
 >;
 

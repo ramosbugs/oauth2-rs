@@ -41,11 +41,11 @@ use url::Url;
 
 type SpecialTokenResponse = NonStandardTokenResponse<EmptyExtraTokenFields>;
 type SpecialClient = Client<
-    StandardRevocableToken,
     BasicErrorResponse,
     SpecialTokenResponse,
     BasicTokenType,
     BasicTokenIntrospectionResponse,
+    StandardRevocableToken,
     BasicRevocationErrorResponse,
 >;
 

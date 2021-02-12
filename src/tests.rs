@@ -1083,11 +1083,11 @@ mod colorful_extension {
     use std::fmt::{Debug, Display, Formatter};
 
     pub type ColorfulClient = Client<
-        ColorfulRevocableToken,
         StandardErrorResponse<ColorfulErrorResponseType>,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
         StandardTokenIntrospectionResponse<ColorfulFields, ColorfulTokenType>,
+        ColorfulRevocableToken,
         StandardErrorResponse<ColorfulErrorResponseType>,
     >;
 
@@ -1394,11 +1394,11 @@ mod custom_errors {
     impl ErrorResponse for CustomErrorResponse {}
 
     pub type CustomErrorClient = Client<
-        ColorfulRevocableToken,
         CustomErrorResponse,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
         StandardTokenIntrospectionResponse<ColorfulFields, ColorfulTokenType>,
+        ColorfulRevocableToken,
         CustomErrorResponse,
     >;
 }
@@ -2326,11 +2326,11 @@ fn test_send_sync_impl() {
     is_sync_and_send::<AuthorizationRequest>();
     is_sync_and_send::<
         Client<
-            StandardRevocableToken,
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
             BasicTokenType,
             StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
+            StandardRevocableToken,
             BasicRevocationErrorResponse,
         >,
     >();

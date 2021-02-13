@@ -349,9 +349,9 @@ new_url_type![
 ];
 new_url_type![
     ///
-    /// URL of the client's introspect endpoint.
+    /// URL of the client's [RFC 7662 OAuth 2.0 Token Introspection](https://tools.ietf.org/html/rfc7662) endpoint.
     ///
-    IntrospectUrl
+    IntrospectionUrl
 ];
 new_url_type![
     ///

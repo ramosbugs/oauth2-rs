@@ -652,9 +652,7 @@ where
     }
 
     ///
-    /// Sets the introspect URL for contacting the introspect endpoint ([RFC 7662](https://tools.ietf.org/html/rfc7662)).
-    ///
-    /// See: [`introspect()`](Self::introspect())
+    /// Sets the introspect URL used by the introspect endpoint.
     ///
     pub fn set_introspection_url(mut self, introspect_url: IntrospectUrl) -> Self {
         self.introspect_url = Some(introspect_url);

@@ -848,8 +848,12 @@ where
     }
 
     ///
-    /// Query the authorization server [`RFC 7662 compatible`](https://tools.ietf.org/html/rfc7662) endpoint to
-    /// determine the set of metadata for a given previously received token.
+    /// Exchanges a code produced by a successful authorization process with an access token.
+    ///
+    /// Acquires ownership of the `code` because authorization codes may only be used once to
+    /// retrieve an access token from the authorization server.
+    ///
+    /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
     ///
     pub fn introspect<'a>(&'a self, token: &'a AccessToken) -> IntrospectRequest<'a, TE, TIR, TT> {
         IntrospectRequest {

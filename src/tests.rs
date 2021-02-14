@@ -1746,7 +1746,7 @@ fn test_token_revocation_with_unsupported_token_type() {
 }
 
 #[test]
-fn test_token_revocation_with_access_token() {
+fn test_token_revocation_with_access_token_and_empty_json_response() {
     let client = new_client()
         .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
@@ -1769,6 +1769,61 @@ fn test_token_revocation_with_access_token() {
                 .into_iter()
                 .collect(),
                 body: b"{}".to_vec(),
+            },
+        ))
+        .unwrap();
+}
+
+#[test]
+fn test_token_revocation_with_access_token_and_empty_response() {
+    let client = new_client()
+        .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+
+    client
+        .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+            ],
+            "token=access_token_123&token_type_hint=access_token",
+            Some("https://revocation/url".parse().unwrap()),
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: vec![]
+                .into_iter()
+                .collect(),
+                body: vec![],
+            },
+        ))
+        .unwrap();
+}
+
+#[test]
+fn test_token_revocation_with_access_token_and_non_json_response() {
+    let client = new_client()
+        .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+
+    client
+        .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+            ],
+            "token=access_token_123&token_type_hint=access_token",
+            Some("https://revocation/url".parse().unwrap()),
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/octet-stream").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: vec![1, 2, 3],
             },
         ))
         .unwrap();

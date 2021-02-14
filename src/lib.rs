@@ -502,9 +502,10 @@ pub use url;
 
 pub use types::{
     AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
-    DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl, IntrospectUrl, PkceCodeChallenge,
-    PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
-    ResourceOwnerUsername, ResponseType, RevocationUrl, Scope, TokenUrl, UserCode,
+    DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl, IntrospectionUrl,
+    PkceCodeChallenge, PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken,
+    ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, RevocationUrl, Scope, TokenUrl,
+    UserCode,
 };
 
 pub use crate::revocation::RevocableToken;
@@ -574,7 +575,7 @@ where
     auth_type: AuthType,
     token_url: Option<TokenUrl>,
     redirect_url: Option<RedirectUrl>,
-    introspect_url: Option<IntrospectUrl>,
+    introspection_url: Option<IntrospectionUrl>,
     revocation_url: Option<RevocationUrl>,
     device_authorization_url: Option<DeviceAuthorizationUrl>,
     phantom: PhantomData<(TE, TR, TT, TIR, RT, TRE)>,
@@ -622,7 +623,7 @@ where
             auth_type: AuthType::BasicAuth,
             token_url,
             redirect_url: None,
-            introspect_url: None,
+            introspection_url: None,
             revocation_url: None,
             device_authorization_url: None,
             phantom: PhantomData,
@@ -652,10 +653,11 @@ where
     }
 
     ///
-    /// Sets the introspect URL used by the introspect endpoint.
+    /// Sets the introspection URL for contacting the ([RFC 7662](https://tools.ietf.org/html/rfc7662))
+    /// introspection endpoint.
     ///
-    pub fn set_introspection_url(mut self, introspect_url: IntrospectUrl) -> Self {
-        self.introspect_url = Some(introspect_url);
+    pub fn set_introspection_url(mut self, introspection_url: IntrospectionUrl) -> Self {
+        self.introspection_url = Some(introspection_url);
 
         self
     }
@@ -848,20 +850,19 @@ where
     }
 
     ///
-    /// Exchanges a code produced by a successful authorization process with an access token.
+    /// Query the authorization server [`RFC 7662 compatible`](https://tools.ietf.org/html/rfc7662) introspection
+    /// endpoint to determine the set of metadata for a previously received token.
     ///
-    /// Acquires ownership of the `code` because authorization codes may only be used once to
-    /// retrieve an access token from the authorization server.
-    ///
-    /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
-    ///
-    pub fn introspect<'a>(&'a self, token: &'a AccessToken) -> IntrospectRequest<'a, TE, TIR, TT> {
-        IntrospectRequest {
+    pub fn introspect<'a>(
+        &'a self,
+        token: &'a AccessToken,
+    ) -> IntrospectionRequest<'a, TE, TIR, TT> {
+        IntrospectionRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
             client_secret: self.client_secret.as_ref(),
             extra_params: Vec::new(),
-            introspect_url: self.introspect_url.as_ref(),
+            introspection_url: self.introspection_url.as_ref(),
             token,
             token_type_hint: None,
             _phantom: PhantomData,
@@ -1515,7 +1516,7 @@ where
 /// See https://tools.ietf.org/html/rfc7662#section-2.1
 ///
 #[derive(Debug)]
-pub struct IntrospectRequest<'a, TE, TIR, TT>
+pub struct IntrospectionRequest<'a, TE, TIR, TT>
 where
     TE: ErrorResponse,
     TIR: TokenIntrospectionResponse<TT>,
@@ -1528,19 +1529,19 @@ where
     client_id: &'a ClientId,
     client_secret: Option<&'a ClientSecret>,
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
-    introspect_url: Option<&'a IntrospectUrl>,
+    introspection_url: Option<&'a IntrospectionUrl>,
 
     _phantom: PhantomData<(TE, TIR, TT)>,
 }
 
-impl<'a, TE, TIR, TT> IntrospectRequest<'a, TE, TIR, TT>
+impl<'a, TE, TIR, TT> IntrospectionRequest<'a, TE, TIR, TT>
 where
     TE: ErrorResponse + 'static,
     TIR: TokenIntrospectionResponse<TT>,
     TT: TokenType,
 {
     ///
-    /// Sets the optional token_type_hint parameter
+    /// Sets the optional token_type_hint parameter.
     ///
     /// See: https://tools.ietf.org/html/rfc7662#section-2.1
     ///
@@ -1564,7 +1565,7 @@ where
     }
 
     ///
-    /// Appends an extra param to the token introspect.
+    /// Appends an extra param to the token introspection request.
     ///
     /// This method allows extensions to be used without direct support from
     /// this crate. If `name` conflicts with a parameter managed by this crate, the
@@ -1603,8 +1604,10 @@ where
             &self.extra_params,
             None,
             None,
-            self.introspect_url
-                .ok_or_else(|| RequestTokenError::Other("no introspect_url provided".to_string()))?
+            self.introspection_url
+                .ok_or_else(|| {
+                    RequestTokenError::Other("no introspection_url provided".to_string())
+                })?
                 .url(),
             params,
         ))

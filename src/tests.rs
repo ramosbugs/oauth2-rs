@@ -1536,9 +1536,11 @@ fn test_token_introspection_successful_with_basic_auth_minimal_response() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
         .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-        .set_introspection_url(IntrospectUrl::new("https://introspect/url".to_string()).unwrap());
+        .set_introspection_url(
+            IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
+        );
 
-    let introspect = client
+    let introspection_response = client
         .introspect(&AccessToken::new("access_token_123".to_string()))
         .request(mock_http_client(
             vec![
@@ -1547,7 +1549,7 @@ fn test_token_introspection_successful_with_basic_auth_minimal_response() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "token=access_token_123",
-            Some("https://introspect/url".parse().unwrap()),
+            Some("https://introspection/url".parse().unwrap()),
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -1565,18 +1567,18 @@ fn test_token_introspection_successful_with_basic_auth_minimal_response() {
         ))
         .unwrap();
 
-    assert_eq!(true, introspect.active);
-    assert_eq!(None, introspect.scopes);
-    assert_eq!(None, introspect.client_id);
-    assert_eq!(None, introspect.username);
-    assert_eq!(None, introspect.token_type);
-    assert_eq!(None, introspect.exp);
-    assert_eq!(None, introspect.iat);
-    assert_eq!(None, introspect.nbf);
-    assert_eq!(None, introspect.sub);
-    assert_eq!(None, introspect.aud);
-    assert_eq!(None, introspect.iss);
-    assert_eq!(None, introspect.jti);
+    assert_eq!(true, introspection_response.active);
+    assert_eq!(None, introspection_response.scopes);
+    assert_eq!(None, introspection_response.client_id);
+    assert_eq!(None, introspection_response.username);
+    assert_eq!(None, introspection_response.token_type);
+    assert_eq!(None, introspection_response.exp);
+    assert_eq!(None, introspection_response.iat);
+    assert_eq!(None, introspection_response.nbf);
+    assert_eq!(None, introspection_response.sub);
+    assert_eq!(None, introspection_response.aud);
+    assert_eq!(None, introspection_response.iss);
+    assert_eq!(None, introspection_response.jti);
 }
 
 #[test]
@@ -1584,9 +1586,11 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
         .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-        .set_introspection_url(IntrospectUrl::new("https://introspect/url".to_string()).unwrap());
+        .set_introspection_url(
+            IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
+        );
 
-    let introspect = client
+    let introspection_response = client
         .introspect(&AccessToken::new("access_token_123".to_string()))
         .set_token_type_hint("access_token")
         .request(mock_http_client(
@@ -1596,7 +1600,7 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
                 (AUTHORIZATION, "Basic YWFhOmJiYg=="),
             ],
             "token=access_token_123&token_type_hint=access_token",
-            Some("https://introspect/url".parse().unwrap()),
+            Some("https://introspection/url".parse().unwrap()),
             HttpResponse {
                 status_code: StatusCode::OK,
                 headers: vec![(
@@ -1625,29 +1629,44 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
         ))
         .unwrap();
 
-    assert_eq!(true, introspect.active);
+    assert_eq!(true, introspection_response.active);
     assert_eq!(
         Some(vec![
             Scope::new("email".to_string()),
             Scope::new("profile".to_string())
         ]),
-        introspect.scopes
+        introspection_response.scopes
     );
-    assert_eq!(Some(ClientId::new("aaa".to_string())), introspect.client_id);
-    assert_eq!(Some("demo".to_string()), introspect.username);
-    assert_eq!(Some(BasicTokenType::Bearer), introspect.token_type);
-    assert_eq!(Some(Utc.timestamp(1604073517, 0)), introspect.exp);
-    assert_eq!(Some(Utc.timestamp(1604073217, 0)), introspect.iat);
-    assert_eq!(Some(Utc.timestamp(1604073317, 0)), introspect.nbf);
-    assert_eq!(Some("demo".to_string()), introspect.sub);
-    assert_eq!(Some(vec!["demo".to_string()]), introspect.aud);
+    assert_eq!(
+        Some(ClientId::new("aaa".to_string())),
+        introspection_response.client_id
+    );
+    assert_eq!(Some("demo".to_string()), introspection_response.username);
+    assert_eq!(
+        Some(BasicTokenType::Bearer),
+        introspection_response.token_type
+    );
+    assert_eq!(
+        Some(Utc.timestamp(1604073517, 0)),
+        introspection_response.exp
+    );
+    assert_eq!(
+        Some(Utc.timestamp(1604073217, 0)),
+        introspection_response.iat
+    );
+    assert_eq!(
+        Some(Utc.timestamp(1604073317, 0)),
+        introspection_response.nbf
+    );
+    assert_eq!(Some("demo".to_string()), introspection_response.sub);
+    assert_eq!(Some(vec!["demo".to_string()]), introspection_response.aud);
     assert_eq!(
         Some("http://127.0.0.1:8080/auth/realms/test-realm".to_string()),
-        introspect.iss
+        introspection_response.iss
     );
     assert_eq!(
         Some("be1b7da2-fc18-47b3-bdf1-7a4f50bcf53f".to_string()),
-        introspect.jti
+        introspection_response.jti
     );
 }
 

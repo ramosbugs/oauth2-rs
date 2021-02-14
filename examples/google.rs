@@ -13,12 +13,12 @@
 //! ...and follow the instructions.
 //!
 
-use oauth2::basic::BasicClient;
+use oauth2::{basic::BasicClient, revocation::StandardRevocableToken, TokenResponse};
 // Alternatively, this can be oauth2::curl::http_client or a custom.
 use oauth2::reqwest::http_client;
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge, RedirectUrl,
-    Scope, TokenUrl,
+    RevocationUrl, Scope, TokenUrl,
 };
 use std::env;
 use std::io::{BufRead, BufReader, Write};
@@ -49,6 +49,11 @@ fn main() {
     // See below for the server implementation.
     .set_redirect_url(
         RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
+    )
+    // Google supports OAuth 2.0 Token Revocation (RFC-7009)
+    .set_revocation_url(
+        RevocationUrl::new("https://oauth2.googleapis.com/revoke".to_string())
+            .expect("Invalid revocation endpoint URL"),
     );
 
     // Google supports Proof Key for Code Exchange (PKCE - https://oauth.net/2/pkce/).
@@ -127,14 +132,29 @@ fn main() {
             );
 
             // Exchange the code with a token.
-            let token = client
+            let token_response = client
                 .exchange_code(code)
                 .set_pkce_verifier(pkce_code_verifier)
                 .request(http_client);
 
-            println!("Google returned the following token:\n{:?}\n", token);
+            println!(
+                "Google returned the following token:\n{:?}\n",
+                token_response
+            );
 
-            // The server will terminate itself after collecting the first code.
+            // Revoke the obtained token
+            let token_response = token_response.unwrap();
+            let token_to_revoke: StandardRevocableToken = match token_response.refresh_token() {
+                Some(token) => token.into(),
+                None => token_response.access_token().into(),
+            };
+
+            client
+                .revoke_token(token_to_revoke)
+                .request(http_client)
+                .expect("Failed to revoke token");
+
+            // The server will terminate itself after revoking the token.
             break;
         }
     }

@@ -1791,9 +1791,7 @@ fn test_token_revocation_with_access_token_and_empty_response() {
             Some("https://revocation/url".parse().unwrap()),
             HttpResponse {
                 status_code: StatusCode::OK,
-                headers: vec![]
-                .into_iter()
-                .collect(),
+                headers: vec![].into_iter().collect(),
                 body: vec![],
             },
         ))

@@ -495,9 +495,9 @@ pub use url;
 
 pub use types::{
     AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
-    DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl, IntrospectionUrl, PkceCodeChallenge,
-    PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
-    ResourceOwnerUsername, ResponseType, Scope, TokenUrl, UserCode,
+    DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl, IntrospectionUrl,
+    PkceCodeChallenge, PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken,
+    ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, Scope, TokenUrl, UserCode,
 };
 
 const CONTENT_TYPE_JSON: &str = "application/json";
@@ -805,7 +805,10 @@ where
     /// Query the authorization server [`RFC 7662 compatible`](https://tools.ietf.org/html/rfc7662) introspection
     /// endpoint to determine the set of metadata for a previously received token.
     ///
-    pub fn introspect<'a>(&'a self, token: &'a AccessToken) -> IntrospectionRequest<'a, TE, TIR, TT> {
+    pub fn introspect<'a>(
+        &'a self,
+        token: &'a AccessToken,
+    ) -> IntrospectionRequest<'a, TE, TIR, TT> {
         IntrospectionRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
@@ -1533,7 +1536,9 @@ where
             None,
             None,
             self.introspection_url
-                .ok_or_else(|| RequestTokenError::Other("no introspection_url provided".to_string()))?
+                .ok_or_else(|| {
+                    RequestTokenError::Other("no introspection_url provided".to_string())
+                })?
                 .url(),
             params,
         ))

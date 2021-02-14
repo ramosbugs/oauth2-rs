@@ -1512,7 +1512,9 @@ fn test_token_introspection_successful_with_basic_auth_minimal_response() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
         .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-        .set_introspection_url(IntrospectionUrl::new("https://introspection/url".to_string()).unwrap());
+        .set_introspection_url(
+            IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
+        );
 
     let introspection_response = client
         .introspect(&AccessToken::new("access_token_123".to_string()))
@@ -1560,7 +1562,9 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
         .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-        .set_introspection_url(IntrospectionUrl::new("https://introspection/url".to_string()).unwrap());
+        .set_introspection_url(
+            IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
+        );
 
     let introspection_response = client
         .introspect(&AccessToken::new("access_token_123".to_string()))
@@ -1609,12 +1613,27 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
         ]),
         introspection_response.scopes
     );
-    assert_eq!(Some(ClientId::new("aaa".to_string())), introspection_response.client_id);
+    assert_eq!(
+        Some(ClientId::new("aaa".to_string())),
+        introspection_response.client_id
+    );
     assert_eq!(Some("demo".to_string()), introspection_response.username);
-    assert_eq!(Some(BasicTokenType::Bearer), introspection_response.token_type);
-    assert_eq!(Some(Utc.timestamp(1604073517, 0)), introspection_response.exp);
-    assert_eq!(Some(Utc.timestamp(1604073217, 0)), introspection_response.iat);
-    assert_eq!(Some(Utc.timestamp(1604073317, 0)), introspection_response.nbf);
+    assert_eq!(
+        Some(BasicTokenType::Bearer),
+        introspection_response.token_type
+    );
+    assert_eq!(
+        Some(Utc.timestamp(1604073517, 0)),
+        introspection_response.exp
+    );
+    assert_eq!(
+        Some(Utc.timestamp(1604073217, 0)),
+        introspection_response.iat
+    );
+    assert_eq!(
+        Some(Utc.timestamp(1604073317, 0)),
+        introspection_response.nbf
+    );
     assert_eq!(Some("demo".to_string()), introspection_response.sub);
     assert_eq!(Some(vec!["demo".to_string()]), introspection_response.aud);
     assert_eq!(

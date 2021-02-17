@@ -2771,6 +2771,12 @@ where
         self.jti = jti;
     }
     ///
+    /// Extra fields defined by the client application.
+    ///
+    pub fn extra_fields(&self) -> &EF {
+        &self.extra_fields
+    }
+    ///
     /// Sets the `set_extra_fields` field.
     ///
     pub fn set_extra_fields(&mut self, extra_fields: EF) {

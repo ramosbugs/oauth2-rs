@@ -918,6 +918,27 @@ where
             _phantom: PhantomData,
         })
     }
+
+    ///
+    /// Attempts to revoke the given previously received token using an [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009)
+    /// compatible endpoint.
+    ///
+    /// Requires that [`set_revocation_url()`](Self::set_revocation_url()) have already been called to set the revocation endpoint URL.
+    ///
+    /// Attempting to submit the generated request without calling [`set_revocation_url()`](Self::set_revocation_url())
+    /// first will result in an error.
+    ///
+    pub fn revoke_token(&self, token: RT) -> RevocationRequest<RT, TRE> {
+        RevocationRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            revocation_url: self.revocation_url.as_ref(),
+            token,
+            _phantom: PhantomData,
+        }
+    }
 }
 
 ///
@@ -2775,6 +2796,12 @@ where
     ///
     pub fn set_jti(&mut self, jti: Option<String>) {
         self.jti = jti;
+    }
+    ///
+    /// Extra fields defined by the client application.
+    ///
+    pub fn extra_fields(&self) -> &EF {
+        &self.extra_fields
     }
     ///
     /// Sets the `set_extra_fields` field.

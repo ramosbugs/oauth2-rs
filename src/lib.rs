@@ -924,7 +924,7 @@ where
             client_id: &self.client_id,
             client_secret: self.client_secret.as_ref(),
             extra_params: Vec::new(),
-            revocation_url: revocation_url,
+            revocation_url,
             token,
             _phantom: PhantomData,
         })

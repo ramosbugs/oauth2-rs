@@ -831,14 +831,19 @@ where
     /// Perform a device authorization request as per
     /// https://tools.ietf.org/html/rfc8628#section-3.1
     ///
-    pub fn exchange_device_code(&self) -> Result<DeviceAuthorizationRequest<TE>, ConfigurationError> {
+    pub fn exchange_device_code(
+        &self,
+    ) -> Result<DeviceAuthorizationRequest<TE>, ConfigurationError> {
         Ok(DeviceAuthorizationRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
             client_secret: self.client_secret.as_ref(),
             extra_params: Vec::new(),
             scopes: Vec::new(),
-            device_authorization_url: self.device_authorization_url.as_ref().ok_or(ConfigurationError::MissingUrl("device authorization_url"))?,
+            device_authorization_url: self
+                .device_authorization_url
+                .as_ref()
+                .ok_or(ConfigurationError::MissingUrl("device authorization_url"))?,
             _phantom: PhantomData,
         })
     }
@@ -880,7 +885,10 @@ where
             client_id: &self.client_id,
             client_secret: self.client_secret.as_ref(),
             extra_params: Vec::new(),
-            introspection_url: self.introspection_url.as_ref().ok_or(ConfigurationError::MissingUrl("introspection"))?,
+            introspection_url: self
+                .introspection_url
+                .as_ref()
+                .ok_or(ConfigurationError::MissingUrl("introspection"))?,
             token,
             token_type_hint: None,
             _phantom: PhantomData,
@@ -896,7 +904,10 @@ where
     /// Attempting to submit the generated request without calling [`set_revocation_url()`](Self::set_revocation_url())
     /// first will result in an error.
     ///
-    pub fn revoke_token(&self, token: RT) -> Result<RevocationRequest<RT, TRE>, ConfigurationError> {
+    pub fn revoke_token(
+        &self,
+        token: RT,
+    ) -> Result<RevocationRequest<RT, TRE>, ConfigurationError> {
         // https://tools.ietf.org/html/rfc7009#section-2 states:
         //   "The client requests the revocation of a particular token by making an
         //    HTTP POST request to the token revocation endpoint URL.  This URL
@@ -917,27 +928,6 @@ where
             token,
             _phantom: PhantomData,
         })
-    }
-
-    ///
-    /// Attempts to revoke the given previously received token using an [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009)
-    /// compatible endpoint.
-    ///
-    /// Requires that [`set_revocation_url()`](Self::set_revocation_url()) have already been called to set the revocation endpoint URL.
-    ///
-    /// Attempting to submit the generated request without calling [`set_revocation_url()`](Self::set_revocation_url())
-    /// first will result in an error.
-    ///
-    pub fn revoke_token(&self, token: RT) -> RevocationRequest<RT, TRE> {
-        RevocationRequest {
-            auth_type: &self.auth_type,
-            client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
-            extra_params: Vec::new(),
-            revocation_url: self.revocation_url.as_ref(),
-            token,
-            _phantom: PhantomData,
-        }
     }
 }
 

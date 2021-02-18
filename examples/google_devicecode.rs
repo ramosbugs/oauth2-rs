@@ -59,7 +59,7 @@ fn main() {
 
     // Request the set of codes from the Device Authorization endpoint.
     let details: StoringDeviceAuthorizationResponse = device_client
-        .exchange_device_code()
+        .exchange_device_code().unwrap()
         .add_scope(Scope::new("profile".to_string()))
         .request(http_client)
         .expect("Failed to request codes from device auth endpoint");

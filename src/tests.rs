@@ -1541,7 +1541,7 @@ fn test_token_introspection_successful_with_basic_auth_minimal_response() {
         );
 
     let introspection_response = client
-        .introspect(&AccessToken::new("access_token_123".to_string()))
+        .introspect(&AccessToken::new("access_token_123".to_string())).unwrap()
         .request(mock_http_client(
             vec![
                 (ACCEPT, "application/json"),
@@ -1591,7 +1591,7 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
         );
 
     let introspection_response = client
-        .introspect(&AccessToken::new("access_token_123".to_string()))
+        .introspect(&AccessToken::new("access_token_123".to_string())).unwrap()
         .set_token_type_hint("access_token")
         .request(mock_http_client(
             vec![
@@ -1674,35 +1674,23 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
 fn test_token_revocation_with_missing_url() {
     let client = new_client();
 
-    type TestError = RequestTokenError<std::fmt::Error, BasicRevocationErrorResponse>;
-    type TestResult = Result<(), TestError>;
-
-    let result: TestResult = client
+    let result = client
         .revoke_token(AccessToken::new("access_token_123".to_string()).into())
-        .request(|_| unreachable!());
+        .unwrap_err();
 
-    match result {
-        Err(RequestTokenError::Other(msg)) => assert_eq!(msg, "no revocation_url provided"),
-        _ => unreachable!("Expected an error"),
-    };
+    assert_eq!(format!("{}", result), "No revocation endpoint URL specified");
 }
 
 #[test]
 fn test_token_revocation_with_non_https_url() {
     let client = new_client();
 
-    type TestError = RequestTokenError<std::fmt::Error, BasicRevocationErrorResponse>;
-    type TestResult = Result<(), TestError>;
-
-    let result: TestResult = client
+    let result = client
         .set_revocation_url(RevocationUrl::new("http://revocation/url".to_string()).unwrap())
         .revoke_token(AccessToken::new("access_token_123".to_string()).into())
-        .request(|_| unreachable!());
+        .unwrap_err();
 
-    match result {
-        Err(RequestTokenError::Other(msg)) => assert_eq!(msg, "revocation_url is not HTTPS"),
-        _ => unreachable!("Expected an error"),
-    };
+    assert_eq!(format!("{}", result), "Scheme for revocation endpoint URL must be HTTPS");
 }
 
 #[test]
@@ -1711,7 +1699,7 @@ fn test_token_revocation_with_unsupported_token_type() {
         .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     let revocation_response = client
-        .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+        .revoke_token(AccessToken::new("access_token_123".to_string()).into()).unwrap()
         .request(mock_http_client(
             vec![
                 (ACCEPT, "application/json"),
@@ -1751,7 +1739,7 @@ fn test_token_revocation_with_access_token_and_empty_json_response() {
         .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     client
-        .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+        .revoke_token(AccessToken::new("access_token_123".to_string()).into()).unwrap()
         .request(mock_http_client(
             vec![
                 (ACCEPT, "application/json"),
@@ -1780,7 +1768,7 @@ fn test_token_revocation_with_access_token_and_empty_response() {
         .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     client
-        .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+        .revoke_token(AccessToken::new("access_token_123".to_string()).into()).unwrap()
         .request(mock_http_client(
             vec![
                 (ACCEPT, "application/json"),
@@ -1804,7 +1792,7 @@ fn test_token_revocation_with_access_token_and_non_json_response() {
         .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     client
-        .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+        .revoke_token(AccessToken::new("access_token_123".to_string()).into()).unwrap()
         .request(mock_http_client(
             vec![
                 (ACCEPT, "application/json"),
@@ -1833,7 +1821,7 @@ fn test_token_revocation_with_refresh_token() {
         .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     client
-        .revoke_token(RefreshToken::new("refresh_token_123".to_string()).into())
+        .revoke_token(RefreshToken::new("refresh_token_123".to_string()).into()).unwrap()
         .request(mock_http_client(
             vec![
                 (ACCEPT, "application/json"),
@@ -1871,6 +1859,7 @@ fn test_extension_token_revocation_successful() {
         .revoke_token(ColorfulRevocableToken::Red(
             "colorful_token_123".to_string(),
         ))
+        .unwrap()
         .request(mock_http_client(
             vec![
                 (ACCEPT, "application/json"),
@@ -1917,7 +1906,7 @@ fn new_device_auth_details(expires_in: u32) -> StandardDeviceAuthorizationRespon
 
     let client = new_client().set_device_authorization_url(device_auth_url.clone());
     client
-        .exchange_device_code()
+        .exchange_device_code().unwrap()
         .add_extra_param("foo", "bar")
         .add_scope(Scope::new("openid".to_string()))
         .request(mock_http_client(

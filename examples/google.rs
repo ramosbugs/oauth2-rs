@@ -150,7 +150,7 @@ fn main() {
             };
 
             client
-                .revoke_token(token_to_revoke)
+                .revoke_token(token_to_revoke).unwrap()
                 .request(http_client)
                 .expect("Failed to revoke token");
 

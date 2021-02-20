@@ -20,7 +20,7 @@ pub trait RevocableToken {
     /// Indicates the type of the token being revoked, as defined by [RFC 7009, Section 2.1](https://tools.ietf.org/html/rfc7009#section-2.1).
     ///
     /// Implementations should return `Some(...)` values for token types that the target authorization servers are
-    /// expected to know (e.g. because they are registered in the [OAuth Token Type Hints Registry](https://tools.ietf.org/html/rfc7009#section-4.1.2))
+    /// expected to know (e.g. because they are registered in the [OAuth Token Type Hints Registry](https://tools.ietf.org/html/rfc7009#section-4.1.2)
     /// so that they can potentially optimize their search for the token to be revoked.
     ///
     fn type_hint(&self) -> Option<&str>;

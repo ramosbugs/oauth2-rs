@@ -389,7 +389,7 @@
 //!     .set_device_authorization_url(device_auth_url);
 //!
 //! let details: StandardDeviceAuthorizationResponse = client
-//!     .exchange_device_code()
+//!     .exchange_device_code()?
 //!     .add_scope(Scope::new("read".to_string()))
 //!     .request(http_client)?;
 //!
@@ -512,6 +512,24 @@ pub use crate::revocation::RevocableToken;
 
 const CONTENT_TYPE_JSON: &str = "application/json";
 const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";
+
+///
+/// There was a problem configuring the request.
+///
+#[non_exhaustive]
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigurationError {
+    ///
+    /// The endpoint URL tp be contacted is missing.
+    ///
+    #[error("No {0} endpoint URL specified")]
+    MissingUrl(&'static str),
+    ///
+    /// The endpoint URL to be contacted MUST be HTTPS.
+    ///
+    #[error("Scheme for {0} endpoint URL must be HTTPS")]
+    InsecureUrl(&'static str),
+}
 
 ///
 /// Indicates whether requests to the authorization server should use basic authentication or
@@ -813,16 +831,21 @@ where
     /// Perform a device authorization request as per
     /// https://tools.ietf.org/html/rfc8628#section-3.1
     ///
-    pub fn exchange_device_code(&self) -> DeviceAuthorizationRequest<TE> {
-        DeviceAuthorizationRequest {
+    pub fn exchange_device_code(
+        &self,
+    ) -> Result<DeviceAuthorizationRequest<TE>, ConfigurationError> {
+        Ok(DeviceAuthorizationRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
             client_secret: self.client_secret.as_ref(),
             extra_params: Vec::new(),
             scopes: Vec::new(),
-            device_authorization_url: self.device_authorization_url.as_ref(),
+            device_authorization_url: self
+                .device_authorization_url
+                .as_ref()
+                .ok_or(ConfigurationError::MissingUrl("device authorization_url"))?,
             _phantom: PhantomData,
-        }
+        })
     }
 
     ///
@@ -856,17 +879,20 @@ where
     pub fn introspect<'a>(
         &'a self,
         token: &'a AccessToken,
-    ) -> IntrospectionRequest<'a, TE, TIR, TT> {
-        IntrospectionRequest {
+    ) -> Result<IntrospectionRequest<'a, TE, TIR, TT>, ConfigurationError> {
+        Ok(IntrospectionRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
             client_secret: self.client_secret.as_ref(),
             extra_params: Vec::new(),
-            introspection_url: self.introspection_url.as_ref(),
+            introspection_url: self
+                .introspection_url
+                .as_ref()
+                .ok_or(ConfigurationError::MissingUrl("introspection"))?,
             token,
             token_type_hint: None,
             _phantom: PhantomData,
-        }
+        })
     }
 
     ///
@@ -878,16 +904,30 @@ where
     /// Attempting to submit the generated request without calling [`set_revocation_url()`](Self::set_revocation_url())
     /// first will result in an error.
     ///
-    pub fn revoke_token(&self, token: RT) -> RevocationRequest<RT, TRE> {
-        RevocationRequest {
+    pub fn revoke_token(
+        &self,
+        token: RT,
+    ) -> Result<RevocationRequest<RT, TRE>, ConfigurationError> {
+        // https://tools.ietf.org/html/rfc7009#section-2 states:
+        //   "The client requests the revocation of a particular token by making an
+        //    HTTP POST request to the token revocation endpoint URL.  This URL
+        //    MUST conform to the rules given in [RFC6749], Section 3.1.  Clients
+        //    MUST verify that the URL is an HTTPS URL."
+        let revocation_url = match self.revocation_url.as_ref() {
+            Some(url) if url.url().scheme() == "https" => Ok(url),
+            Some(_) => Err(ConfigurationError::InsecureUrl("revocation")),
+            None => Err(ConfigurationError::MissingUrl("revocation")),
+        }?;
+
+        Ok(RevocationRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
             client_secret: self.client_secret.as_ref(),
             extra_params: Vec::new(),
-            revocation_url: self.revocation_url.as_ref(),
+            revocation_url,
             token,
             _phantom: PhantomData,
-        }
+        })
     }
 }
 
@@ -1529,7 +1569,7 @@ where
     client_id: &'a ClientId,
     client_secret: Option<&'a ClientSecret>,
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
-    introspection_url: Option<&'a IntrospectionUrl>,
+    introspection_url: &'a IntrospectionUrl,
 
     _phantom: PhantomData<(TE, TIR, TT)>,
 }
@@ -1604,11 +1644,7 @@ where
             &self.extra_params,
             None,
             None,
-            self.introspection_url
-                .ok_or_else(|| {
-                    RequestTokenError::Other("no introspection_url provided".to_string())
-                })?
-                .url(),
+            self.introspection_url.url(),
             params,
         ))
     }
@@ -1662,7 +1698,7 @@ where
     client_id: &'a ClientId,
     client_secret: Option<&'a ClientSecret>,
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
-    revocation_url: Option<&'a RevocationUrl>,
+    revocation_url: &'a RevocationUrl,
 
     _phantom: PhantomData<(RT, TE)>,
 }
@@ -1700,21 +1736,6 @@ where
     where
         RE: Error + 'static,
     {
-        // https://tools.ietf.org/html/rfc7009#section-2 states:
-        //   "The client requests the revocation of a particular token by making an
-        //    HTTP POST request to the token revocation endpoint URL.  This URL
-        //    MUST conform to the rules given in [RFC6749], Section 3.1.  Clients
-        //    MUST verify that the URL is an HTTPS URL."
-        let revocation_url = match self.revocation_url {
-            Some(url) if url.url().scheme() == "https" => Ok(url.url()),
-            Some(_) => Err(RequestTokenError::Other(
-                "revocation_url is not HTTPS".to_string(),
-            )),
-            None => Err(RequestTokenError::Other(
-                "no revocation_url provided".to_string(),
-            )),
-        }?;
-
         let mut params: Vec<(&str, &str)> = vec![("token", self.token.secret())];
         if let Some(type_hint) = self.token.type_hint() {
             params.push(("token_type_hint", type_hint));
@@ -1727,7 +1748,7 @@ where
             &self.extra_params,
             None,
             None,
-            revocation_url,
+            self.revocation_url.url(),
             params,
         ))
     }
@@ -1972,7 +1993,7 @@ where
     client_secret: Option<&'a ClientSecret>,
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     scopes: Vec<Cow<'a, Scope>>,
-    device_authorization_url: Option<&'a DeviceAuthorizationUrl>,
+    device_authorization_url: &'a DeviceAuthorizationUrl,
     _phantom: PhantomData<TE>,
 }
 
@@ -2023,11 +2044,7 @@ where
             &self.extra_params,
             None,
             Some(&self.scopes),
-            self.device_authorization_url
-                .ok_or_else(|| {
-                    RequestTokenError::Other("no device authorization_url provided".to_string())
-                })?
-                .url(),
+            self.device_authorization_url.url(),
             vec![],
         ))
     }

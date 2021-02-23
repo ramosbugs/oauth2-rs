@@ -1731,13 +1731,14 @@ fn test_token_revocation_with_unsupported_token_type() {
             },
         ));
 
-    assert!(matches!(revocation_response, Err(
-        RequestTokenError::ServerResponse(
-            BasicRevocationErrorResponse{
+    assert!(matches!(
+        revocation_response,
+        Err(RequestTokenError::ServerResponse(
+            BasicRevocationErrorResponse {
                 error: RevocationErrorResponseType::UnsupportedTokenType,
                 ..
-            })
-        )
+            }
+        ))
     ));
 }
 

@@ -508,7 +508,7 @@ pub use types::{
     UserCode,
 };
 
-pub use crate::revocation::RevocableToken;
+pub use revocation::{RevocableToken, RevocationErrorResponseType, StandardRevocableToken};
 
 const CONTENT_TYPE_JSON: &str = "application/json";
 const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";

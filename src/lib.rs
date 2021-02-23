@@ -870,6 +870,12 @@ where
     /// Query the authorization server [`RFC 7662 compatible`](https://tools.ietf.org/html/rfc7662) introspection
     /// endpoint to determine the set of metadata for a previously received token.
     ///
+    /// Requires that [`set_introspection_uri()`](Self::set_introspection_uri()) have already been called to set the
+    /// introspection endpoint URL.
+    ///
+    /// Attempting to submit the generated request without calling [`set_introspection_uri()`](Self::set_introspection_uri())
+    /// first will result in an error.
+    ///
     pub fn introspect<'a>(
         &'a self,
         token: &'a AccessToken,
@@ -893,9 +899,10 @@ where
     /// Attempts to revoke the given previously received token using an [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009)
     /// compatible endpoint.
     ///
-    /// Requires that [`set_revocation_url()`](Self::set_revocation_url()) have already been called to set the revocation endpoint URL.
+    /// Requires that [`set_revocation_uri()`](Self::set_revocation_uri()) have already been called to set the
+    /// revocation endpoint URL.
     ///
-    /// Attempting to submit the generated request without calling [`set_revocation_url()`](Self::set_revocation_url())
+    /// Attempting to submit the generated request without calling [`set_revocation_uri()`](Self::set_revocation_uri())
     /// first will result in an error.
     ///
     pub fn revoke_token(

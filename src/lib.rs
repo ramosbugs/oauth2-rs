@@ -564,17 +564,11 @@ pub enum AuthType {
 /// ```ignore
 /// let revocation_response = client
 ///     .revoke_token(AccessToken::new("some token".to_string()).into())
-///     .request(...)
-///     .unwrap();
+///     .request(...);
 ///
-/// assert!(matches!(revocation_response, Err(
-///     RequestTokenError::ServerResponse(
-///         BasicRevocationErrorResponse{
-///             error: RevocationErrorResponseType::UnsupportedTokenType,
-///             ..
-///         })
-///     )
-/// ));
+/// assert!(matches!(res, Err(
+///     RequestTokenError::ServerResponse(err)) if matches!(err.error(),
+///         RevocationErrorResponseType::UnsupportedTokenType)));
 /// ```
 ///
 #[derive(Clone, Debug)]

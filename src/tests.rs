@@ -219,7 +219,7 @@ fn test_authorize_url_with_extension_response_type() {
 #[test]
 fn test_authorize_url_with_redirect_url() {
     let client = new_client()
-        .set_redirect_url(RedirectUrl::new("https://localhost/redirect".to_string()).unwrap());
+        .set_redirect_uri(RedirectUrl::new("https://localhost/redirect".to_string()).unwrap());
 
     let (url, _) = client
         .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
@@ -240,11 +240,11 @@ fn test_authorize_url_with_redirect_url() {
 #[test]
 fn test_authorize_url_with_redirect_url_override() {
     let client = new_client()
-        .set_redirect_url(RedirectUrl::new("https://localhost/redirect".to_string()).unwrap());
+        .set_redirect_uri(RedirectUrl::new("https://localhost/redirect".to_string()).unwrap());
 
     let (url, _) = client
         .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
-        .set_redirect_url(Cow::Owned(
+        .set_redirect_uri(Cow::Owned(
             RedirectUrl::new("https://localhost/alternative".to_string()).unwrap(),
         ))
         .url();
@@ -611,7 +611,7 @@ fn test_exchange_password_with_json_response() {
 fn test_exchange_code_successful_with_redirect_url() {
     let client = new_client()
         .set_auth_type(AuthType::RequestBody)
-        .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
+        .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
 
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -659,7 +659,7 @@ fn test_exchange_code_successful_with_redirect_url() {
 fn test_exchange_code_successful_with_basic_auth() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
-        .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
+        .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
 
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -707,7 +707,7 @@ fn test_exchange_code_successful_with_basic_auth() {
 fn test_exchange_code_successful_with_pkce_and_extension() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
-        .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
+        .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
 
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -763,7 +763,7 @@ fn test_exchange_code_successful_with_pkce_and_extension() {
 fn test_exchange_refresh_token_successful_with_extension() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
-        .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
+        .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
 
     let token = client
         .exchange_refresh_token(&RefreshToken::new("ccc".to_string()))
@@ -1535,8 +1535,8 @@ fn test_deserialize_optional_string_or_vec_string_vec() {
 fn test_token_introspection_successful_with_basic_auth_minimal_response() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
-        .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-        .set_introspection_url(
+        .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
+        .set_introspection_uri(
             IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
         );
 
@@ -1586,8 +1586,8 @@ fn test_token_introspection_successful_with_basic_auth_minimal_response() {
 fn test_token_introspection_successful_with_basic_auth_full_response() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)
-        .set_redirect_url(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-        .set_introspection_url(
+        .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
+        .set_introspection_uri(
             IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
         );
 
@@ -1691,7 +1691,7 @@ fn test_token_revocation_with_non_https_url() {
     let client = new_client();
 
     let result = client
-        .set_revocation_url(RevocationUrl::new("http://revocation/url".to_string()).unwrap())
+        .set_revocation_uri(RevocationUrl::new("http://revocation/url".to_string()).unwrap())
         .revoke_token(AccessToken::new("access_token_123".to_string()).into())
         .unwrap_err();
 
@@ -1704,7 +1704,7 @@ fn test_token_revocation_with_non_https_url() {
 #[test]
 fn test_token_revocation_with_unsupported_token_type() {
     let client = new_client()
-        .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+        .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     let revocation_response = client
         .revoke_token(AccessToken::new("access_token_123".to_string()).into()).unwrap()
@@ -1744,7 +1744,7 @@ fn test_token_revocation_with_unsupported_token_type() {
 #[test]
 fn test_token_revocation_with_access_token_and_empty_json_response() {
     let client = new_client()
-        .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+        .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     client
         .revoke_token(AccessToken::new("access_token_123".to_string()).into())
@@ -1774,7 +1774,7 @@ fn test_token_revocation_with_access_token_and_empty_json_response() {
 #[test]
 fn test_token_revocation_with_access_token_and_empty_response() {
     let client = new_client()
-        .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+        .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     client
         .revoke_token(AccessToken::new("access_token_123".to_string()).into())
@@ -1799,7 +1799,7 @@ fn test_token_revocation_with_access_token_and_empty_response() {
 #[test]
 fn test_token_revocation_with_access_token_and_non_json_response() {
     let client = new_client()
-        .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+        .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     client
         .revoke_token(AccessToken::new("access_token_123".to_string()).into())
@@ -1829,7 +1829,7 @@ fn test_token_revocation_with_access_token_and_non_json_response() {
 #[test]
 fn test_token_revocation_with_refresh_token() {
     let client = new_client()
-        .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+        .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     client
         .revoke_token(RefreshToken::new("refresh_token_123".to_string()).into())
@@ -1865,7 +1865,7 @@ fn test_extension_token_revocation_successful() {
         AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
         Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
     )
-    .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+    .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     client
         .revoke_token(ColorfulRevocableToken::Red(

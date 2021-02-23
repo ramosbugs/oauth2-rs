@@ -114,7 +114,7 @@
 //!         Some(TokenUrl::new("http://token".to_string())?)
 //!     )
 //!     // Set the URL the user will be redirected to after the authorization process.
-//!     .set_redirect_url(RedirectUrl::new("http://redirect".to_string())?);
+//!     .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
 //!
 //! // Generate a PKCE challenge.
 //! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -185,7 +185,7 @@
 //!         Some(TokenUrl::new("http://token".to_string())?)
 //!     )
 //!     // Set the URL the user will be redirected to after the authorization process.
-//!     .set_redirect_url(RedirectUrl::new("http://redirect".to_string())?);
+//!     .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
 //!
 //! // Generate a PKCE challenge.
 //! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -664,7 +664,7 @@ where
     ///
     /// Sets the the redirect URL used by the authorization endpoint.
     ///
-    pub fn set_redirect_url(mut self, redirect_url: RedirectUrl) -> Self {
+    pub fn set_redirect_uri(mut self, redirect_url: RedirectUrl) -> Self {
         self.redirect_url = Some(redirect_url);
 
         self
@@ -674,7 +674,7 @@ where
     /// Sets the introspection URL for contacting the ([RFC 7662](https://tools.ietf.org/html/rfc7662))
     /// introspection endpoint.
     ///
-    pub fn set_introspection_url(mut self, introspection_url: IntrospectionUrl) -> Self {
+    pub fn set_introspection_uri(mut self, introspection_url: IntrospectionUrl) -> Self {
         self.introspection_url = Some(introspection_url);
 
         self
@@ -685,7 +685,7 @@ where
     ///
     /// See: [`revoke_token()`](Self::revoke_token())
     ///
-    pub fn set_revocation_url(mut self, revocation_url: RevocationUrl) -> Self {
+    pub fn set_revocation_uri(mut self, revocation_url: RevocationUrl) -> Self {
         self.revocation_url = Some(revocation_url);
 
         self
@@ -1010,7 +1010,7 @@ impl<'a> AuthorizationRequest<'a> {
     ///
     /// Overrides the `redirect_url` to the one specified.
     ///
-    pub fn set_redirect_url(mut self, redirect_url: Cow<'a, RedirectUrl>) -> Self {
+    pub fn set_redirect_uri(mut self, redirect_url: Cow<'a, RedirectUrl>) -> Self {
         self.redirect_url = Some(redirect_url);
         self
     }

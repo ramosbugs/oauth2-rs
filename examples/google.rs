@@ -47,11 +47,11 @@ fn main() {
     )
     // This example will be running its own server at localhost:8080.
     // See below for the server implementation.
-    .set_redirect_url(
+    .set_redirect_uri(
         RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
     )
     // Google supports OAuth 2.0 Token Revocation (RFC-7009)
-    .set_revocation_url(
+    .set_revocation_uri(
         RevocationUrl::new("https://oauth2.googleapis.com/revoke".to_string())
             .expect("Invalid revocation endpoint URL"),
     );

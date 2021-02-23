@@ -561,10 +561,45 @@ pub enum AuthType {
 ///   - Generic type `TRE` (aka Token Revocation Error) for errors defined by [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009).
 ///
 /// For example when revoking a token, error code `unsupported_token_type` (from RFC 7009) may be returned:
-/// ```ignore
-/// let revocation_response = client
+/// ```rust
+/// # use thiserror::Error;
+/// # use http::status::StatusCode;
+/// # use http::header::{HeaderValue, CONTENT_TYPE};
+/// # use oauth2::{*, basic::*};
+/// # let client = BasicClient::new(
+/// #     ClientId::new("aaa".to_string()),
+/// #     Some(ClientSecret::new("bbb".to_string())),
+/// #     AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+/// #     Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
+/// # )
+/// # .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+/// #
+/// # #[derive(Debug, Error)]
+/// # enum FakeError {
+/// #     #[error("error")]
+/// #     Err,
+/// # }
+/// #
+/// # let http_client = |_| -> Result<HttpResponse, FakeError> {
+/// #     Ok(HttpResponse {
+/// #         status_code: StatusCode::BAD_REQUEST,
+/// #         headers: vec![(
+/// #             CONTENT_TYPE,
+/// #             HeaderValue::from_str("application/json").unwrap(),
+/// #         )]
+/// #         .into_iter()
+/// #         .collect(),
+/// #         body: "{\"error\": \"unsupported_token_type\", \"error_description\": \"stuff happened\", \
+/// #                \"error_uri\": \"https://errors\"}"
+/// #             .to_string()
+/// #             .into_bytes(),
+/// #     })
+/// # };
+/// #
+/// let res = client
 ///     .revoke_token(AccessToken::new("some token".to_string()).into())
-///     .request(...);
+///     .unwrap()
+///     .request(http_client);
 ///
 /// assert!(matches!(res, Err(
 ///     RequestTokenError::ServerResponse(err)) if matches!(err.error(),

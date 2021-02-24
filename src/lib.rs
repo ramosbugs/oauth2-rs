@@ -114,7 +114,7 @@
 //!         Some(TokenUrl::new("http://token".to_string())?)
 //!     )
 //!     // Set the URL the user will be redirected to after the authorization process.
-//!     .set_redirect_url(RedirectUrl::new("http://redirect".to_string())?);
+//!     .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
 //!
 //! // Generate a PKCE challenge.
 //! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -185,7 +185,7 @@
 //!         Some(TokenUrl::new("http://token".to_string())?)
 //!     )
 //!     // Set the URL the user will be redirected to after the authorization process.
-//!     .set_redirect_url(RedirectUrl::new("http://redirect".to_string())?);
+//!     .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
 //!
 //! // Generate a PKCE challenge.
 //! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -508,7 +508,7 @@ pub use types::{
     UserCode,
 };
 
-pub use crate::revocation::RevocableToken;
+pub use revocation::{RevocableToken, RevocationErrorResponseType, StandardRevocableToken};
 
 const CONTENT_TYPE_JSON: &str = "application/json";
 const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";
@@ -561,20 +561,49 @@ pub enum AuthType {
 ///   - Generic type `TRE` (aka Token Revocation Error) for errors defined by [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009).
 ///
 /// For example when revoking a token, error code `unsupported_token_type` (from RFC 7009) may be returned:
-/// ```ignore
-/// let revocation_response = client
+/// ```rust
+/// # use thiserror::Error;
+/// # use http::status::StatusCode;
+/// # use http::header::{HeaderValue, CONTENT_TYPE};
+/// # use oauth2::{*, basic::*};
+/// # let client = BasicClient::new(
+/// #     ClientId::new("aaa".to_string()),
+/// #     Some(ClientSecret::new("bbb".to_string())),
+/// #     AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+/// #     Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
+/// # )
+/// # .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+/// #
+/// # #[derive(Debug, Error)]
+/// # enum FakeError {
+/// #     #[error("error")]
+/// #     Err,
+/// # }
+/// #
+/// # let http_client = |_| -> Result<HttpResponse, FakeError> {
+/// #     Ok(HttpResponse {
+/// #         status_code: StatusCode::BAD_REQUEST,
+/// #         headers: vec![(
+/// #             CONTENT_TYPE,
+/// #             HeaderValue::from_str("application/json").unwrap(),
+/// #         )]
+/// #         .into_iter()
+/// #         .collect(),
+/// #         body: "{\"error\": \"unsupported_token_type\", \"error_description\": \"stuff happened\", \
+/// #                \"error_uri\": \"https://errors\"}"
+/// #             .to_string()
+/// #             .into_bytes(),
+/// #     })
+/// # };
+/// #
+/// let res = client
 ///     .revoke_token(AccessToken::new("some token".to_string()).into())
-///     .request(...)
-///     .unwrap();
+///     .unwrap()
+///     .request(http_client);
 ///
-/// assert!(matches!(revocation_response, Err(
-///     RequestTokenError::ServerResponse(
-///         BasicRevocationErrorResponse{
-///             error: RevocationErrorResponseType::UnsupportedTokenType,
-///             ..
-///         })
-///     )
-/// ));
+/// assert!(matches!(res, Err(
+///     RequestTokenError::ServerResponse(err)) if matches!(err.error(),
+///         RevocationErrorResponseType::UnsupportedTokenType)));
 /// ```
 ///
 #[derive(Clone, Debug)]
@@ -664,7 +693,7 @@ where
     ///
     /// Sets the the redirect URL used by the authorization endpoint.
     ///
-    pub fn set_redirect_url(mut self, redirect_url: RedirectUrl) -> Self {
+    pub fn set_redirect_uri(mut self, redirect_url: RedirectUrl) -> Self {
         self.redirect_url = Some(redirect_url);
 
         self
@@ -674,7 +703,7 @@ where
     /// Sets the introspection URL for contacting the ([RFC 7662](https://tools.ietf.org/html/rfc7662))
     /// introspection endpoint.
     ///
-    pub fn set_introspection_url(mut self, introspection_url: IntrospectionUrl) -> Self {
+    pub fn set_introspection_uri(mut self, introspection_url: IntrospectionUrl) -> Self {
         self.introspection_url = Some(introspection_url);
 
         self
@@ -685,7 +714,7 @@ where
     ///
     /// See: [`revoke_token()`](Self::revoke_token())
     ///
-    pub fn set_revocation_url(mut self, revocation_url: RevocationUrl) -> Self {
+    pub fn set_revocation_uri(mut self, revocation_url: RevocationUrl) -> Self {
         self.revocation_url = Some(revocation_url);
 
         self
@@ -876,6 +905,12 @@ where
     /// Query the authorization server [`RFC 7662 compatible`](https://tools.ietf.org/html/rfc7662) introspection
     /// endpoint to determine the set of metadata for a previously received token.
     ///
+    /// Requires that [`set_introspection_uri()`](Self::set_introspection_uri()) have already been called to set the
+    /// introspection endpoint URL.
+    ///
+    /// Attempting to submit the generated request without calling [`set_introspection_uri()`](Self::set_introspection_uri())
+    /// first will result in an error.
+    ///
     pub fn introspect<'a>(
         &'a self,
         token: &'a AccessToken,
@@ -899,9 +934,10 @@ where
     /// Attempts to revoke the given previously received token using an [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009)
     /// compatible endpoint.
     ///
-    /// Requires that [`set_revocation_url()`](Self::set_revocation_url()) have already been called to set the revocation endpoint URL.
+    /// Requires that [`set_revocation_uri()`](Self::set_revocation_uri()) have already been called to set the
+    /// revocation endpoint URL.
     ///
-    /// Attempting to submit the generated request without calling [`set_revocation_url()`](Self::set_revocation_url())
+    /// Attempting to submit the generated request without calling [`set_revocation_uri()`](Self::set_revocation_uri())
     /// first will result in an error.
     ///
     pub fn revoke_token(
@@ -1010,7 +1046,7 @@ impl<'a> AuthorizationRequest<'a> {
     ///
     /// Overrides the `redirect_url` to the one specified.
     ///
-    pub fn set_redirect_url(mut self, redirect_url: Cow<'a, RedirectUrl>) -> Self {
+    pub fn set_redirect_uri(mut self, redirect_url: Cow<'a, RedirectUrl>) -> Self {
         self.redirect_url = Some(redirect_url);
         self
     }

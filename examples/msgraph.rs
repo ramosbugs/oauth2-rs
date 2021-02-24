@@ -61,7 +61,7 @@ fn main() {
     .set_auth_type(AuthType::RequestBody)
     // This example will be running its own server at localhost:3003.
     // See below for the server implementation.
-    .set_redirect_url(
+    .set_redirect_uri(
         RedirectUrl::new("http://localhost:3003/redirect".to_string())
             .expect("Invalid redirect URL"),
     );

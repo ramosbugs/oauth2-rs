@@ -927,7 +927,10 @@ fn test_exchange_code_with_json_parse_error() {
             assert_eq!(".", json_err.path().to_string());
             assert_eq!(1, json_err.inner().line());
             assert_eq!(1, json_err.inner().column());
-            assert_eq!(serde_json::error::Category::Syntax, json_err.inner().classify());
+            assert_eq!(
+                serde_json::error::Category::Syntax,
+                json_err.inner().classify()
+            );
         }
         other => panic!("Unexpected error: {:?}", other),
     }
@@ -1007,7 +1010,10 @@ fn test_exchange_code_with_invalid_token_type() {
             assert_eq!("token_type", json_err.path().to_string());
             assert_eq!(1, json_err.inner().line());
             assert_eq!(43, json_err.inner().column());
-            assert_eq!(serde_json::error::Category::Data, json_err.inner().classify());
+            assert_eq!(
+                serde_json::error::Category::Data,
+                json_err.inner().classify()
+            );
         }
         other => panic!("Unexpected error: {:?}", other),
     }

@@ -1936,7 +1936,7 @@ where
     check_response_body(&http_response)?;
 
     let response_body = http_response.body.as_slice();
-    serde_json::from_slice(response_body)
+    serde_path_to_error::deserialize(&mut serde_json::Deserializer::from_slice(response_body))
         .map_err(|e| RequestTokenError::Parse(e, response_body.to_vec()))
 }
 
@@ -1964,7 +1964,7 @@ where
                 "Server returned empty error response".to_string(),
             ));
         } else {
-            let error = match serde_json::from_slice::<TE>(reason) {
+            let error = match serde_path_to_error::deserialize::<_, TE>(&mut serde_json::Deserializer::from_slice(reason)) {
                 Ok(error) => RequestTokenError::ServerResponse(error),
                 Err(error) => RequestTokenError::Parse(error, reason.to_vec()),
             };
@@ -3028,7 +3028,7 @@ where
     /// or error responses.
     ///
     #[error("Failed to parse server response")]
-    Parse(#[source] serde_json::error::Error, Vec<u8>),
+    Parse(#[source] serde_path_to_error::Error<serde_json::error::Error>, Vec<u8>),
     ///
     /// Some other type of error occurred (e.g., an unexpected server response).
     ///

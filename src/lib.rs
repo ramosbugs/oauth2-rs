@@ -3021,12 +3021,12 @@ where
     ServerResponse(T),
     ///
     /// An error occurred while sending the request or receiving the response (e.g., network
-    /// connectivity Errored).
+    /// connectivity failed).
     ///
-    #[error("Request Errored")]
+    #[error("Request failed")]
     Request(#[source] RE),
     ///
-    /// Errored to parse server response. Parse errors may occur while parsing either successful
+    /// Failed to parse server response. Parse errors may occur while parsing either successful
     /// or error responses.
     ///
     #[error("Failed to parse server response")]

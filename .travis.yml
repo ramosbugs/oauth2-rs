@@ -17,7 +17,7 @@ before_script:
       rustup component add rustfmt
     fi
 script:
-  # Newer dependency versions don't support rustc 1.34, so we use a Cargo.lock file for those
+  # Newer dependency versions don't support rustc 1.45, so we use a Cargo.lock file for those
   # builds.
   - |
     if [ "${TRAVIS_RUST_VERSION}" == "1.45.0" ]; then

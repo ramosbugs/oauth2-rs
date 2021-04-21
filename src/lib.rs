@@ -991,6 +991,16 @@ impl<'a> AuthorizationRequest<'a> {
     }
 
     ///
+    /// Creates a new Scope for each Vector String and appends to the authorization URL.
+    ///
+    pub fn add_scopes(mut self, scopes: &[String]) -> Self {
+        scopes
+            .iter()
+            .for_each(|s| self.scopes.push(Cow::Owned(Scope::new(s.to_string()))));
+        self
+    }
+
+    ///
     /// Appends an extra param to the authorization URL.
     ///
     /// This method allows extensions to be used without direct support from
@@ -1318,6 +1328,16 @@ where
     }
 
     ///
+    /// Creates a new Scope for each Vector String and appends to the authorization URL.
+    ///
+    pub fn add_scopes(mut self, scopes: &[String]) -> Self {
+        scopes
+            .iter()
+            .for_each(|s| self.scopes.push(Cow::Owned(Scope::new(s.to_string()))));
+        self
+    }
+
+    ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
@@ -1431,6 +1451,16 @@ where
     }
 
     ///
+    /// Creates a new Scope for each Vector String and appends to the authorization URL.
+    ///
+    pub fn add_scopes(mut self, scopes: &[String]) -> Self {
+        scopes
+            .iter()
+            .for_each(|s| self.scopes.push(Cow::Owned(Scope::new(s.to_string()))));
+        self
+    }
+
+    ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
@@ -1540,6 +1570,16 @@ where
     ///
     pub fn add_scope(mut self, scope: Scope) -> Self {
         self.scopes.push(Cow::Owned(scope));
+        self
+    }
+
+    ///
+    /// Creates a new Scope for each Vector String and appends to the authorization URL.
+    ///
+    pub fn add_scopes(mut self, scopes: &[String]) -> Self {
+        scopes
+            .iter()
+            .for_each(|s| self.scopes.push(Cow::Owned(Scope::new(s.to_string()))));
         self
     }
 
@@ -2076,6 +2116,16 @@ where
     ///
     pub fn add_scope(mut self, scope: Scope) -> Self {
         self.scopes.push(Cow::Owned(scope));
+        self
+    }
+
+    ///
+    /// Creates a new Scope for each Vector String and appends to the authorization URL.
+    ///
+    pub fn add_scopes(mut self, scopes: &[String]) -> Self {
+        scopes
+            .iter()
+            .for_each(|s| self.scopes.push(Cow::Owned(Scope::new(s.to_string()))));
         self
     }
 

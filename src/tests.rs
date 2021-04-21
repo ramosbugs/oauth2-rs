@@ -177,10 +177,10 @@ fn test_authorize_url_with_param() {
 
 #[test]
 fn test_authorize_url_with_scopes() {
+    let scopes = vec!["read".to_string(), "write".to_string()];
     let (url, _) = new_client()
         .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
-        .add_scope(Scope::new("read".to_string()))
-        .add_scope(Scope::new("write".to_string()))
+        .add_scopes(&scopes)
         .url();
 
     assert_eq!(
@@ -190,6 +190,26 @@ fn test_authorize_url_with_scopes() {
              &client_id=aaa\
              &state=csrf_token\
              &scope=read+write"
+        )
+        .unwrap(),
+        url
+    );
+}
+
+#[test]
+fn test_authorize_url_with_one_scope() {
+    let (url, _) = new_client()
+        .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+        .add_scope(Scope::new("read".to_string()))
+        .url();
+
+    assert_eq!(
+        Url::parse(
+            "https://example.com/auth\
+             ?response_type=code\
+             &client_id=aaa\
+             &state=csrf_token\
+             &scope=read"
         )
         .unwrap(),
         url

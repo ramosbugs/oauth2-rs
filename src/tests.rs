@@ -656,6 +656,57 @@ fn test_exchange_code_successful_with_redirect_url() {
 }
 
 #[test]
+fn test_exchange_code_successful_with_redirect_url_override() {
+    let client = new_client()
+        .set_auth_type(AuthType::RequestBody)
+        .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap());
+
+    let token = client
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .set_redirect_uri(Cow::Owned(
+            RedirectUrl::new("https://redirect/alternative".to_string()).unwrap(),
+        ))
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+            ],
+            "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb&\
+             redirect_uri=https%3A%2F%2Fredirect%2Falternative",
+            None,
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
+        .unwrap();
+
+    assert_eq!("12/34", token.access_token().secret());
+    assert_eq!(BasicTokenType::Bearer, *token.token_type());
+    assert_eq!(
+        Some(&vec![
+            Scope::new("read".to_string()),
+            Scope::new("write".to_string()),
+        ]),
+        token.scopes()
+    );
+    assert_eq!(None, token.expires_in());
+    assert!(token.refresh_token().is_none());
+}
+
+#[test]
 fn test_exchange_code_successful_with_basic_auth() {
     let client = new_client()
         .set_auth_type(AuthType::BasicAuth)

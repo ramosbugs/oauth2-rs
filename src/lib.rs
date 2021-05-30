@@ -784,7 +784,7 @@ where
             extra_params: Vec::new(),
             pkce_verifier: None,
             token_url: self.token_url.as_ref(),
-            redirect_url: self.redirect_url.as_ref(),
+            redirect_url: self.redirect_url.as_ref().map(Cow::Borrowed),
             _phantom: PhantomData,
         }
     }
@@ -1146,7 +1146,7 @@ where
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pkce_verifier: Option<PkceCodeVerifier>,
     token_url: Option<&'a TokenUrl>,
-    redirect_url: Option<&'a RedirectUrl>,
+    redirect_url: Option<Cow<'a, RedirectUrl>>,
     _phantom: PhantomData<(TE, TR, TT)>,
 }
 impl<'a, TE, TR, TT> CodeTokenRequest<'a, TE, TR, TT>
@@ -1188,6 +1188,14 @@ where
     ///
     pub fn set_pkce_verifier(mut self, pkce_verifier: PkceCodeVerifier) -> Self {
         self.pkce_verifier = Some(pkce_verifier);
+        self
+    }
+
+    ///
+    /// Overrides the `redirect_url` to the one specified.
+    ///
+    pub fn set_redirect_uri(mut self, redirect_url: Cow<'a, RedirectUrl>) -> Self {
+        self.redirect_url = Some(redirect_url);
         self
     }
 
@@ -1837,7 +1845,7 @@ fn endpoint_request<'a>(
     client_id: &'a ClientId,
     client_secret: Option<&'a ClientSecret>,
     extra_params: &'a [(Cow<'a, str>, Cow<'a, str>)],
-    redirect_url: Option<&'a RedirectUrl>,
+    redirect_url: Option<Cow<'a, RedirectUrl>>,
     scopes: Option<&'a Vec<Cow<'a, Scope>>>,
     url: &'a Url,
     params: Vec<(&'a str, &'a str)>,
@@ -1899,7 +1907,7 @@ fn endpoint_request<'a>(
     }
 
     if let Some(ref redirect_url) = redirect_url {
-        params.push(("redirect_uri", redirect_url.as_ref()));
+        params.push(("redirect_uri", redirect_url.as_str()));
     }
 
     params.extend_from_slice(

@@ -2,16 +2,14 @@
 //! This example showcases the Microsoft Graph OAuth2 process for requesting access to Microsoft
 //! services using PKCE.
 //!
-//! Before running it, you'll need to generate your own Microsoft OAuth2 credentials.
-//!
-//! * Go to https://apps.dev.microsoft.com/
-//! * Click Add an App.
-//! * Skip the guided setup.
-//! * Set Web Redirect URL to http://localhost:3003/redirect
-//! * Add Delegated Permissions for Files.Read
-//! * Use the Application Id as MSGRAPH_CLIENT_ID.
-//! * Click Generate New Password.
-//! * Copy the password and use it as MSGRAPH_CLIENT_SECRET.
+//! Before running it, you'll need to generate your own Microsoft OAuth2 credentials. See
+//! https://docs.microsoft.com/azure/active-directory/develop/quickstart-register-app
+//! * Register a `Web` application with a `Redirect URI` of `http://localhost:3003/redirect`.
+//! * In the left menu select `Overview`. Copy the `Application (client) ID` as the MSGRAPH_CLIENT_ID.
+//! * In the left menu select `Certificates & secrets` and add a new client secret. Copy the secret value
+//!   as MSGRAPH_CLIENT_SECRET.
+//! * In the left menu select `API permissions` and add a permission. Select Microsoft Graph and
+//!   `Delegated permissions`. Add the `Files.Read` permission.
 //!
 //! In order to run the example call:
 //!

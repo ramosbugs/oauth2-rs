@@ -991,6 +991,17 @@ impl<'a> AuthorizationRequest<'a> {
     }
 
     ///
+    /// Appends a collection of scopes to the token request.
+    ///
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
+        self
+    }
+
+    ///
     /// Appends an extra param to the authorization URL.
     ///
     /// This method allows extensions to be used without direct support from
@@ -1318,6 +1329,17 @@ where
     }
 
     ///
+    /// Appends a collection of scopes to the token request.
+    ///
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
+        self
+    }
+
+    ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
@@ -1431,6 +1453,17 @@ where
     }
 
     ///
+    /// Appends a collection of scopes to the token request.
+    ///
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
+        self
+    }
+
+    ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
@@ -1540,6 +1573,17 @@ where
     ///
     pub fn add_scope(mut self, scope: Scope) -> Self {
         self.scopes.push(Cow::Owned(scope));
+        self
+    }
+
+    ///
+    /// Appends a collection of scopes to the token request.
+    ///
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
         self
     }
 
@@ -2076,6 +2120,17 @@ where
     ///
     pub fn add_scope(mut self, scope: Scope) -> Self {
         self.scopes.push(Cow::Owned(scope));
+        self
+    }
+
+    ///
+    /// Appends a collection of scopes to the token request.
+    ///
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
         self
     }
 

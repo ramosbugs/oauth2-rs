@@ -991,12 +991,13 @@ impl<'a> AuthorizationRequest<'a> {
     }
 
     ///
-    /// Creates a new Scope for each Vector String and appends to the authorization URL.
+    /// Appends a collection of scopes to the token request.
     ///
-    pub fn add_scopes(mut self, scopes: &[String]) -> Self {
-        scopes
-            .iter()
-            .for_each(|s| self.scopes.push(Cow::Owned(Scope::new(s.to_string()))));
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
         self
     }
 
@@ -1328,12 +1329,13 @@ where
     }
 
     ///
-    /// Creates a new Scope for each Vector String and appends to the authorization URL.
+    /// Appends a collection of scopes to the token request.
     ///
-    pub fn add_scopes(mut self, scopes: &[String]) -> Self {
-        scopes
-            .iter()
-            .for_each(|s| self.scopes.push(Cow::Owned(Scope::new(s.to_string()))));
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
         self
     }
 
@@ -1451,12 +1453,13 @@ where
     }
 
     ///
-    /// Creates a new Scope for each Vector String and appends to the authorization URL.
+    /// Appends a collection of scopes to the token request.
     ///
-    pub fn add_scopes(mut self, scopes: &[String]) -> Self {
-        scopes
-            .iter()
-            .for_each(|s| self.scopes.push(Cow::Owned(Scope::new(s.to_string()))));
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
         self
     }
 
@@ -1574,12 +1577,13 @@ where
     }
 
     ///
-    /// Creates a new Scope for each Vector String and appends to the authorization URL.
+    /// Appends a collection of scopes to the token request.
     ///
-    pub fn add_scopes(mut self, scopes: &[String]) -> Self {
-        scopes
-            .iter()
-            .for_each(|s| self.scopes.push(Cow::Owned(Scope::new(s.to_string()))));
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
         self
     }
 
@@ -2120,12 +2124,13 @@ where
     }
 
     ///
-    /// Creates a new Scope for each Vector String and appends to the authorization URL.
+    /// Appends a collection of scopes to the token request.
     ///
-    pub fn add_scopes(mut self, scopes: &[String]) -> Self {
-        scopes
-            .iter()
-            .for_each(|s| self.scopes.push(Cow::Owned(Scope::new(s.to_string()))));
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
         self
     }
 

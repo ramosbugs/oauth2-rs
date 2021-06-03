@@ -74,7 +74,7 @@ pub struct NonStandardTokenResponse<EF: ExtraTokenFields> {
     #[serde(skip_serializing_if = "Option::is_none")]
     refresh_token: Option<RefreshToken>,
     #[serde(rename = "scope")]
-    #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
+    #[serde(deserialize_with = "helpers::deserialize_sequence_or_space_delimited_vec")]
     #[serde(serialize_with = "helpers::serialize_space_delimited_vec")]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]

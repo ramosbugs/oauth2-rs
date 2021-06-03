@@ -88,23 +88,42 @@ where
 /// # */
 /// ```
 ///
-pub fn deserialize_space_delimited_vec<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+pub fn deserialize_sequence_or_space_delimited_vec<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 where
     T: Default + Deserialize<'de>,
     D: Deserializer<'de>,
 {
     use serde::de::Error;
     use serde_json::Value;
-    if let Some(space_delimited) = Option::<String>::deserialize(deserializer)? {
-        let entries = space_delimited
-            .split(' ')
-            .map(|s| Value::String(s.to_string()))
-            .collect();
-        T::deserialize(Value::Array(entries)).map_err(Error::custom)
+
+    if let Some(sequence_or_string) = Option::<SequenceOrString>::deserialize(deserializer)? {
+        match sequence_or_string {
+            SequenceOrString::Str(space_delimited) => {
+                let entries = space_delimited
+                    .split(' ')
+                    .map(|s| Value::String(s.to_string()))
+                    .collect();
+                T::deserialize(Value::Array(entries)).map_err(Error::custom)
+            },
+
+            SequenceOrString::StrSeq(str_sequence) => {
+                let entries = str_sequence.into_iter()
+                    .map(|s| Value::String(s.to_string()))
+                    .collect();
+                T::deserialize(Value::Array(entries)).map_err(Error::custom)
+            }
+        }
     } else {
         // If the JSON value is null, use the default value.
         Ok(T::default())
     }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum SequenceOrString {
+    Str(String),
+    StrSeq(Vec<String>),
 }
 
 ///

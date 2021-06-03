@@ -387,6 +387,64 @@ fn test_exchange_code_successful_with_complete_json_response() {
 }
 
 #[test]
+fn test_exchange_code_successful_with_complete_json_response_and_scope_as_sequence() {
+    let client = new_client().set_auth_type(AuthType::RequestBody);
+    let token = client
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+            ],
+            "grant_type=authorization_code&code=ccc&client_id=aaa&client_secret=bbb",
+            None,
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": [\"read\", \"write\"], \
+                       \"expires_in\": 3600, \
+                       \"refresh_token\": \"foobar\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
+        .unwrap();
+
+    assert_eq!("12/34", token.access_token().secret());
+    assert_eq!(BasicTokenType::Bearer, *token.token_type());
+    assert_eq!(
+        Some(&vec![
+            Scope::new("read".to_string()),
+            Scope::new("write".to_string()),
+        ]),
+        token.scopes()
+    );
+    assert_eq!(3600, token.expires_in().unwrap().as_secs());
+    assert_eq!("foobar", token.refresh_token().clone().unwrap().secret());
+
+    // Ensure that serialization produces an equivalent JSON value.
+    let serialized_json = serde_json::to_string(&token).unwrap();
+    assert_eq!(
+        "{\"access_token\":\"12/34\",\"token_type\":\"bearer\",\"expires_in\":3600,\
+         \"refresh_token\":\"foobar\",\"scope\":\"read write\"}"
+            .to_string(),
+        serialized_json
+    );
+
+    let deserialized_token = serde_json::from_str::<BasicTokenResponse>(&serialized_json).unwrap();
+    assert_token_eq(&token, &deserialized_token);
+}
+
+#[test]
 fn test_exchange_client_credentials_with_basic_auth() {
     let client = BasicClient::new(
         ClientId::new("aaa/;&".to_string()),

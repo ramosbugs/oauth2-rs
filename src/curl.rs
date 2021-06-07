@@ -69,14 +69,12 @@ pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
             .read_function(|buf| Ok(form_slice.read(buf).unwrap_or(0)))
             .map_err(Error::Curl)?;
 
-        if let Method::POST = request.method {
-            transfer
-                .write_function(|new_data| {
-                    data.extend_from_slice(new_data);
-                    Ok(new_data.len())
-                })
-                .map_err(Error::Curl)?;
-        }
+        transfer
+            .write_function(|new_data| {
+                data.extend_from_slice(new_data);
+                Ok(new_data.len())
+            })
+            .map_err(Error::Curl)?;
 
         transfer.perform().map_err(Error::Curl)?;
     }

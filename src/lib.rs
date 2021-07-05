@@ -2326,7 +2326,7 @@ where
             }
 
             // Sleep here using the provided sleep function.
-            sleep_fn(interval);
+            sleep_fn(interval).await;
         }
     }
 

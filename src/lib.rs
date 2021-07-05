@@ -25,7 +25,7 @@
 //!
 //!    Example import in `Cargo.toml`:
 //!    ```toml
-//!    oauth2 = "4.0"
+//!    oauth2 = "4.1"
 //!    ```
 //!
 //! For the HTTP client modes described above, the following HTTP client implementations can be
@@ -58,7 +58,7 @@
 //!    may wish to disable the default `reqwest` 0.10 dependency by specifying
 //!    `default-features = false` in `Cargo.toml`:
 //!    ```toml
-//!    oauth2 = { version = "4.0", default-features = false }
+//!    oauth2 = { version = "4.1", default-features = false }
 //!    ```
 //!
 //!    Synchronous HTTP clients should implement the following trait:

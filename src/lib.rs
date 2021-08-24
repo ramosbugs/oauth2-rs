@@ -32,7 +32,7 @@
 //! used:
 //!  * **[`reqwest`]**
 //!
-//!    The `reqwest` HTTP client supports both modes. By default, `reqwest` 0.10 is enabled,
+//!    The `reqwest` HTTP client supports both modes. By default, `reqwest` 0.11 is enabled,
 //!    which supports the synchronous and asynchronous `futures` 0.3 APIs.
 //!
 //!    Synchronous client: [`reqwest::http_client`]

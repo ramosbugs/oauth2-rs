@@ -73,7 +73,10 @@ jobs:
         if: ${{ matrix.rust == 'stable' }}
         run: |
           cargo install --force cargo-audit
-          cargo audit
+          # The chrono thread safety issue doesn't affect this crate since the crate does not rely
+          # on the system's local time zone, only UTC. See:
+          # https://github.com/chronotope/chrono/issues/499#issuecomment-946388161
+          cargo audit --ignore RUSTSEC-2020-0159
 
       - name: Check WASM build
         run: cargo check --target wasm32-unknown-unknown

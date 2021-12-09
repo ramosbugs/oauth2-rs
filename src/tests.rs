@@ -1784,6 +1784,26 @@ fn test_token_revocation_with_non_https_url() {
 }
 
 #[test]
+fn test_token_revocation_unchecked() {
+    let client = new_client();
+
+    client
+        .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap())
+        .revoke_token_with_unchecked_url(AccessToken::new("access_token_123".to_string()).into())
+        .unwrap();
+}
+
+#[test]
+fn test_token_revocation_unchecked_with_insecure_url() {
+    let client = new_client();
+
+    client
+        .set_revocation_uri(RevocationUrl::new("http://revocation/url".to_string()).unwrap())
+        .revoke_token_with_unchecked_url(AccessToken::new("access_token_123".to_string()).into())
+        .unwrap();
+}
+
+#[test]
 fn test_token_revocation_with_unsupported_token_type() {
     let client = new_client()
         .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());

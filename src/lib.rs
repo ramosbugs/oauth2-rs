@@ -949,11 +949,26 @@ where
         //    HTTP POST request to the token revocation endpoint URL.  This URL
         //    MUST conform to the rules given in [RFC6749], Section 3.1.  Clients
         //    MUST verify that the URL is an HTTPS URL."
-        let revocation_url = match self.revocation_url.as_ref() {
-            Some(url) if url.url().scheme() == "https" => Ok(url),
-            Some(_) => Err(ConfigurationError::InsecureUrl("revocation")),
-            None => Err(ConfigurationError::MissingUrl("revocation")),
-        }?;
+        if let Some(url) = self.revocation_url.as_ref() {
+            if url.url().scheme() != "https" {
+                return Err(ConfigurationError::InsecureUrl("revocation"))
+            }
+        }
+        self.revoke_token_with_unchecked_url(token)
+    }
+
+    ///
+    /// Attempts to revoke the given previously received token using an [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009)
+    /// compatible endpoint WITHOUT checking and enforcing that the endpoint use HTTPS (in violation of RFC 7009).
+    ///
+    /// It is strongly recommended to use [`revoke_token()`](Self::revoke_token()) instead, but sometimes useful to allow in secure endpoints in development.
+    ///
+    pub fn revoke_token_with_unchecked_url(
+        &self,
+        token: RT
+    ) -> Result<RevocationRequest<RT, TRE>, ConfigurationError> {
+        let revocation_url = self.revocation_url.as_ref()
+            .ok_or(ConfigurationError::MissingUrl("revocation"))?;
 
         Ok(RevocationRequest {
             auth_type: &self.auth_type,

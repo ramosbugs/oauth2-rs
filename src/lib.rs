@@ -616,7 +616,7 @@ where
     RT: RevocableToken,
     TRE: ErrorResponse,
 {
-    client_id: ClientId,
+    pub client_id: ClientId,
     client_secret: Option<ClientSecret>,
     auth_url: AuthUrl,
     auth_type: AuthType,

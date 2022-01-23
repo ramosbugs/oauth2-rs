@@ -965,6 +965,66 @@ where
             _phantom: PhantomData,
         })
     }
+
+    ///
+    /// Returns the Client ID.
+    ///
+    pub fn client_id(&self) -> &ClientId {
+        &self.client_id
+    }
+
+    ///
+    /// Returns the authorization endpoint.
+    ///
+    pub fn auth_url(&self) -> &AuthUrl {
+        &self.auth_url
+    }
+
+    ///
+    /// Returns the type of client authentication used for communicating with the authorization
+    /// server.
+    ///
+    pub fn auth_type(&self) -> &AuthType {
+        &self.auth_type
+    }
+
+    ///
+    /// Returns the token endpoint.
+    ///
+    pub fn token_url(&self) -> Option<&TokenUrl> {
+        self.token_url.as_ref()
+    }
+
+    ///
+    /// Returns the redirect URL used by the authorization endpoint.
+    ///
+    pub fn redirect_url(&self) -> Option<&RedirectUrl> {
+        self.redirect_url.as_ref()
+    }
+
+    ///
+    /// Returns the introspection URL for contacting the ([RFC 7662](https://tools.ietf.org/html/rfc7662))
+    /// introspection endpoint.
+    ///
+    pub fn introspection_url(&self) -> Option<&IntrospectionUrl> {
+        self.introspection_url.as_ref()
+    }
+
+    ///
+    /// Returns the revocation URL for contacting the revocation endpoint ([RFC 7009](https://tools.ietf.org/html/rfc7009)).
+    ///
+    /// See: [`revoke_token()`](Self::revoke_token())
+    ///
+    pub fn revocation_url(&self) -> Option<&RevocationUrl> {
+        self.revocation_url.as_ref()
+    }
+
+    ///
+    /// Returns the the device authorization URL used by the device authorization endpoint.
+    ///
+    pub fn device_authorization_url(&self) -> Option<&DeviceAuthorizationUrl> {
+        self.device_authorization_url.as_ref()
+    }
 }
 
 ///

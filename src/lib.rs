@@ -970,10 +970,6 @@ where
         &self.client_id
     }
 
-    pub fn client_secret(&self) -> Option<&ClientSecret> {
-        self.client_secret.as_ref()
-    }
-
     pub fn auth_url(&self) -> &AuthUrl {
         &self.auth_url
     }

@@ -616,15 +616,15 @@ where
     RT: RevocableToken,
     TRE: ErrorResponse,
 {
-    pub client_id: ClientId,
-    pub client_secret: Option<ClientSecret>,
-    pub auth_url: AuthUrl,
-    pub auth_type: AuthType,
-    pub token_url: Option<TokenUrl>,
-    pub redirect_url: Option<RedirectUrl>,
-    pub introspection_url: Option<IntrospectionUrl>,
-    pub revocation_url: Option<RevocationUrl>,
-    pub device_authorization_url: Option<DeviceAuthorizationUrl>,
+    client_id: ClientId,
+    client_secret: Option<ClientSecret>,
+    auth_url: AuthUrl,
+    auth_type: AuthType,
+    token_url: Option<TokenUrl>,
+    redirect_url: Option<RedirectUrl>,
+    introspection_url: Option<IntrospectionUrl>,
+    revocation_url: Option<RevocationUrl>,
+    device_authorization_url: Option<DeviceAuthorizationUrl>,
     phantom: PhantomData<(TE, TR, TT, TIR, RT, TRE)>,
 }
 
@@ -964,6 +964,42 @@ where
             token,
             _phantom: PhantomData,
         })
+    }
+
+    pub fn client_id(&self) -> &ClientId {
+        &self.client_id
+    }
+
+    pub fn client_secret(&self) -> Option<&ClientSecret> {
+        self.client_secret.as_ref()
+    }
+
+    pub fn auth_url(&self) -> &AuthUrl {
+        &self.auth_url
+    }
+
+    pub fn auth_type(&self) -> &AuthType {
+        &self.auth_type
+    }
+
+    pub fn token_url(&self) -> Option<&TokenUrl> {
+        self.token_url.as_ref()
+    }
+
+    pub fn redirect_url(&self) -> Option<&RedirectUrl> {
+        self.redirect_url.as_ref()
+    }
+
+    pub fn introspection_url(&self) -> Option<&IntrospectionUrl> {
+        self.introspection_url.as_ref()
+    }
+
+    pub fn revocation_url(&self) -> Option<&RevocationUrl> {
+        self.revocation_url.as_ref()
+    }
+
+    pub fn device_authorization_url(&self) -> Option<&DeviceAuthorizationUrl> {
+        self.device_authorization_url.as_ref()
     }
 }
 

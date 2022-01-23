@@ -691,7 +691,7 @@ where
     }
 
     ///
-    /// Sets the the redirect URL used by the authorization endpoint.
+    /// Sets the redirect URL used by the authorization endpoint.
     ///
     pub fn set_redirect_uri(mut self, redirect_url: RedirectUrl) -> Self {
         self.redirect_url = Some(redirect_url);

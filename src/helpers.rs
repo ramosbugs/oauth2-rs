@@ -1,9 +1,9 @@
 use serde::ser::{Impossible, SerializeStructVariant, SerializeTupleVariant};
 use serde::{de, ser};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::borrow::Cow;
 use std::fmt;
 use std::marker::PhantomData;
-use std::borrow::Cow;
 
 ///
 /// Serde case-insensitive deserializer for an untagged `enum`.
@@ -370,9 +370,9 @@ pub fn variant_name<T: Serialize>(t: &T) -> &'static str {
 }
 
 /// Enum for taking static string literals or allocated strings as parameters.
-/// 
+///
 /// Need a `String`? Use `.to_string()`
-/// 
+///
 /// Need a `str`? Use `.as_str()` or `.as_ref()`
 #[derive(Clone)]
 pub enum AsStr {
@@ -380,7 +380,7 @@ pub enum AsStr {
     Static(&'static str),
 
     /// A heap-allocated, dynamic, mutable `String`.
-    Dynamic(String)
+    Dynamic(String),
 }
 impl AsStr {
     /// Convert to a `&str`
@@ -440,7 +440,7 @@ impl AsRef<str> for AsStr {
 impl serde::Serialize for AsStr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer
+        S: serde::Serializer,
     {
         serializer.serialize_str(self.as_ref())
     }
@@ -448,7 +448,7 @@ impl serde::Serialize for AsStr {
 impl<'de> serde::Deserialize<'de> for AsStr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>
+        D: serde::Deserializer<'de>,
     {
         String::deserialize(deserializer).map(AsStr::Dynamic)
     }

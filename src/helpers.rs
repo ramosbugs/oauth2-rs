@@ -3,6 +3,7 @@ use serde::{de, ser};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::marker::PhantomData;
+use std::borrow::Cow;
 
 ///
 /// Serde case-insensitive deserializer for an untagged `enum`.
@@ -366,4 +367,140 @@ pub fn variant_name<T: Serialize>(t: &T) -> &'static str {
     }
 
     t.serialize(VariantName).unwrap()
+}
+
+/// Enum for taking static string literals or allocated strings as parameters.
+/// 
+/// Need a `String`? Use `.to_string()`
+/// 
+/// Need a `str`? Use `.as_str()` or `.as_ref()`
+#[derive(Clone)]
+pub enum AsStr {
+    /// An immutable, static `str`. Not allocated on the heap.
+    Static(&'static str),
+
+    /// A heap-allocated, dynamic, mutable `String`.
+    Dynamic(String)
+}
+impl AsStr {
+    /// Convert to a `&str`
+    pub fn as_str(&self) -> &str {
+        self.as_ref()
+    }
+}
+impl core::ops::Deref for AsStr {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            AsStr::Static(str) => str,
+            AsStr::Dynamic(string) => string.as_str(),
+        }
+    }
+}
+impl From<Cow<'static, str>> for AsStr {
+    fn from(cow: Cow<'static, str>) -> Self {
+        match cow {
+            Cow::Borrowed(str) => AsStr::Static(str),
+            Cow::Owned(string) => AsStr::Dynamic(string),
+        }
+    }
+}
+impl<'a> Into<Cow<'a, str>> for AsStr {
+    fn into(self) -> Cow<'static, str> {
+        self.to_string().into()
+    }
+}
+impl Into<String> for AsStr {
+    fn into(self) -> String {
+        match self {
+            AsStr::Static(str) => str.to_string(),
+            AsStr::Dynamic(string) => string,
+        }
+    }
+}
+impl From<&'static str> for AsStr {
+    fn from(str: &'static str) -> Self {
+        AsStr::Static(str)
+    }
+}
+impl From<String> for AsStr {
+    fn from(string: String) -> Self {
+        AsStr::Dynamic(string)
+    }
+}
+impl AsRef<str> for AsStr {
+    fn as_ref(&self) -> &str {
+        match self {
+            AsStr::Static(str) => str,
+            AsStr::Dynamic(string) => string.as_str(),
+        }
+    }
+}
+impl serde::Serialize for AsStr {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer
+    {
+        serializer.serialize_str(self.as_ref())
+    }
+}
+impl<'de> serde::Deserialize<'de> for AsStr {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>
+    {
+        String::deserialize(deserializer).map(AsStr::Dynamic)
+    }
+}
+impl PartialEq for AsStr {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+impl PartialEq<String> for AsStr {
+    fn eq(&self, other: &String) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+impl PartialEq<AsStr> for Cow<'_, str> {
+    fn eq(&self, other: &AsStr) -> bool {
+        self.as_ref() == other.as_str()
+    }
+}
+impl PartialEq<AsStr> for String {
+    fn eq(&self, other: &AsStr) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+impl PartialEq<AsStr> for str {
+    fn eq(&self, other: &AsStr) -> bool {
+        self == other.as_str()
+    }
+}
+impl PartialEq<str> for AsStr {
+    fn eq(&self, other: &str) -> bool {
+        self.as_str() == other
+    }
+}
+impl PartialEq<Cow<'_, str>> for AsStr {
+    fn eq(&self, other: &Cow<'_, str>) -> bool {
+        self.as_str() == other.as_ref()
+    }
+}
+impl Eq for AsStr {}
+impl std::hash::Hash for AsStr {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_str().hash(state)
+    }
+}
+impl std::fmt::Debug for AsStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self.as_str(), f)
+    }
+}
+impl std::fmt::Display for AsStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(self.as_str(), f)
+    }
 }

@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use url::Url;
 
+use crate::helpers::AsStr;
+
 macro_rules! new_type {
     // Convenience pattern without an impl.
     (
@@ -84,8 +86,8 @@ macro_rules! new_type {
             $($item)*
 
             #[doc = $new_doc]
-            pub fn new(s: $type) -> Self {
-                $name(s)
+            pub fn new<S: Into<$type>>(s: S) -> Self {
+                $name(s.into())
             }
         }
         impl Deref for $name {
@@ -153,8 +155,8 @@ macro_rules! new_secret_type {
             $($item)*
 
             #[doc = $new_doc]
-            pub fn new(s: $type) -> Self {
-                $name(s)
+            pub fn new<S: Into<$type>>(s: S) -> Self {
+                $name(s.into())
             }
             ///
             #[doc = $secret_doc]
@@ -232,27 +234,37 @@ macro_rules! new_url_type {
     ) => {
         $(#[$attr])*
         #[derive(Clone)]
-        pub struct $name(Url, String);
+        pub struct $name(Url, AsStr);
         impl $name {
             #[doc = $new_doc]
-            pub fn new(url: String) -> Result<Self, ::url::ParseError> {
-                Ok($name(Url::parse(&url)?, url))
+            pub fn new<U: Into<AsStr>>(url: U) -> Result<Self, ::url::ParseError> {
+				let url = url.into();
+                Ok($name(Url::parse(url.as_ref())?, url))
             }
             #[doc = $from_url_doc]
             pub fn from_url(url: Url) -> Self {
                 let s = url.to_string();
-                Self(url, s)
+                Self(url, s.into())
             }
             #[doc = $url_doc]
             pub fn url(&self) -> &Url {
                 return &self.0;
             }
+            #[allow(missing_docs)]
+            pub fn as_str(&self) -> &str {
+                self.as_ref()
+            }
             $($item)*
         }
         impl Deref for $name {
-            type Target = String;
-            fn deref(&self) -> &String {
-                &self.1
+            type Target = str;
+            fn deref(&self) -> &str {
+                self.1.as_ref()
+            }
+        }
+        impl AsRef<str> for $name {
+            fn as_ref(&self) -> &str {
+                self.1.as_ref()
             }
         }
         impl ::std::fmt::Debug for $name {
@@ -326,7 +338,7 @@ new_type![
     /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
     ///
     #[derive(Deserialize, Serialize, Eq, Hash)]
-    ClientId(String)
+    ClientId(AsStr)
 ];
 
 new_url_type![
@@ -377,7 +389,7 @@ new_type![
     /// [Section 3.1.1](https://tools.ietf.org/html/rfc6749#section-3.1.1).
     ///
     #[derive(Deserialize, Serialize, Eq, Hash)]
-    ResponseType(String)
+    ResponseType(AsStr)
 ];
 new_type![
     ///
@@ -385,7 +397,7 @@ new_type![
     /// token.
     ///
     #[derive(Deserialize, Serialize, Eq, Hash)]
-    ResourceOwnerUsername(String)
+    ResourceOwnerUsername(AsStr)
 ];
 
 new_type![
@@ -393,7 +405,7 @@ new_type![
     /// Access token scope, as defined by the authorization server.
     ///
     #[derive(Deserialize, Serialize, Eq, Hash)]
-    Scope(String)
+    Scope(AsStr)
 ];
 impl AsRef<str> for Scope {
     fn as_ref(&self) -> &str {
@@ -407,7 +419,7 @@ new_type![
     /// via the `code_challenge_method` parameter.
     ///
     #[derive(Deserialize, Serialize, Eq, Hash)]
-    PkceCodeChallengeMethod(String)
+    PkceCodeChallengeMethod(AsStr)
 ];
 // This type intentionally does not implement Clone in order to make it difficult to reuse PKCE
 // challenges across multiple requests.
@@ -505,7 +517,7 @@ impl PkceCodeChallenge {
 
         Self {
             code_challenge,
-            code_challenge_method: PkceCodeChallengeMethod::new("S256".to_string()),
+            code_challenge_method: PkceCodeChallengeMethod::new("S256"),
         }
     }
 
@@ -571,7 +583,7 @@ new_secret_type![
     /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
     ///
     #[derive(Clone, Deserialize, Serialize)]
-    ClientSecret(String)
+    ClientSecret(AsStr)
 ];
 new_secret_type![
     ///
@@ -606,21 +618,21 @@ new_secret_type![
     /// Authorization code returned from the authorization endpoint.
     ///
     #[derive(Clone, Deserialize, Serialize)]
-    AuthorizationCode(String)
+    AuthorizationCode(AsStr)
 ];
 new_secret_type![
     ///
     /// Refresh token used to obtain a new access token (if supported by the authorization server).
     ///
     #[derive(Clone, Deserialize, Serialize)]
-    RefreshToken(String)
+    RefreshToken(AsStr)
 ];
 new_secret_type![
     ///
     /// Access token returned by the token endpoint and used to access protected resources.
     ///
     #[derive(Clone, Deserialize, Serialize)]
-    AccessToken(String)
+    AccessToken(AsStr)
 ];
 new_secret_type![
     ///
@@ -628,14 +640,14 @@ new_secret_type![
     /// token.
     ///
     #[derive(Clone)]
-    ResourceOwnerPassword(String)
+    ResourceOwnerPassword(AsStr)
 ];
 new_secret_type![
     ///
     /// Device code returned by the device authorization endpoint and used to query the token endpoint.
     ///
     #[derive(Clone, Deserialize, Serialize)]
-    DeviceCode(String)
+    DeviceCode(AsStr)
 ];
 new_secret_type![
     ///
@@ -643,7 +655,7 @@ new_secret_type![
     /// to authorize.  Contains the user code.
     ///
     #[derive(Clone, Deserialize, Serialize)]
-    VerificationUriComplete(String)
+    VerificationUriComplete(AsStr)
 ];
 new_secret_type![
     ///
@@ -651,5 +663,5 @@ new_secret_type![
     /// the verification URI.
     ///
     #[derive(Clone, Deserialize, Serialize)]
-    UserCode(String)
+    UserCode(AsStr)
 ];

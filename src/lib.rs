@@ -421,9 +421,8 @@
 //!
 //! - [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
 //!
-use chrono::serde::ts_seconds_option;
-use chrono::{DateTime, Utc};
 use std::borrow::Cow;
+use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
@@ -436,6 +435,7 @@ use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use url::{form_urlencoded, Url};
 
 ///
@@ -896,7 +896,7 @@ where
             extra_params: Vec::new(),
             token_url: self.token_url.as_ref(),
             dev_auth_resp: auth_response,
-            time_fn: Arc::new(Utc::now),
+            time_fn: Arc::new(OffsetDateTime::now_utc),
             _phantom: PhantomData,
         }
     }
@@ -2266,7 +2266,7 @@ where
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     token_url: Option<&'a TokenUrl>,
     dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
-    time_fn: Arc<dyn Fn() -> DateTime<Utc> + 'b + Send + Sync>,
+    time_fn: Arc<dyn Fn() -> OffsetDateTime + 'b + Send + Sync>,
     _phantom: PhantomData<(TR, TT, EF)>,
 }
 
@@ -2307,7 +2307,7 @@ where
     ///
     pub fn set_time_fn<T>(mut self, time_fn: T) -> Self
     where
-        T: Fn() -> DateTime<Utc> + 'b + Send + Sync,
+        T: Fn() -> OffsetDateTime + 'b + Send + Sync,
     {
         self.time_fn = Arc::new(time_fn);
         self
@@ -2464,7 +2464,7 @@ where
     fn compute_timeout<RE>(
         &self,
         timeout: Option<Duration>,
-    ) -> Result<DateTime<Utc>, RequestTokenError<RE, DeviceCodeErrorResponse>>
+    ) -> Result<OffsetDateTime, RequestTokenError<RE, DeviceCodeErrorResponse>>
     where
         RE: Error + 'static,
     {
@@ -2472,12 +2472,12 @@ where
         // use that, otherwise use the value given by the device authorization
         // response.
         let timeout_dur = timeout.unwrap_or_else(|| self.dev_auth_resp.expires_in());
-        let chrono_timeout = chrono::Duration::from_std(timeout_dur)
+        let chrono_timeout:time::Duration = time::Duration::try_from(timeout_dur)
             .map_err(|_| RequestTokenError::Other("Failed to convert duration".to_string()))?;
 
         // Calculate the DateTime at which the request times out.
         let timeout_dt = (*self.time_fn)()
-            .checked_add_signed(chrono_timeout)
+            .checked_add(chrono_timeout)
             .ok_or_else(|| RequestTokenError::Other("Failed to calculate timeout".to_string()))?;
 
         Ok(timeout_dt)
@@ -2749,19 +2749,19 @@ where
     /// since January 1 1970 UTC, indicating when this token will expire,
     /// as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     ///
-    fn exp(&self) -> Option<DateTime<Utc>>;
+    fn exp(&self) -> Option<OffsetDateTime>;
     ///
     /// OPTIONAL.  Integer timestamp, measured in the number of seconds
     /// since January 1 1970 UTC, indicating when this token was
     /// originally issued, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     ///
-    fn iat(&self) -> Option<DateTime<Utc>>;
+    fn iat(&self) -> Option<OffsetDateTime>;
     ///
     /// OPTIONAL.  Integer timestamp, measured in the number of seconds
     /// since January 1 1970 UTC, indicating when this token is not to be
     /// used before, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     ///
-    fn nbf(&self) -> Option<DateTime<Utc>>;
+    fn nbf(&self) -> Option<OffsetDateTime>;
     ///
     /// OPTIONAL.  Subject of the token, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     /// Usually a machine-readable identifier of the resource owner who
@@ -2818,17 +2818,17 @@ where
     )]
     token_type: Option<TT>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(with = "ts_seconds_option")]
+    #[serde(with = "time::serde::timestamp::option")]
     #[serde(default)]
-    exp: Option<DateTime<Utc>>,
+    exp: Option<OffsetDateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(with = "ts_seconds_option")]
+    #[serde(with = "time::serde::timestamp::option")]
     #[serde(default)]
-    iat: Option<DateTime<Utc>>,
+    iat: Option<OffsetDateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(with = "ts_seconds_option")]
+    #[serde(with = "time::serde::timestamp::option")]
     #[serde(default)]
-    nbf: Option<DateTime<Utc>>,
+    nbf: Option<OffsetDateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
     sub: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -2909,19 +2909,19 @@ where
     ///
     /// Sets the `set_exp` field.
     ///
-    pub fn set_exp(&mut self, exp: Option<DateTime<Utc>>) {
+    pub fn set_exp(&mut self, exp: Option<OffsetDateTime>) {
         self.exp = exp;
     }
     ///
     /// Sets the `set_iat` field.
     ///
-    pub fn set_iat(&mut self, iat: Option<DateTime<Utc>>) {
+    pub fn set_iat(&mut self, iat: Option<OffsetDateTime>) {
         self.iat = iat;
     }
     ///
     /// Sets the `set_nbf` field.
     ///
-    pub fn set_nbf(&mut self, nbf: Option<DateTime<Utc>>) {
+    pub fn set_nbf(&mut self, nbf: Option<OffsetDateTime>) {
         self.nbf = nbf;
     }
     ///
@@ -2986,15 +2986,15 @@ where
         self.token_type.as_ref()
     }
 
-    fn exp(&self) -> Option<DateTime<Utc>> {
+    fn exp(&self) -> Option<OffsetDateTime> {
         self.exp
     }
 
-    fn iat(&self) -> Option<DateTime<Utc>> {
+    fn iat(&self) -> Option<OffsetDateTime> {
         self.iat
     }
 
-    fn nbf(&self) -> Option<DateTime<Utc>> {
+    fn nbf(&self) -> Option<OffsetDateTime> {
         self.nbf
     }
 

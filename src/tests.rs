@@ -10,7 +10,6 @@ use crate::revocation::StandardRevocableToken;
 use super::basic::*;
 use super::devicecode::*;
 use super::*;
-use chrono::TimeZone;
 
 fn new_client() -> BasicClient {
     BasicClient::new(
@@ -1731,15 +1730,15 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
         introspection_response.token_type
     );
     assert_eq!(
-        Some(Utc.timestamp(1604073517, 0)),
+        Some(OffsetDateTime::from_unix_timestamp(1604073517).unwrap()),
         introspection_response.exp
     );
     assert_eq!(
-        Some(Utc.timestamp(1604073217, 0)),
+        Some(OffsetDateTime::from_unix_timestamp(1604073217).unwrap()),
         introspection_response.iat
     );
     assert_eq!(
-        Some(Utc.timestamp(1604073317, 0)),
+        Some(OffsetDateTime::from_unix_timestamp(1604073317).unwrap()),
         introspection_response.nbf
     );
     assert_eq!(Some("demo".to_string()), introspection_response.sub);
@@ -2035,15 +2034,14 @@ impl IncreasingTime {
     fn new() -> Self {
         Self { times: (0..) }
     }
-    fn next(&mut self) -> DateTime<Utc> {
+    fn next(&mut self) -> OffsetDateTime {
         let next_value = self.times.next().unwrap();
-        let naive = chrono::NaiveDateTime::from_timestamp(next_value, 0);
-        DateTime::<Utc>::from_utc(naive, chrono::Utc)
+        OffsetDateTime::from_unix_timestamp(next_value).unwrap()
     }
 }
 
 /// Creates a time function that increments by one second each time.
-fn mock_time_fn() -> impl Fn() -> DateTime<Utc> + Send + Sync {
+fn mock_time_fn() -> impl Fn() -> OffsetDateTime + Send + Sync {
     let timer = std::sync::Mutex::new(IncreasingTime::new());
     move || timer.lock().unwrap().next()
 }

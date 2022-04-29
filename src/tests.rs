@@ -2469,7 +2469,7 @@ fn test_device_token_slowdown_then_success() {
 
 #[test]
 fn test_send_sync_impl() {
-    fn is_sync_and_send<T: Sync + Send>() {};
+    fn is_sync_and_send<T: Sync + Send>() {}
     #[derive(Debug)]
     struct TestError;
     impl std::fmt::Display for TestError {

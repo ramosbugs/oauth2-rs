@@ -541,7 +541,7 @@ pub enum ConfigurationError {
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum AuthType {
-    /// The client_id and client_secret will be included as part of the request body.
+    /// The client_id and client_secret (if set) will be included as part of the request body.
     RequestBody,
     /// The client_id and client_secret will be included using the basic auth authentication scheme.
     BasicAuth,
@@ -682,7 +682,10 @@ where
     /// server.
     ///
     /// The default is to use HTTP Basic authentication, as recommended in
-    /// [Section 2.3.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-2.3.1).
+    /// [Section 2.3.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-2.3.1). Note that
+    /// if a client secret is omitted (i.e., `client_secret` is set to `None` when calling
+    /// [`Client::new`]), [`AuthType::RequestBody`] is used regardless of the `auth_type` passed to
+    /// this function.
     ///
     pub fn set_auth_type(mut self, auth_type: AuthType) -> Self {
         self.auth_type = auth_type;
@@ -1981,32 +1984,29 @@ fn endpoint_request<'a>(
     }
 
     // FIXME: add support for auth extensions? e.g., client_secret_jwt and private_key_jwt
-    match auth_type {
-        AuthType::RequestBody => {
-            params.push(("client_id", client_id));
-            if let Some(ref client_secret) = client_secret {
-                params.push(("client_secret", client_secret.secret()));
-            }
-        }
-        AuthType::BasicAuth => {
+    match (auth_type, client_secret) {
+        // Basic auth only makes sense when a client secret is provided. Otherwise, always pass the
+        // client ID in the request body.
+        (AuthType::BasicAuth, Some(secret)) => {
             // Section 2.3.1 of RFC 6749 requires separately url-encoding the id and secret
             // before using them as HTTP Basic auth username and password. Note that this is
             // not standard for ordinary Basic auth, so curl won't do it for us.
             let urlencoded_id: String =
                 form_urlencoded::byte_serialize(&client_id.as_bytes()).collect();
-
-            let urlencoded_secret = client_secret.map(|secret| {
-                form_urlencoded::byte_serialize(secret.secret().as_bytes()).collect::<String>()
-            });
-            let b64_credential = base64::encode(&format!(
-                "{}:{}",
-                &urlencoded_id,
-                urlencoded_secret.as_deref().unwrap_or("")
-            ));
+            let urlencoded_secret: String =
+                form_urlencoded::byte_serialize(secret.secret().as_bytes()).collect();
+            let b64_credential =
+                base64::encode(&format!("{}:{}", &urlencoded_id, urlencoded_secret));
             headers.append(
                 AUTHORIZATION,
                 HeaderValue::from_str(&format!("Basic {}", &b64_credential)).unwrap(),
             );
+        }
+        (AuthType::RequestBody, _) | (AuthType::BasicAuth, None) => {
+            params.push(("client_id", client_id));
+            if let Some(ref client_secret) = client_secret {
+                params.push(("client_secret", client_secret.secret()));
+            }
         }
     }
 

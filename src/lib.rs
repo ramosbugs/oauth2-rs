@@ -425,7 +425,6 @@ use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 use std::marker::PhantomData;
-use std::mem::MaybeUninit;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
@@ -2487,11 +2486,11 @@ where
     Error(Option<RequestTokenError<RE, DeviceCodeErrorResponse>>),
     Requesting(
         #[pin] CF,
-        MaybeUninit<DeviceAccessTokenRequestParams<C, S, T, TR, TT>>,
+        Option<DeviceAccessTokenRequestParams<C, S, T, TR, TT>>,
     ),
     Sleeping(
         #[pin] SF,
-        MaybeUninit<DeviceAccessTokenRequestParams<C, S, T, TR, TT>>,
+        Option<DeviceAccessTokenRequestParams<C, S, T, TR, TT>>,
     ),
 }
 
@@ -2520,9 +2519,7 @@ where
                         "Device code expired".to_string(),
                     )))
                 } else {
-                    let fut = (params.http_client)(params.request.clone());
-                    let params = MaybeUninit::new(params);
-                    Self::Requesting(fut, params)
+                    Self::Requesting((params.http_client)(params.request.clone()), Some(params))
                 }
             }
             Err(err) => Self::Error(Some(err)),
@@ -2551,43 +2548,35 @@ where
                         .take()
                         .expect("Response cannot be polled after completion")))
                 }
-                AsyncDeviceAccessTokenResponseProj::Sleeping(fut, maybe_params) => {
-                    match fut.poll(cx) {
-                        Poll::Ready(_) => {
-                            let params = unsafe { maybe_params.assume_init_mut() };
-                            let now = (params.time_fn)();
-                            if now > params.timeout_dt {
-                                return Poll::Ready(Err(RequestTokenError::Other(
-                                    "Device code expired".to_string(),
-                                )));
-                            } else {
-                                let fut = (params.http_client)(params.request.clone());
-                                let params = std::mem::replace(
-                                    maybe_params,
-                                    std::mem::MaybeUninit::uninit(),
-                                );
-                                self.set(Self::Requesting(fut, params));
-                            }
+                AsyncDeviceAccessTokenResponseProj::Sleeping(fut, params) => match fut.poll(cx) {
+                    Poll::Ready(_) => {
+                        let params = params.take().expect("Params should be available");
+                        let now = (params.time_fn)();
+                        if now > params.timeout_dt {
+                            return Poll::Ready(Err(RequestTokenError::Other(
+                                "Device code expired".to_string(),
+                            )));
+                        } else {
+                            self.set(Self::Requesting(
+                                (params.http_client)(params.request.clone()),
+                                Some(params),
+                            ));
                         }
-                        Poll::Pending => return Poll::Pending,
                     }
-                }
-                AsyncDeviceAccessTokenResponseProj::Requesting(fut, maybe_params) => match fut
-                    .poll(cx)
-                {
+                    Poll::Pending => return Poll::Pending,
+                },
+                AsyncDeviceAccessTokenResponseProj::Requesting(fut, params) => match fut.poll(cx) {
                     Poll::Ready(response) => {
-                        let params = unsafe { maybe_params.assume_init_mut() };
+                        let mut params = params.take().expect("Params should be available");
                         match process_device_access_token_response(response, params.interval) {
                             DeviceAccessTokenPollResult::ContinueWithNewPollInterval(
                                 new_interval,
                             ) => {
                                 params.interval = new_interval;
-                                let fut = (params.sleep_fn)(params.interval);
-                                let params = std::mem::replace(
-                                    maybe_params,
-                                    std::mem::MaybeUninit::uninit(),
-                                );
-                                self.set(Self::Sleeping(fut, params));
+                                self.set(Self::Sleeping(
+                                    (params.sleep_fn)(params.interval),
+                                    Some(params),
+                                ));
                             }
                             DeviceAccessTokenPollResult::Done(res, _) => return Poll::Ready(res),
                         }

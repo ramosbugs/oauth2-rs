@@ -2597,6 +2597,7 @@ fn test_send_sync_impl() {
     is_sync_and_send::<StandardDeviceAuthorizationResponse>();
     is_sync_and_send::<
         DeviceAccessTokenRequest<
+            fn() -> DateTime<Utc>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
             BasicTokenType,
             EmptyExtraDeviceAuthorizationFields,

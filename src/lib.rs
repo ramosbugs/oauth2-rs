@@ -425,11 +425,14 @@ use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 use std::marker::PhantomData;
-use std::sync::Arc;
+use std::mem::MaybeUninit;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 use std::time::Duration;
 
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
+use pin_project::pin_project;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use url::{form_urlencoded, Url};
@@ -880,10 +883,10 @@ where
     /// Perform a device access token request as per
     /// <https://tools.ietf.org/html/rfc8628#section-3.4>.
     ///
-    pub fn exchange_device_access_token<'a, 'b, 'c, EF>(
+    pub fn exchange_device_access_token<'a, 'b, EF>(
         &'a self,
         auth_response: &'b DeviceAuthorizationResponse<EF>,
-    ) -> DeviceAccessTokenRequest<'b, 'c, TR, TT, EF>
+    ) -> DeviceAccessTokenRequest<'b, fn() -> DateTime<Utc>, TR, TT, EF>
     where
         'a: 'b,
         EF: ExtraDeviceAuthorizationFields,
@@ -895,7 +898,7 @@ where
             extra_params: Vec::new(),
             token_url: self.token_url.as_ref(),
             dev_auth_resp: auth_response,
-            time_fn: Arc::new(Utc::now),
+            time_fn: Utc::now,
             _phantom: PhantomData,
         }
     }
@@ -1311,20 +1314,16 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> Result<TR, RequestTokenError<RE, TE>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<RE, TE>>>
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
-        endpoint_response(http_response)
+        AsyncTokenResponse::new(self.prepare_request().map(http_client), endpoint_response)
     }
 }
 
@@ -1413,20 +1412,16 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> Result<TR, RequestTokenError<RE, TE>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<RE, TE>>>
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
-        endpoint_response(http_response)
+        AsyncTokenResponse::new(self.prepare_request().map(http_client), endpoint_response)
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
@@ -1538,20 +1533,16 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> Result<TR, RequestTokenError<RE, TE>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<RE, TE>>>
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
-        endpoint_response(http_response)
+        AsyncTokenResponse::new(self.prepare_request().map(http_client), endpoint_response)
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
@@ -1662,20 +1653,16 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> Result<TR, RequestTokenError<RE, TE>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<RE, TE>>>
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
-        endpoint_response(http_response)
+        AsyncTokenResponse::new(self.prepare_request().map(http_client), endpoint_response)
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
@@ -1812,20 +1799,16 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> Result<TIR, RequestTokenError<RE, TE>>
+    ) -> impl Future<Output = Result<TIR, RequestTokenError<RE, TE>>>
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
-        endpoint_response(http_response)
+        AsyncTokenResponse::new(self.prepare_request().map(http_client), endpoint_response)
     }
 }
 
@@ -1925,20 +1908,19 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<C, F, RE>(
         self,
         http_client: C,
-    ) -> Result<(), RequestTokenError<RE, TE>>
+    ) -> impl Future<Output = Result<(), RequestTokenError<RE, TE>>>
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
-        endpoint_response_status_only(http_response)
+        AsyncTokenResponse::new(
+            self.prepare_request().map(http_client),
+            endpoint_response_status_only,
+        )
     }
 }
 
@@ -2124,6 +2106,53 @@ where
     Ok(())
 }
 
+#[pin_project(project = AsyncTokenResponseProj)]
+enum AsyncTokenResponse<F, H, T, RE, TE>
+where
+    F: Future<Output = Result<HttpResponse, RE>>,
+    RE: Error + 'static,
+    TE: ErrorResponse + 'static,
+    H: Fn(HttpResponse) -> Result<T, RequestTokenError<RE, TE>>,
+{
+    Error(Option<RequestTokenError<RE, TE>>),
+    Pending(#[pin] F, H),
+}
+
+impl<F, H, T, RE, TE> AsyncTokenResponse<F, H, T, RE, TE>
+where
+    F: Future<Output = Result<HttpResponse, RE>>,
+    RE: Error + 'static,
+    TE: ErrorResponse + 'static,
+    H: Fn(HttpResponse) -> Result<T, RequestTokenError<RE, TE>>,
+{
+    fn new(response: Result<F, RequestTokenError<RE, TE>>, handler: H) -> Self {
+        match response {
+            Ok(fut) => Self::Pending(fut, handler),
+            Err(err) => Self::Error(Some(err)),
+        }
+    }
+}
+
+impl<F, H, T, RE, TE> Future for AsyncTokenResponse<F, H, T, RE, TE>
+where
+    F: Future<Output = Result<HttpResponse, RE>>,
+    RE: Error + 'static,
+    TE: ErrorResponse + 'static,
+    H: Fn(HttpResponse) -> Result<T, RequestTokenError<RE, TE>>,
+{
+    type Output = Result<T, RequestTokenError<RE, TE>>;
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match self.project() {
+            AsyncTokenResponseProj::Error(err) => Poll::Ready(Err(err
+                .take()
+                .expect("Response cannot be polled after completion"))),
+            AsyncTokenResponseProj::Pending(fut, handler) => fut
+                .poll(cx)
+                .map(|res| res.map_err(RequestTokenError::Request).and_then(handler)),
+        }
+    }
+}
+
 ///
 /// The request for a set of verification codes from the authorization server.
 ///
@@ -2226,21 +2255,17 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
-    pub async fn request_async<C, F, RE, EF>(
+    pub fn request_async<C, F, RE, EF>(
         self,
         http_client: C,
-    ) -> Result<DeviceAuthorizationResponse<EF>, RequestTokenError<RE, TE>>
+    ) -> impl Future<Output = Result<DeviceAuthorizationResponse<EF>, RequestTokenError<RE, TE>>>
     where
         C: FnOnce(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
         EF: ExtraDeviceAuthorizationFields,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
-        endpoint_response(http_response)
+        AsyncTokenResponse::new(self.prepare_request().map(http_client), endpoint_response)
     }
 }
 
@@ -2250,7 +2275,7 @@ where
 /// See <https://tools.ietf.org/html/rfc8628#section-3.4>.
 ///
 #[derive(Clone)]
-pub struct DeviceAccessTokenRequest<'a, 'b, TR, TT, EF>
+pub struct DeviceAccessTokenRequest<'a, T, TR, TT, EF>
 where
     TR: TokenResponse<TT>,
     TT: TokenType,
@@ -2262,12 +2287,13 @@ where
     extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     token_url: Option<&'a TokenUrl>,
     dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
-    time_fn: Arc<dyn Fn() -> DateTime<Utc> + 'b + Send + Sync>,
+    time_fn: T,
     _phantom: PhantomData<(TR, TT, EF)>,
 }
 
-impl<'a, 'b, TR, TT, EF> DeviceAccessTokenRequest<'a, 'b, TR, TT, EF>
+impl<'a, T, TR, TT, EF> DeviceAccessTokenRequest<'a, T, TR, TT, EF>
 where
+    T: Fn() -> DateTime<Utc> + Send + Sync,
     TR: TokenResponse<TT>,
     TT: TokenType,
     EF: ExtraDeviceAuthorizationFields,
@@ -2301,12 +2327,20 @@ where
     ///
     /// This function is used while polling the authorization server.
     ///
-    pub fn set_time_fn<T>(mut self, time_fn: T) -> Self
+    pub fn set_time_fn<F>(self, time_fn: F) -> DeviceAccessTokenRequest<'a, F, TR, TT, EF>
     where
-        T: Fn() -> DateTime<Utc> + 'b + Send + Sync,
+        F: Fn() -> DateTime<Utc> + Send + Sync,
     {
-        self.time_fn = Arc::new(time_fn);
-        self
+        DeviceAccessTokenRequest {
+            auth_type: self.auth_type,
+            client_id: self.client_id,
+            client_secret: self.client_secret,
+            extra_params: self.extra_params,
+            token_url: self.token_url,
+            dev_auth_resp: self.dev_auth_resp,
+            time_fn,
+            _phantom: self._phantom,
+        }
     }
 
     ///
@@ -2326,16 +2360,17 @@ where
     {
         // Get the request timeout and starting interval
         let timeout_dt = self.compute_timeout(timeout)?;
+        let request = self.prepare_request()?;
         let mut interval = self.dev_auth_resp.interval();
 
         // Loop while requesting a token.
         loop {
-            let now = (*self.time_fn)();
+            let now = (self.time_fn)();
             if now > timeout_dt {
                 break Err(RequestTokenError::Other("Device code expired".to_string()));
             }
 
-            match self.process_response(http_client(self.prepare_request()?), interval) {
+            match process_device_access_token_response(http_client(request.clone()), interval) {
                 DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
                     interval = new_interval
                 }
@@ -2350,12 +2385,12 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
-    pub async fn request_async<C, F, S, SF, RE>(
+    pub fn request_async<C, F, S, SF, RE>(
         self,
         http_client: C,
         sleep_fn: S,
         timeout: Option<Duration>,
-    ) -> Result<TR, RequestTokenError<RE, DeviceCodeErrorResponse>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<RE, DeviceCodeErrorResponse>>>
     where
         C: Fn(HttpRequest) -> F,
         F: Future<Output = Result<HttpResponse, RE>>,
@@ -2363,27 +2398,19 @@ where
         SF: Future<Output = ()>,
         RE: Error + 'static,
     {
-        // Get the request timeout and starting interval
-        let timeout_dt = self.compute_timeout(timeout)?;
-        let mut interval = self.dev_auth_resp.interval();
-
-        // Loop while requesting a token.
-        loop {
-            let now = (*self.time_fn)();
-            if now > timeout_dt {
-                break Err(RequestTokenError::Other("Device code expired".to_string()));
-            }
-
-            match self.process_response(http_client(self.prepare_request()?).await, interval) {
-                DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
-                    interval = new_interval
-                }
-                DeviceAccessTokenPollResult::Done(res, _) => break res,
-            }
-
-            // Sleep here using the provided sleep function.
-            sleep_fn(interval).await;
-        }
+        AsyncDeviceAccessTokenResponse::new(
+            self.compute_timeout(timeout)
+                .and_then(|timeout_dt| self.prepare_request().map(|request| (timeout_dt, request)))
+                .map(|(timeout_dt, request)| DeviceAccessTokenRequestParams {
+                    time_fn: self.time_fn,
+                    http_client,
+                    interval: self.dev_auth_resp.interval(),
+                    timeout_dt,
+                    request,
+                    sleep_fn,
+                    phantom: PhantomData,
+                }),
+        )
     }
 
     fn prepare_request<RE>(
@@ -2409,54 +2436,6 @@ where
         ))
     }
 
-    fn process_response<RE>(
-        &self,
-        res: Result<HttpResponse, RE>,
-        current_interval: Duration,
-    ) -> DeviceAccessTokenPollResult<TR, RE, DeviceCodeErrorResponse, TT>
-    where
-        RE: Error + 'static,
-    {
-        let http_response = match res {
-            Ok(inner) => inner,
-            Err(_) => {
-                // Try and double the current interval. If that fails, just use the current one.
-                let new_interval = current_interval.checked_mul(2).unwrap_or(current_interval);
-                return DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval);
-            }
-        };
-
-        // Explicitly process the response with a DeviceCodeErrorResponse
-        let res = endpoint_response::<RE, DeviceCodeErrorResponse, TR>(http_response);
-        match res {
-            // On a ServerResponse error, the error needs inspecting as a DeviceCodeErrorResponse
-            // to work out whether a retry needs to happen.
-            Err(RequestTokenError::ServerResponse(dcer)) => {
-                match dcer.error() {
-                    // On AuthorizationPending, a retry needs to happen with the same poll interval.
-                    DeviceCodeErrorResponseType::AuthorizationPending => {
-                        DeviceAccessTokenPollResult::ContinueWithNewPollInterval(current_interval)
-                    }
-                    // On SlowDown, a retry needs to happen with a larger poll interval.
-                    DeviceCodeErrorResponseType::SlowDown => {
-                        DeviceAccessTokenPollResult::ContinueWithNewPollInterval(
-                            current_interval + Duration::from_secs(5),
-                        )
-                    }
-
-                    // On any other error, just return the error.
-                    _ => DeviceAccessTokenPollResult::Done(
-                        Err(RequestTokenError::ServerResponse(dcer)),
-                        PhantomData,
-                    ),
-                }
-            }
-
-            // On any other success or failure, return the failure.
-            res => DeviceAccessTokenPollResult::Done(res, PhantomData),
-        }
-    }
-
     fn compute_timeout<RE>(
         &self,
         timeout: Option<Duration>,
@@ -2472,11 +2451,200 @@ where
             .map_err(|_| RequestTokenError::Other("Failed to convert duration".to_string()))?;
 
         // Calculate the DateTime at which the request times out.
-        let timeout_dt = (*self.time_fn)()
+        let timeout_dt = (self.time_fn)()
             .checked_add_signed(chrono_timeout)
             .ok_or_else(|| RequestTokenError::Other("Failed to calculate timeout".to_string()))?;
 
         Ok(timeout_dt)
+    }
+}
+
+struct DeviceAccessTokenRequestParams<C, S, T, TR, TT> {
+    time_fn: T,
+    request: HttpRequest,
+    timeout_dt: DateTime<Utc>,
+    interval: Duration,
+    http_client: C,
+    sleep_fn: S,
+    phantom: PhantomData<(TR, TT)>,
+}
+
+#[pin_project(
+    project_replace = AsyncDeviceAccessTokenResponseProjOwned,
+    project = AsyncDeviceAccessTokenResponseProj
+)]
+enum AsyncDeviceAccessTokenResponse<C, CF, S, SF, T, TR, TT, RE>
+where
+    T: Fn() -> DateTime<Utc> + Send + Sync,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    RE: Error + 'static,
+    C: Fn(HttpRequest) -> CF,
+    CF: Future<Output = Result<HttpResponse, RE>>,
+    S: Fn(Duration) -> SF,
+    SF: Future<Output = ()>,
+{
+    Error(Option<RequestTokenError<RE, DeviceCodeErrorResponse>>),
+    Requesting(
+        #[pin] CF,
+        MaybeUninit<DeviceAccessTokenRequestParams<C, S, T, TR, TT>>,
+    ),
+    Sleeping(
+        #[pin] SF,
+        MaybeUninit<DeviceAccessTokenRequestParams<C, S, T, TR, TT>>,
+    ),
+}
+
+impl<C, CF, S, SF, T, TR, TT, RE> AsyncDeviceAccessTokenResponse<C, CF, S, SF, T, TR, TT, RE>
+where
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    RE: Error + 'static,
+    C: Fn(HttpRequest) -> CF,
+    CF: Future<Output = Result<HttpResponse, RE>>,
+    S: Fn(Duration) -> SF,
+    SF: Future<Output = ()>,
+    T: Fn() -> DateTime<Utc> + Send + Sync,
+{
+    fn new(
+        params: Result<
+            DeviceAccessTokenRequestParams<C, S, T, TR, TT>,
+            RequestTokenError<RE, DeviceCodeErrorResponse>,
+        >,
+    ) -> Self {
+        match params {
+            Ok(params) => {
+                let now = (params.time_fn)();
+                if now > params.timeout_dt {
+                    Self::Error(Some(RequestTokenError::Other(
+                        "Device code expired".to_string(),
+                    )))
+                } else {
+                    let fut = (params.http_client)(params.request.clone());
+                    let params = MaybeUninit::new(params);
+                    Self::Requesting(fut, params)
+                }
+            }
+            Err(err) => Self::Error(Some(err)),
+        }
+    }
+}
+
+impl<C, CF, S, SF, T, TR, TT, RE> Future
+    for AsyncDeviceAccessTokenResponse<C, CF, S, SF, T, TR, TT, RE>
+where
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    RE: Error + 'static,
+    C: Fn(HttpRequest) -> CF,
+    CF: Future<Output = Result<HttpResponse, RE>>,
+    S: Fn(Duration) -> SF,
+    SF: Future<Output = ()>,
+    T: Fn() -> DateTime<Utc> + Send + Sync,
+{
+    type Output = Result<TR, RequestTokenError<RE, DeviceCodeErrorResponse>>;
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        loop {
+            match self.as_mut().project() {
+                AsyncDeviceAccessTokenResponseProj::Error(err) => {
+                    return Poll::Ready(Err(err
+                        .take()
+                        .expect("Response cannot be polled after completion")))
+                }
+                AsyncDeviceAccessTokenResponseProj::Sleeping(fut, maybe_params) => {
+                    match fut.poll(cx) {
+                        Poll::Ready(_) => {
+                            let params = unsafe { maybe_params.assume_init_mut() };
+                            let now = (params.time_fn)();
+                            if now > params.timeout_dt {
+                                return Poll::Ready(Err(RequestTokenError::Other(
+                                    "Device code expired".to_string(),
+                                )));
+                            } else {
+                                let fut = (params.http_client)(params.request.clone());
+                                let params = std::mem::replace(
+                                    maybe_params,
+                                    std::mem::MaybeUninit::uninit(),
+                                );
+                                self.set(Self::Requesting(fut, params));
+                            }
+                        }
+                        Poll::Pending => return Poll::Pending,
+                    }
+                }
+                AsyncDeviceAccessTokenResponseProj::Requesting(fut, maybe_params) => match fut
+                    .poll(cx)
+                {
+                    Poll::Ready(response) => {
+                        let params = unsafe { maybe_params.assume_init_mut() };
+                        match process_device_access_token_response(response, params.interval) {
+                            DeviceAccessTokenPollResult::ContinueWithNewPollInterval(
+                                new_interval,
+                            ) => {
+                                params.interval = new_interval;
+                                let fut = (params.sleep_fn)(params.interval);
+                                let params = std::mem::replace(
+                                    maybe_params,
+                                    std::mem::MaybeUninit::uninit(),
+                                );
+                                self.set(Self::Sleeping(fut, params));
+                            }
+                            DeviceAccessTokenPollResult::Done(res, _) => return Poll::Ready(res),
+                        }
+                    }
+                    Poll::Pending => return Poll::Pending,
+                },
+            }
+        }
+    }
+}
+
+fn process_device_access_token_response<TR, TT, RE>(
+    res: Result<HttpResponse, RE>,
+    current_interval: Duration,
+) -> DeviceAccessTokenPollResult<TR, RE, DeviceCodeErrorResponse, TT>
+where
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    RE: Error + 'static,
+{
+    let http_response = match res {
+        Ok(inner) => inner,
+        Err(_) => {
+            // Try and double the current interval. If that fails, just use the current one.
+            let new_interval = current_interval.checked_mul(2).unwrap_or(current_interval);
+            return DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval);
+        }
+    };
+
+    // Explicitly process the response with a DeviceCodeErrorResponse
+    let res = endpoint_response::<RE, DeviceCodeErrorResponse, TR>(http_response);
+    match res {
+        // On a ServerResponse error, the error needs inspecting as a DeviceCodeErrorResponse
+        // to work out whether a retry needs to happen.
+        Err(RequestTokenError::ServerResponse(dcer)) => {
+            match dcer.error() {
+                // On AuthorizationPending, a retry needs to happen with the same poll interval.
+                DeviceCodeErrorResponseType::AuthorizationPending => {
+                    DeviceAccessTokenPollResult::ContinueWithNewPollInterval(current_interval)
+                }
+                // On SlowDown, a retry needs to happen with a larger poll interval.
+                DeviceCodeErrorResponseType::SlowDown => {
+                    DeviceAccessTokenPollResult::ContinueWithNewPollInterval(
+                        current_interval + Duration::from_secs(5),
+                    )
+                }
+
+                // On any other error, just return the error.
+                _ => DeviceAccessTokenPollResult::Done(
+                    Err(RequestTokenError::ServerResponse(dcer)),
+                    PhantomData,
+                ),
+            }
+        }
+
+        // On any other success or failure, return the failure.
+        res => DeviceAccessTokenPollResult::Done(res, PhantomData),
     }
 }
 

@@ -33,6 +33,7 @@ ureq = { version = "2", optional = true }
 url = { version = "2.1", features = ["serde"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 serde_path_to_error = "0.1"
+pin-project = "1.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }

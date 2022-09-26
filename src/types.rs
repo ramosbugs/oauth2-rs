@@ -84,7 +84,7 @@ macro_rules! new_type {
             $($item)*
 
             #[doc = $new_doc]
-            pub fn new(s: $type) -> Self {
+            pub const fn new(s: $type) -> Self {
                 $name(s)
             }
         }

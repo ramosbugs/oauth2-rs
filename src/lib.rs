@@ -416,6 +416,7 @@
 //! ## Contributed Examples
 //!
 //! - [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
+//! - [Microsoft Async Device Code Flow](https://github.com/LorenzoLeonardo/oauth2-rs/blob/main/examples/microsoft_devicecode.rs)
 //!
 use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};

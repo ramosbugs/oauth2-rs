@@ -410,13 +410,13 @@
 //!
 //! - [Google](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/google.rs) (includes token revocation)
 //! - [Github](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/github.rs)
+//! - [Microsoft Device Code Flow (async)](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/microsoft_devicecode.rs)
 //! - [Microsoft Graph](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/msgraph.rs)
 //! - [Wunderlist](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/wunderlist.rs)
 //!
 //! ## Contributed Examples
 //!
 //! - [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
-//! - [Microsoft Async Device Code Flow](https://github.com/LorenzoLeonardo/oauth2-rs/blob/main/examples/microsoft_devicecode.rs)
 //!
 use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};

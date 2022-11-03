@@ -1,6 +1,7 @@
 use http::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
 use revocation::RevocationErrorResponseType;
+use std::convert::TryInto;
 use thiserror::Error;
 use url::form_urlencoded::byte_serialize;
 use url::Url;
@@ -2509,6 +2510,14 @@ fn test_device_token_slowdown_then_success() {
     );
     assert_eq!(None, token.expires_in());
     assert!(token.refresh_token().is_none());
+}
+
+#[test]
+fn test_impl_from_fromstr() {
+    let _: ClientId = "".to_string().into();
+    let _: ClientSecret = "".to_string().into();
+    let _: RedirectUrl = "https://localhost:8080".parse().unwrap();
+    let _: RedirectUrl = "https://localhost:8080".to_string().try_into().unwrap();
 }
 
 #[test]

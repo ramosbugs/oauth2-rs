@@ -1,4 +1,5 @@
-use std::convert::Into;
+use core::convert::TryFrom;
+use core::str::FromStr;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
@@ -94,9 +95,9 @@ macro_rules! new_type {
                 &self.0
             }
         }
-        impl Into<$type> for $name {
-            fn into(self) -> $type {
-                self.0
+        impl From<$type> for $name {
+            fn from(t: $type) -> Self {
+                Self::new(t)
             }
         }
     }
@@ -168,6 +169,11 @@ macro_rules! new_secret_type {
         impl Debug for $name {
             fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
                 write!(f, concat!(stringify!($name), "([redacted])"))
+            }
+        }
+        impl From<$type> for $name {
+            fn from(t: $type) -> Self {
+                Self::new(t)
             }
         }
     };
@@ -317,6 +323,18 @@ macro_rules! new_url_type {
             }
         }
         impl Eq for $name {}
+        impl TryFrom<String> for $name {
+            type Error = url::ParseError;
+            fn try_from(str: String) -> Result<Self, url::ParseError> {
+                Self::new(str)
+            }
+        }
+        impl FromStr for $name {
+            type Err = url::ParseError;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Self::new(String::from(s))
+            }
+        }
     };
 }
 

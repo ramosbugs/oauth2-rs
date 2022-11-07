@@ -2203,6 +2203,14 @@ fn test_device_token_authorization_timeout() {
         .err()
         .unwrap();
     match token {
+        RequestTokenError::ServerResponse(msg) => assert_eq!(
+            msg,
+            DeviceCodeErrorResponse::new(
+                DeviceCodeErrorResponseType::ExpiredToken,
+                Some(String::from("This device code has expired.")),
+                None,
+            )
+        ),
         RequestTokenError::Other(msg) => assert_eq!(msg, "Device code expired"),
         _ => unreachable!("Error should be an expiry"),
     }

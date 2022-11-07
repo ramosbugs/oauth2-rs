@@ -417,7 +417,6 @@
 //! ## Contributed Examples
 //!
 //! - [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
-//! - [Microsoft Async Device Code Flow](https://github.com/LorenzoLeonardo/oauth2-rs/blob/main/examples/microsoft_devicecode.rs)
 //!
 use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};
@@ -2334,7 +2333,13 @@ where
         loop {
             let now = (*self.time_fn)();
             if now > timeout_dt {
-                break Err(RequestTokenError::Other("Device code expired".to_string()));
+                break Err(RequestTokenError::ServerResponse(
+                    DeviceCodeErrorResponse::new(
+                        DeviceCodeErrorResponseType::ExpiredToken,
+                        Some(String::from("This device code has expired.")),
+                        None,
+                    ),
+                ));
             }
 
             match self.process_response(http_client(self.prepare_request()?), interval) {
@@ -2373,7 +2378,13 @@ where
         loop {
             let now = (*self.time_fn)();
             if now > timeout_dt {
-                break Err(RequestTokenError::Other("Device code expired".to_string()));
+                break Err(RequestTokenError::ServerResponse(
+                    DeviceCodeErrorResponse::new(
+                        DeviceCodeErrorResponseType::ExpiredToken,
+                        Some(String::from("This device code has expired.")),
+                        None,
+                    ),
+                ));
             }
 
             match self.process_response(http_client(self.prepare_request()?).await, interval) {

@@ -2333,7 +2333,13 @@ where
         loop {
             let now = (*self.time_fn)();
             if now > timeout_dt {
-                break Err(RequestTokenError::Other("Device code expired".to_string()));
+                break Err(RequestTokenError::ServerResponse(
+                    DeviceCodeErrorResponse::new(
+                        DeviceCodeErrorResponseType::ExpiredToken,
+                        Some(String::from("This device code has expired.")),
+                        None,
+                    ),
+                ));
             }
 
             match self.process_response(http_client(self.prepare_request()?), interval) {
@@ -2372,7 +2378,13 @@ where
         loop {
             let now = (*self.time_fn)();
             if now > timeout_dt {
-                break Err(RequestTokenError::Other("Device code expired".to_string()));
+                break Err(RequestTokenError::ServerResponse(
+                    DeviceCodeErrorResponse::new(
+                        DeviceCodeErrorResponseType::ExpiredToken,
+                        Some(String::from("This device code has expired.")),
+                        None,
+                    ),
+                ));
             }
 
             match self.process_response(http_client(self.prepare_request()?).await, interval) {

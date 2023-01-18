@@ -166,6 +166,10 @@ pub enum DeviceCodeErrorResponseType {
     /// A Basic response type
     ///
     Basic(BasicErrorResponseType),
+    ///
+    /// Polling for access token was cancelled
+    ///
+    PollingAccessTokenCancelled,
 }
 impl DeviceCodeErrorResponseType {
     fn from_str(s: &str) -> Self {
@@ -189,6 +193,7 @@ impl AsRef<str> for DeviceCodeErrorResponseType {
             DeviceCodeErrorResponseType::AccessDenied => "access_denied",
             DeviceCodeErrorResponseType::ExpiredToken => "expired_token",
             DeviceCodeErrorResponseType::Basic(basic) => basic.as_ref(),
+            DeviceCodeErrorResponseType::PollingAccessTokenCancelled => "polling_cancelled",
         }
     }
 }

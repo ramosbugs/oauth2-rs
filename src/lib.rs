@@ -898,6 +898,7 @@ where
             dev_auth_resp: auth_response,
             time_fn: Arc::new(Utc::now),
             _phantom: PhantomData,
+            cancel_polling: false,
         }
     }
 
@@ -2265,6 +2266,7 @@ where
     dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
     time_fn: Arc<dyn Fn() -> DateTime<Utc> + 'b + Send + Sync>,
     _phantom: PhantomData<(TR, TT, EF)>,
+    cancel_polling: bool,
 }
 
 impl<'a, 'b, TR, TT, EF> DeviceAccessTokenRequest<'a, 'b, TR, TT, EF>
@@ -2376,6 +2378,16 @@ where
 
         // Loop while requesting a token.
         loop {
+            if self.cancel_polling {
+                break Err(RequestTokenError::ServerResponse(
+                    DeviceCodeErrorResponse::new(
+                        DeviceCodeErrorResponseType::PollingAccessTokenCancelled,
+                        Some(String::from("Polling of access token was cancelled")),
+                        None,
+                    ),
+                ));
+            }
+
             let now = (*self.time_fn)();
             if now > timeout_dt {
                 break Err(RequestTokenError::ServerResponse(
@@ -2490,6 +2502,14 @@ where
             .ok_or_else(|| RequestTokenError::Other("Failed to calculate timeout".to_string()))?;
 
         Ok(timeout_dt)
+    }
+
+    ///
+    /// Sets the cancel flag to true to terminate the polling of access token
+    /// in the request_async function
+    ///
+    pub async fn cancel_poll_access_token(&mut self) {
+        self.cancel_polling = true;
     }
 }
 

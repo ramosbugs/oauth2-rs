@@ -288,6 +288,8 @@ fn test_authorize_url_with_redirect_url_override() {
 enum FakeError {
     #[error("error")]
     Err,
+    #[error("polling_cancelled")]
+    PollingCancelled,
 }
 
 // Because the secret types don't implement PartialEq, we can't directly use == to compare tokens.
@@ -2617,4 +2619,99 @@ fn test_send_sync_impl() {
     is_sync_and_send::<super::curl::Error>();
     #[cfg(feature = "reqwest")]
     is_sync_and_send::<super::reqwest::Error<TestError>>();
+}
+
+fn mock_http_client_cancel_polling_of_access_token(
+    request_headers: Vec<(HeaderName, &'static str)>,
+    request_body: &'static str,
+    request_url: Option<Url>,
+    _response: HttpResponse,
+) -> impl Fn(HttpRequest) -> Result<HttpResponse, FakeError> {
+    move |request: HttpRequest| {
+        assert_eq!(
+            &request.url,
+            request_url
+                .as_ref()
+                .unwrap_or(&Url::parse("https://example.com/token").unwrap())
+        );
+        assert_eq!(
+            request.headers,
+            request_headers
+                .iter()
+                .map(|(name, value)| (name.clone(), HeaderValue::from_str(value).unwrap()))
+                .collect(),
+        );
+        assert_eq!(&String::from_utf8(request.body).unwrap(), request_body);
+
+        Err(FakeError::PollingCancelled)
+    }
+}
+
+#[test]
+fn test_cancel_polling_of_access_token() {
+    let details = new_device_auth_details(3600);
+    assert_eq!("12345", details.device_code().secret());
+    assert_eq!("https://verify/here", details.verification_uri().as_str());
+    assert_eq!("abcde", details.user_code().secret().as_str());
+    assert_eq!(
+        "https://verify/here?abcde",
+        details
+            .verification_uri_complete()
+            .unwrap()
+            .secret()
+            .as_str()
+    );
+    assert_eq!(Duration::from_secs(3600), details.expires_in());
+    assert_eq!(Duration::from_secs(1), details.interval());
+
+    let token = new_client()
+        .exchange_device_access_token(&details)
+        .set_time_fn(mock_time_fn())
+        .request(mock_http_client_cancel_polling_of_access_token(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+            None,
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: "{\
+                    \"access_token\": \"12/34\", \
+                    \"token_type\": \"bearer\", \
+                    \"scope\": \"openid\"\
+                    }"
+                .to_string()
+                .into_bytes(),
+            },
+        ),
+        mock_sleep_fn,
+        None);
+
+    match token {
+        Ok(_res) => {
+            assert!(true);
+        }
+        Err(e) => match e {
+            RequestTokenError::ServerResponse(_) => {
+                assert!(true);
+            }
+            RequestTokenError::Request(_) => {
+                assert!(true);
+            }
+            RequestTokenError::Parse(_, _) => {
+                assert!(true);
+            }
+            RequestTokenError::Other(msg) => {
+                assert_eq!(msg, "Polling for access token was cancelled.".to_string());
+            }
+        },
+    };
 }

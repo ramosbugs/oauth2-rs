@@ -2432,7 +2432,16 @@ where
     {
         let http_response = match res {
             Ok(inner) => inner,
-            Err(_) => {
+            Err(err) => {
+                // User application cancel polling for access token
+                if err.to_string() == *"polling_cancelled" {
+                    return DeviceAccessTokenPollResult::Done(
+                        Err(RequestTokenError::Other(
+                            "Polling for access token was cancelled.".to_string(),
+                        )),
+                        PhantomData,
+                    );
+                }
                 // Try and double the current interval. If that fails, just use the current one.
                 let new_interval = current_interval.checked_mul(2).unwrap_or(current_interval);
                 return DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval);

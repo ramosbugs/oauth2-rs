@@ -2351,6 +2351,8 @@ where
 
             // Sleep here using the provided sleep function.
             sleep_fn(interval);
+            // This will ensure that the interval won't compound by 2 if there is a return error from the http_client.
+            interval = self.dev_auth_resp.interval();
         }
     }
 
@@ -2396,6 +2398,8 @@ where
 
             // Sleep here using the provided sleep function.
             sleep_fn(interval).await;
+            // This will ensure that the interval won't compound by 2 if there is a return error from the http_client.
+            interval = self.dev_auth_resp.interval();
         }
     }
 

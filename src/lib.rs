@@ -2313,8 +2313,8 @@ where
     }
 
     ///
-    /// Sets the upper limit of the interval during polling of access token
-    /// just incase there is a return error from the http_client
+    /// Sets the upper limit of the sleep interval to use for polling the token endpoint when the
+    /// HTTP client returns an error (e.g., in case of connection timeout).
     ///
     pub fn set_max_backoff_interval(mut self, interval: Duration) -> Self {
         self.max_backoff_interval = Some(interval);

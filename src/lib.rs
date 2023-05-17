@@ -897,6 +897,7 @@ where
             token_url: self.token_url.as_ref(),
             dev_auth_resp: auth_response,
             time_fn: Arc::new(Utc::now),
+            max_backoff_interval: None,
             _phantom: PhantomData,
         }
     }
@@ -2264,6 +2265,7 @@ where
     token_url: Option<&'a TokenUrl>,
     dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
     time_fn: Arc<dyn Fn() -> DateTime<Utc> + 'b + Send + Sync>,
+    max_backoff_interval: Option<Duration>,
     _phantom: PhantomData<(TR, TT, EF)>,
 }
 
@@ -2307,6 +2309,15 @@ where
         T: Fn() -> DateTime<Utc> + 'b + Send + Sync,
     {
         self.time_fn = Arc::new(time_fn);
+        self
+    }
+
+    ///
+    /// Sets the upper limit of the sleep interval to use for polling the token endpoint when the
+    /// HTTP client returns an error (e.g., in case of connection timeout).
+    ///
+    pub fn set_max_backoff_interval(mut self, interval: Duration) -> Self {
+        self.max_backoff_interval = Some(interval);
         self
     }
 
@@ -2437,8 +2448,16 @@ where
         let http_response = match res {
             Ok(inner) => inner,
             Err(_) => {
-                // Try and double the current interval. If that fails, just use the current one.
-                let new_interval = current_interval.checked_mul(2).unwrap_or(current_interval);
+                // RFC 8628 requires a backoff in cases of connection timeout, but we can't
+                // distinguish between connection timeouts and other HTTP client request errors
+                // here. Set a maximum backoff so that the client doesn't effectively backoff
+                // infinitely when there are network issues unrelated to server load.
+                const DEFAULT_MAX_BACKOFF_INTERVAL: Duration = Duration::from_secs(10);
+                let new_interval = std::cmp::min(
+                    current_interval.checked_mul(2).unwrap_or(current_interval),
+                    self.max_backoff_interval
+                        .unwrap_or(DEFAULT_MAX_BACKOFF_INTERVAL),
+                );
                 return DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval);
             }
         };

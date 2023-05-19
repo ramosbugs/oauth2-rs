@@ -479,6 +479,14 @@ pub mod helpers;
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
 
+///
+/// Microsoft specific OAuth2 implementation for client_credentials with certificates
+/// ([Microsoft identity platform application authentication certificate credentials](https://learn.microsoft.com/en-us/azure/active-directory/develop/active-directory-certificate-credentials)).
+///
+#[cfg(feature = "microsoft")]
+pub mod microsoft;
+
+
 #[cfg(test)]
 mod tests;
 

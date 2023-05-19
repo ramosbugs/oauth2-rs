@@ -19,6 +19,7 @@ default = ["reqwest", "rustls-tls"]
 pkce-plain = []
 native-tls = ["reqwest/native-tls"]
 rustls-tls = ["reqwest/rustls-tls"]
+microsoft = ["jwt", "openssl"]
 
 [dependencies]
 base64 = "0.13"
@@ -33,6 +34,8 @@ ureq = { version = "2", optional = true }
 url = { version = "2.1", features = ["serde"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 serde_path_to_error = "0.1.2"
+jwt = { git = "https://github.com/smndtrl/rust-jwt", branch = "x5t", optional = true, features = [ "openssl" ]}
+openssl = { optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }

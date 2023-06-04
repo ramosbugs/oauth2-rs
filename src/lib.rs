@@ -418,8 +418,6 @@
 //!
 //! - [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
 //!
-use chrono::serde::ts_seconds_option;
-use chrono::{DateTime, Utc};
 use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::Error as FormatterError;
@@ -429,11 +427,15 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
 
+use chrono::serde::ts_seconds_option;
+use chrono::{DateTime, Utc};
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use url::{form_urlencoded, Url};
+
+use crate::devicecode::DeviceAccessTokenPollResult;
 
 ///
 /// Basic OAuth2 implementation with no extensions
@@ -456,10 +458,6 @@ compile_error!("wasm32 is not supported with the `curl` feature. Use the `reqwes
 /// ([RFC 8628](https://tools.ietf.org/html/rfc8628)).
 ///
 pub mod devicecode;
-use devicecode::{
-    DeviceAccessTokenPollResult, DeviceAuthorizationResponse, DeviceCodeErrorResponse,
-    DeviceCodeErrorResponseType, ExtraDeviceAuthorizationFields,
-};
 
 ///
 /// OAuth 2.0 Token Revocation implementation
@@ -497,12 +495,18 @@ pub mod ureq;
 pub use http;
 pub use url;
 
+pub use devicecode::{
+    DeviceAuthorizationResponse, DeviceCodeErrorResponse, DeviceCodeErrorResponseType,
+    EmptyExtraDeviceAuthorizationFields, ExtraDeviceAuthorizationFields,
+    StandardDeviceAuthorizationResponse,
+};
+
 pub use types::{
     AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl, IntrospectionUrl,
     PkceCodeChallenge, PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken,
     ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, RevocationUrl, Scope, TokenUrl,
-    UserCode,
+    UserCode, VerificationUriComplete,
 };
 
 pub use revocation::{RevocableToken, RevocationErrorResponseType, StandardRevocableToken};

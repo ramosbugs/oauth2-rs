@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         None,
         AuthUrl::new("https://login.microsoftonline.com/common/oauth2/v2.0/authorize".to_string())?,
         Some(TokenUrl::new(
-            "https://login.microsoftonline.com/common/v2.0/oauth2/token".to_string(),
+            "https://login.microsoftonline.com/common/oauth2/v2.0/token".to_string(),
         )?),
     )
     .set_device_authorization_url(device_auth_url);

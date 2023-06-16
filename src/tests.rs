@@ -547,6 +547,50 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
 }
 
 #[test]
+fn test_exchange_jwt_bearer_token_with_body_auth() {
+    let client = new_client().set_auth_type(AuthType::RequestBody);
+    let token = client
+        .exchange_jwt_bearer("ccc".to_string())
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+            ],
+            "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=ccc", // Scope and Client ID are encoded in the assertion
+            None,
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: vec![(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )]
+                .into_iter()
+                .collect(),
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
+        .unwrap();
+
+    assert_eq!("12/34", token.access_token().secret());
+    assert_eq!(BasicTokenType::Bearer, *token.token_type());
+    assert_eq!(
+        Some(&vec![
+            Scope::new("read".to_string()),
+            Scope::new("write".to_string()),
+        ]),
+        token.scopes()
+    );
+    assert_eq!(None, token.expires_in());
+    assert!(token.refresh_token().is_none());
+}
+
+#[test]
 fn test_exchange_refresh_token_with_basic_auth() {
     let client = new_client().set_auth_type(AuthType::BasicAuth);
     let token = client

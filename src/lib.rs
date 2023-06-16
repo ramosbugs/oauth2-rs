@@ -905,6 +905,23 @@ where
             _phantom: PhantomData,
         }
     }
+    ///
+    /// Exchanges a JSON Web Token for an access token
+    ///
+    /// See <https://datatracker.ietf.org/doc/html/rfc7523#section-8>.
+    ///
+    pub fn exchange_jwt_bearer<'a, 'b>(&'a self, signed_jwt: String) -> JwtRequest<'b, TE, TR, TT>
+    where
+        'a: 'b,
+    {
+        JwtRequest {
+            signed_jwt,
+            extra_params: Vec::new(),
+            scopes: Vec::new(),
+            token_url: self.token_url.as_ref(),
+            _phantom: PhantomData,
+        }
+    }
 
     ///
     /// Query the authorization server [`RFC 7662 compatible`](https://tools.ietf.org/html/rfc7662) introspection
@@ -1289,7 +1306,7 @@ where
 
         Ok(endpoint_request(
             self.auth_type,
-            self.client_id,
+            Some(self.client_id),
             self.client_secret,
             &self.extra_params,
             self.redirect_url,
@@ -1441,7 +1458,7 @@ where
     {
         Ok(endpoint_request(
             self.auth_type,
-            self.client_id,
+            Some(self.client_id),
             self.client_secret,
             &self.extra_params,
             None,
@@ -1452,6 +1469,126 @@ where
             vec![
                 ("grant_type", "refresh_token"),
                 ("refresh_token", self.refresh_token.secret()),
+            ],
+        ))
+    }
+}
+
+///
+/// A request to exchange a JSON web token for an access token.
+///
+/// See <https://datatracker.ietf.org/doc/html/rfc7523#section-8>.
+///
+#[derive(Debug)]
+pub struct JwtRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    signed_jwt: String,
+    extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    scopes: Vec<Cow<'a, Scope>>,
+    token_url: Option<&'a TokenUrl>,
+    _phantom: PhantomData<(TE, TR, TT)>,
+}
+impl<'a, TE, TR, TT> JwtRequest<'a, TE, TR, TT>
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+{
+    ///
+    /// Appends an extra param to the token request.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should follow the security recommendations for any OAuth2 extensions used with
+    /// this function, which are beyond the scope of
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
+    ///
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
+    {
+        self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    ///
+    /// Appends a new scope to the token request.
+    ///
+    pub fn add_scope(mut self, scope: Scope) -> Self {
+        self.scopes.push(Cow::Owned(scope));
+        self
+    }
+
+    ///
+    /// Appends a collection of scopes to the token request.
+    ///
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
+        self
+    }
+
+    ///
+    /// Synchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
+        RE: Error + 'static,
+    {
+        http_client(self.prepare_request()?)
+            .map_err(RequestTokenError::Request)
+            .and_then(endpoint_response)
+    }
+    ///
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    ///
+    pub async fn request_async<C, F, RE>(
+        self,
+        http_client: C,
+    ) -> Result<TR, RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        RE: Error + 'static,
+    {
+        let http_request = self.prepare_request()?;
+        let http_response = http_client(http_request)
+            .await
+            .map_err(RequestTokenError::Request)?;
+        endpoint_response(http_response)
+    }
+
+    fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Error + 'static,
+    {
+        Ok(endpoint_request(
+            &AuthType::RequestBody,
+            None,
+            None,
+            &self.extra_params,
+            None,
+            Some(&self.scopes),
+            self.token_url
+                .ok_or_else(|| RequestTokenError::Other("no token_url provided".to_string()))?
+                .url(),
+            vec![
+                ("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"),
+                ("assertion", self.signed_jwt.as_str()),
             ],
         ))
     }
@@ -1566,7 +1703,7 @@ where
     {
         Ok(endpoint_request(
             self.auth_type,
-            self.client_id,
+            Some(self.client_id),
             self.client_secret,
             &self.extra_params,
             None,
@@ -1587,7 +1724,7 @@ where
 /// A request to exchange client credentials for an access token.
 ///
 /// See <https://tools.ietf.org/html/rfc6749#section-4.4>.
-///
+///  
 #[derive(Debug)]
 pub struct ClientCredentialsTokenRequest<'a, TE, TR, TT>
 where
@@ -1690,7 +1827,7 @@ where
     {
         Ok(endpoint_request(
             self.auth_type,
-            self.client_id,
+            Some(self.client_id),
             self.client_secret,
             &self.extra_params,
             None,
@@ -1792,7 +1929,7 @@ where
 
         Ok(endpoint_request(
             self.auth_type,
-            self.client_id,
+            Some(self.client_id),
             self.client_secret,
             &self.extra_params,
             None,
@@ -1896,7 +2033,7 @@ where
 
         Ok(endpoint_request(
             self.auth_type,
-            self.client_id,
+            Some(self.client_id),
             self.client_secret,
             &self.extra_params,
             None,
@@ -1951,7 +2088,7 @@ where
 #[allow(clippy::too_many_arguments)]
 fn endpoint_request<'a>(
     auth_type: &'a AuthType,
-    client_id: &'a ClientId,
+    client_id: Option<&'a ClientId>,
     client_secret: Option<&'a ClientSecret>,
     extra_params: &'a [(Cow<'a, str>, Cow<'a, str>)],
     redirect_url: Option<Cow<'a, RedirectUrl>>,
@@ -1988,13 +2125,17 @@ fn endpoint_request<'a>(
     // FIXME: add support for auth extensions? e.g., client_secret_jwt and private_key_jwt
     match (auth_type, client_secret) {
         // Basic auth only makes sense when a client secret is provided. Otherwise, always pass the
-        // client ID in the request body.
+        // client ID in the request body, except for JWT auth.
         (AuthType::BasicAuth, Some(secret)) => {
             // Section 2.3.1 of RFC 6749 requires separately url-encoding the id and secret
             // before using them as HTTP Basic auth username and password. Note that this is
             // not standard for ordinary Basic auth, so curl won't do it for us.
-            let urlencoded_id: String =
-                form_urlencoded::byte_serialize(&client_id.as_bytes()).collect();
+            let urlencoded_id: String = form_urlencoded::byte_serialize(
+                &client_id
+                    .expect("Client ID missing for Basic auth")
+                    .as_bytes(),
+            )
+            .collect();
             let urlencoded_secret: String =
                 form_urlencoded::byte_serialize(secret.secret().as_bytes()).collect();
             let b64_credential =
@@ -2005,7 +2146,9 @@ fn endpoint_request<'a>(
             );
         }
         (AuthType::RequestBody, _) | (AuthType::BasicAuth, None) => {
-            params.push(("client_id", client_id));
+            if let Some(ref client_id) = client_id {
+                params.push(("client_id", client_id))
+            }
             if let Some(ref client_secret) = client_secret {
                 params.push(("client_secret", client_secret.secret()));
             }
@@ -2202,7 +2345,7 @@ where
     {
         Ok(endpoint_request(
             self.auth_type,
-            self.client_id,
+            Some(self.client_id),
             self.client_secret,
             &self.extra_params,
             None,
@@ -2422,7 +2565,7 @@ where
     {
         Ok(endpoint_request(
             self.auth_type,
-            self.client_id,
+            Some(self.client_id),
             self.client_secret,
             &self.extra_params,
             None,

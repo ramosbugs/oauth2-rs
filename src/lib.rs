@@ -427,6 +427,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
 
+use base64::prelude::*;
 use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};
 use http::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
@@ -1998,7 +1999,7 @@ fn endpoint_request<'a>(
             let urlencoded_secret: String =
                 form_urlencoded::byte_serialize(secret.secret().as_bytes()).collect();
             let b64_credential =
-                base64::encode(&format!("{}:{}", &urlencoded_id, urlencoded_secret));
+                BASE64_STANDARD.encode(&format!("{}:{}", &urlencoded_id, urlencoded_secret));
             headers.append(
                 AUTHORIZATION,
                 HeaderValue::from_str(&format!("Basic {}", &b64_credential)).unwrap(),

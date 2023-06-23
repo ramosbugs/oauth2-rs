@@ -21,7 +21,7 @@ native-tls = ["reqwest/native-tls"]
 rustls-tls = ["reqwest/rustls-tls"]
 
 [dependencies]
-base64 = "0.13"
+base64 = "0.21"
 thiserror = "1.0"
 http = "0.2"
 rand = "0.8"

@@ -579,7 +579,7 @@ new_secret_type![
     /// via the `state` parameter.
     ///
     #[must_use]
-    #[derive(Clone, Deserialize, Serialize)]
+    #[derive(Clone, Deserialize, Serialize, Hash, PartialEq, Eq)]
     CsrfToken(String)
     impl {
         ///

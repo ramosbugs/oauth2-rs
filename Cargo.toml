@@ -19,6 +19,7 @@ default = ["reqwest", "rustls-tls"]
 pkce-plain = []
 native-tls = ["reqwest/native-tls"]
 rustls-tls = ["reqwest/rustls-tls"]
+timing-resistant-secret-traits = []
 
 [dependencies]
 base64 = "0.13"

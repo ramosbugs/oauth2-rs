@@ -1,6 +1,8 @@
 use std::convert::Into;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Formatter};
+#[cfg(feature = "timing-resistant-secret-traits")]
+use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 
 use rand::{thread_rng, Rng};
@@ -148,6 +150,7 @@ macro_rules! new_secret_type {
         $(
             #[$attr]
         )*
+        #[cfg_attr(feature = "timing-resistant-secret-traits", derive(Eq))]
         pub struct $name($type);
         impl $name {
             $($item)*
@@ -170,6 +173,21 @@ macro_rules! new_secret_type {
                 write!(f, concat!(stringify!($name), "([redacted])"))
             }
         }
+
+        #[cfg(feature = "timing-resistant-secret-traits")]
+        impl PartialEq for $name {
+            fn eq(&self, other: &Self) -> bool {
+                Sha256::digest(&self.0) == Sha256::digest(&other.0)
+            }
+        }
+
+        #[cfg(feature = "timing-resistant-secret-traits")]
+        impl Hash for $name {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                Sha256::digest(&self.0).hash(state)
+            }
+        }
+
     };
 }
 
@@ -579,7 +597,7 @@ new_secret_type![
     /// via the `state` parameter.
     ///
     #[must_use]
-    #[derive(Clone, Deserialize, Serialize, Hash, PartialEq, Eq)]
+    #[derive(Clone, Deserialize, Serialize)]
     CsrfToken(String)
     impl {
         ///

@@ -30,16 +30,18 @@ pub enum Error {
 /// Synchronous HTTP client for ureq.
 ///
 pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
-    let mut req = if let Method::POST = request.method {
-        ureq::post(&request.url.to_string())
+    let mut req = if request.method == Method::POST {
+        ureq::post(request.url.as_ref())
     } else {
-        ureq::get(&request.url.to_string())
+        ureq::get(request.url.as_ref())
     };
 
     for (name, value) in request.headers {
         if let Some(name) = name {
             req = req.set(
-                &name.to_string(),
+                name.as_ref(),
+                // TODO: In newer `ureq` it should be easier to convert arbitrary byte sequences
+                // without unnecessary UTF-8 fallibility here.
                 value.to_str().map_err(|_| {
                     Error::Other(format!(
                         "invalid {} header value {:?}",
@@ -59,12 +61,10 @@ pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
     .map_err(Box::new)?;
 
     Ok(HttpResponse {
-        status_code: StatusCode::from_u16(response.status())
-            .map_err(|err| Error::Http(err.into()))?,
+        status_code: StatusCode::from_u16(response.status()).map_err(http::Error::from)?,
         headers: vec![(
             CONTENT_TYPE,
-            HeaderValue::from_str(response.content_type())
-                .map_err(|err| Error::Http(err.into()))?,
+            HeaderValue::from_str(response.content_type()).map_err(http::Error::from)?,
         )]
         .into_iter()
         .collect::<HeaderMap>(),

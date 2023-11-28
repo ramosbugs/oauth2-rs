@@ -1309,9 +1309,7 @@ where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,
     {
-        http_client(self.prepare_request()?)
-            .map_err(RequestTokenError::Request)
-            .and_then(endpoint_response)
+        endpoint_response(http_client(self.prepare_request()?)?)
     }
 
     ///
@@ -1327,9 +1325,7 @@ where
         RE: Error + 'static,
     {
         let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
+        let http_response = http_client(http_request).await?;
         endpoint_response(http_response)
     }
 }
@@ -1412,9 +1408,7 @@ where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,
     {
-        http_client(self.prepare_request()?)
-            .map_err(RequestTokenError::Request)
-            .and_then(endpoint_response)
+        endpoint_response(http_client(self.prepare_request()?)?)
     }
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
@@ -1429,9 +1423,7 @@ where
         RE: Error + 'static,
     {
         let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
+        let http_response = http_client(http_request).await?;
         endpoint_response(http_response)
     }
 
@@ -1536,9 +1528,7 @@ where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,
     {
-        http_client(self.prepare_request()?)
-            .map_err(RequestTokenError::Request)
-            .and_then(endpoint_response)
+        endpoint_response(http_client(self.prepare_request()?)?)
     }
 
     ///
@@ -1554,9 +1544,7 @@ where
         RE: Error + 'static,
     {
         let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
+        let http_response = http_client(http_request).await?;
         endpoint_response(http_response)
     }
 
@@ -1660,9 +1648,7 @@ where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,
     {
-        http_client(self.prepare_request()?)
-            .map_err(RequestTokenError::Request)
-            .and_then(endpoint_response)
+        endpoint_response(http_client(self.prepare_request()?)?)
     }
 
     ///
@@ -1678,9 +1664,7 @@ where
         RE: Error + 'static,
     {
         let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
+        let http_response = http_client(http_request).await?;
         endpoint_response(http_response)
     }
 
@@ -1810,9 +1794,7 @@ where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,
     {
-        http_client(self.prepare_request()?)
-            .map_err(RequestTokenError::Request)
-            .and_then(endpoint_response)
+        endpoint_response(http_client(self.prepare_request()?)?)
     }
 
     ///
@@ -1828,9 +1810,7 @@ where
         RE: Error + 'static,
     {
         let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
+        let http_response = http_client(http_request).await?;
         endpoint_response(http_response)
     }
 }
@@ -1923,9 +1903,7 @@ where
         // From https://tools.ietf.org/html/rfc7009#section-2.2:
         //   "The content of the response body is ignored by the client as all
         //    necessary information is conveyed in the response code."
-        http_client(self.prepare_request()?)
-            .map_err(RequestTokenError::Request)
-            .and_then(endpoint_response_status_only)
+        endpoint_response_status_only(http_client(self.prepare_request()?)?)
     }
 
     ///
@@ -1941,9 +1919,7 @@ where
         RE: Error + 'static,
     {
         let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
+        let http_response = http_client(http_request).await?;
         endpoint_response_status_only(http_response)
     }
 }
@@ -2224,9 +2200,7 @@ where
         RE: Error + 'static,
         EF: ExtraDeviceAuthorizationFields,
     {
-        http_client(self.prepare_request()?)
-            .map_err(RequestTokenError::Request)
-            .and_then(endpoint_response)
+        endpoint_response(http_client(self.prepare_request()?)?)
     }
 
     ///
@@ -2243,9 +2217,7 @@ where
         EF: ExtraDeviceAuthorizationFields,
     {
         let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request)
-            .await
-            .map_err(RequestTokenError::Request)?;
+        let http_response = http_client(http_request).await?;
         endpoint_response(http_response)
     }
 }
@@ -2504,8 +2476,12 @@ where
         // use that, otherwise use the value given by the device authorization
         // response.
         let timeout_dur = timeout.unwrap_or_else(|| self.dev_auth_resp.expires_in());
-        let chrono_timeout = chrono::Duration::from_std(timeout_dur)
-            .map_err(|_| RequestTokenError::Other("Failed to convert duration".to_string()))?;
+        let chrono_timeout = chrono::Duration::from_std(timeout_dur).map_err(|e| {
+            RequestTokenError::Other(format!(
+                "Failed to convert `{:?}` to `chrono::Duration`: {}",
+                timeout_dur, e
+            ))
+        })?;
 
         // Calculate the DateTime at which the request times out.
         let timeout_dt = (*self.time_fn)()
@@ -3179,7 +3155,7 @@ where
     /// connectivity failed).
     ///
     #[error("Request failed")]
-    Request(#[source] RE),
+    Request(#[from] RE),
     ///
     /// Failed to parse server response. Parse errors may occur while parsing either successful
     /// or error responses.

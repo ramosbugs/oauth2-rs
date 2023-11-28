@@ -3,39 +3,24 @@ use thiserror::Error;
 ///
 /// Error type returned by failed reqwest HTTP requests.
 ///
+#[non_exhaustive]
 #[derive(Debug, Error)]
-pub enum Error<T>
-where
-    T: std::error::Error + 'static,
-{
+pub enum Error {
     /// Error returned by reqwest crate.
     #[error("request failed")]
-    Reqwest(#[source] T),
+    Reqwest(#[from] reqwest::Error),
     /// Non-reqwest HTTP error.
     #[error("HTTP error")]
-    Http(#[source] http::Error),
+    Http(#[from] http::Error),
     /// I/O error.
     #[error("I/O error")]
-    Io(#[source] std::io::Error),
-    /// Other error.
-    #[error("Other error: {}", _0)]
-    Other(String),
+    Io(#[from] std::io::Error),
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use blocking::http_client;
-///
-/// Error type returned by failed reqwest blocking HTTP requests.
-///
-#[cfg(not(target_arch = "wasm32"))]
-pub type HttpClientError = Error<blocking::reqwest::Error>;
 
 pub use async_client::async_http_client;
-
-///
-/// Error type returned by failed reqwest async HTTP requests.
-///
-pub type AsyncHttpClientError = Error<reqwest::Error>;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod blocking {
@@ -51,14 +36,12 @@ mod blocking {
     ///
     /// Synchronous HTTP client.
     ///
-    pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error<reqwest::Error>> {
+    pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
         let client = blocking::Client::builder()
             // Following redirects opens the client up to SSRF vulnerabilities.
             .redirect(RedirectPolicy::none())
-            .build()
-            .map_err(Error::Reqwest)?;
+            .build()?;
 
-        #[cfg(feature = "reqwest")]
         let mut request_builder = client
             .request(request.method, request.url.as_str())
             .body(request.body);
@@ -66,21 +49,16 @@ mod blocking {
         for (name, value) in &request.headers {
             request_builder = request_builder.header(name.as_str(), value.as_bytes());
         }
-        let mut response = client
-            .execute(request_builder.build().map_err(Error::Reqwest)?)
-            .map_err(Error::Reqwest)?;
+        let mut response = client.execute(request_builder.build()?)?;
 
         let mut body = Vec::new();
-        response.read_to_end(&mut body).map_err(Error::Io)?;
+        response.read_to_end(&mut body)?;
 
-        #[cfg(feature = "reqwest")]
-        {
-            Ok(HttpResponse {
-                status_code: response.status(),
-                headers: response.headers().to_owned(),
-                body,
-            })
-        }
+        Ok(HttpResponse {
+            status_code: response.status(),
+            headers: response.headers().to_owned(),
+            body,
+        })
     }
 }
 
@@ -93,9 +71,7 @@ mod async_client {
     ///
     /// Asynchronous HTTP client.
     ///
-    pub async fn async_http_client(
-        request: HttpRequest,
-    ) -> Result<HttpResponse, Error<reqwest::Error>> {
+    pub async fn async_http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
         let client = {
             let builder = reqwest::Client::builder();
 
@@ -104,7 +80,7 @@ mod async_client {
             #[cfg(not(target_arch = "wasm32"))]
             let builder = builder.redirect(reqwest::redirect::Policy::none());
 
-            builder.build().map_err(Error::Reqwest)?
+            builder.build()?
         };
 
         let mut request_builder = client
@@ -113,13 +89,13 @@ mod async_client {
         for (name, value) in &request.headers {
             request_builder = request_builder.header(name.as_str(), value.as_bytes());
         }
-        let request = request_builder.build().map_err(Error::Reqwest)?;
+        let request = request_builder.build()?;
 
-        let response = client.execute(request).await.map_err(Error::Reqwest)?;
+        let response = client.execute(request).await?;
 
         let status_code = response.status();
         let headers = response.headers().to_owned();
-        let chunks = response.bytes().await.map_err(Error::Reqwest)?;
+        let chunks = response.bytes().await?;
         Ok(HttpResponse {
             status_code,
             headers,

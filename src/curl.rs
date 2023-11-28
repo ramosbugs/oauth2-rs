@@ -14,10 +14,10 @@ use super::{HttpRequest, HttpResponse};
 pub enum Error {
     /// Error returned by curl crate.
     #[error("curl request failed")]
-    Curl(#[source] curl::Error),
+    Curl(#[from] curl::Error),
     /// Non-curl HTTP error.
     #[error("HTTP error")]
-    Http(#[source] http::Error),
+    Http(#[from] http::Error),
     /// Other error.
     #[error("Other error: {}", _0)]
     Other(String),
@@ -28,34 +28,27 @@ pub enum Error {
 ///
 pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
     let mut easy = Easy::new();
-    easy.url(&request.url.to_string()[..])
-        .map_err(Error::Curl)?;
+    easy.url(&request.url.to_string()[..])?;
 
     let mut headers = curl::easy::List::new();
-    request
-        .headers
-        .iter()
-        .map(|(name, value)| {
-            headers
-                .append(&format!(
-                    "{}: {}",
-                    name,
-                    value.to_str().map_err(|_| Error::Other(format!(
-                        "invalid {} header value {:?}",
-                        name,
-                        value.as_bytes()
-                    )))?
-                ))
-                .map_err(Error::Curl)
-        })
-        .collect::<Result<_, _>>()?;
+    for (name, value) in &request.headers {
+        headers.append(&format!(
+            "{}: {}",
+            name,
+            // TODO: Unnecessary fallibility, curl uses a CString under the hood
+            value.to_str().map_err(|_| Error::Other(format!(
+                "invalid {} header value {:?}",
+                name,
+                value.as_bytes()
+            )))?
+        ))?
+    }
 
-    easy.http_headers(headers).map_err(Error::Curl)?;
+    easy.http_headers(headers)?;
 
     if let Method::POST = request.method {
-        easy.post(true).map_err(Error::Curl)?;
-        easy.post_field_size(request.body.len() as u64)
-            .map_err(Error::Curl)?;
+        easy.post(true)?;
+        easy.post_field_size(request.body.len() as u64)?;
     } else {
         assert_eq!(request.method, Method::GET);
     }
@@ -65,37 +58,29 @@ pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
     {
         let mut transfer = easy.transfer();
 
-        transfer
-            .read_function(|buf| Ok(form_slice.read(buf).unwrap_or(0)))
-            .map_err(Error::Curl)?;
+        transfer.read_function(|buf| Ok(form_slice.read(buf).unwrap_or(0)))?;
 
-        transfer
-            .write_function(|new_data| {
-                data.extend_from_slice(new_data);
-                Ok(new_data.len())
-            })
-            .map_err(Error::Curl)?;
+        transfer.write_function(|new_data| {
+            data.extend_from_slice(new_data);
+            Ok(new_data.len())
+        })?;
 
-        transfer.perform().map_err(Error::Curl)?;
+        transfer.perform()?;
     }
 
-    let status_code = easy.response_code().map_err(Error::Curl)? as u16;
+    let status_code = easy.response_code()? as u16;
 
     Ok(HttpResponse {
-        status_code: StatusCode::from_u16(status_code).map_err(|err| Error::Http(err.into()))?,
+        status_code: StatusCode::from_u16(status_code).map_err(http::Error::from)?,
         headers: easy
-            .content_type()
-            .map_err(Error::Curl)?
-            .map(|content_type| {
-                Ok(vec![(
-                    CONTENT_TYPE,
-                    HeaderValue::from_str(content_type).map_err(|err| Error::Http(err.into()))?,
-                )]
-                .into_iter()
-                .collect::<HeaderMap>())
-            })
+            .content_type()?
+            .map(|content_type| HeaderValue::from_str(content_type).map_err(http::Error::from))
             .transpose()?
-            .unwrap_or_else(HeaderMap::new),
+            .map_or_else(HeaderMap::new, |content_type| {
+                vec![(CONTENT_TYPE, content_type)]
+                    .into_iter()
+                    .collect::<HeaderMap>()
+            }),
         body: data,
     })
 }

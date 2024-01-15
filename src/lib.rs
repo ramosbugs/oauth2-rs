@@ -131,7 +131,7 @@
 //!
 //! // Once the user has been redirected to the redirect URL, you'll have access to the
 //! // authorization code. For security reasons, your code should verify that the `state`
-//! // parameter returned by the server matches `csrf_state`.
+//! // parameter returned by the server matches `csrf_token`.
 //!
 //! // Now you can trade it for an access token.
 //! let token_result =
@@ -202,7 +202,7 @@
 //!
 //! // Once the user has been redirected to the redirect URL, you'll have access to the
 //! // authorization code. For security reasons, your code should verify that the `state`
-//! // parameter returned by the server matches `csrf_state`.
+//! // parameter returned by the server matches `csrf_token`.
 //!
 //! // Now you can trade it for an access token.
 //! let token_result = client
@@ -259,7 +259,7 @@
 //!
 //! // Once the user has been redirected to the redirect URL, you'll have the access code.
 //! // For security reasons, your code should verify that the `state` parameter returned by the
-//! // server matches `csrf_state`.
+//! // server matches `csrf_token`.
 //!
 //! # Ok(())
 //! # }

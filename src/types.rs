@@ -594,7 +594,7 @@ new_secret_type![
 new_secret_type![
     ///
     /// Value used for [CSRF](https://tools.ietf.org/html/rfc6749#section-10.12) protection
-    /// via the `state` parameter.
+    /// via the `state` parameter. Compare the `state` parameter to `self.secret()`.
     ///
     #[must_use]
     #[derive(Clone, Deserialize, Serialize)]

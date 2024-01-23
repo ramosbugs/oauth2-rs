@@ -71,6 +71,20 @@
 //!      RE: std::error::Error + 'static
 //!    ```
 //!
+//! # Comparing secrets securely
+//!
+//! OAuth flows require comparing secrets received from the provider servers. To do so securely
+//! while avoiding [timing side-channels](https://en.wikipedia.org/wiki/Timing_attack), the
+//! comparison must be done in constant time, either using a constant-time crate such as
+//! [`constant_time_eq`] (which could break if a future compiler version decides to be overly smart
+//! about its optimizations), or by first computing a cryptographically-secure hash (e.g., SHA-256)
+//! of both values and then comparing the hashes using `==`.
+//!
+//! The `timing-resistant-secret-traits` feature flag adds a safe (but comparatively expensive)
+//! [`PartialEq`] implementation to the secret types. Timing side-channels are why [`PartialEq`] is
+//! not auto-derived for this crate's secret types, and the lack of [`PartialEq`] is intended to
+//! prompt users to think more carefully about these comparisons.
+//!
 //! # Getting started: Authorization Code Grant w/ PKCE
 //!
 //! This is the most common OAuth2 flow. PKCE is recommended whenever the OAuth2 client has no

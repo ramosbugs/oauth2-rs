@@ -22,7 +22,7 @@ rustls-tls = ["reqwest/rustls-tls"]
 timing-resistant-secret-traits = []
 
 [dependencies]
-base64 = "0.13"
+base64 = "0.21"
 thiserror = "1.0"
 http = "0.2"
 rand = "0.8"

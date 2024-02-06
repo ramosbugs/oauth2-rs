@@ -29,7 +29,7 @@ rand = "0.8"
 reqwest = { version = "0.11", optional = true, default-features = false, features = ["blocking"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sha2 = "0.10"
+sha2 = "=0.11.0-pre.3"
 ureq = { version = "2", optional = true }
 url = { version = "2.1", features = ["serde"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std", "wasmbind"] }

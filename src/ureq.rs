@@ -29,6 +29,7 @@ pub enum Error {
 ///
 /// Synchronous HTTP client for ureq.
 ///
+#[tracing::instrument]
 pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
     let mut req = if request.method == Method::POST {
         ureq::post(request.url.as_ref())

@@ -36,6 +36,7 @@ mod blocking {
     ///
     /// Synchronous HTTP client.
     ///
+    #[tracing::instrument]
     pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
         let client = blocking::Client::builder()
             // Following redirects opens the client up to SSRF vulnerabilities.
@@ -71,6 +72,7 @@ mod async_client {
     ///
     /// Asynchronous HTTP client.
     ///
+    #[tracing::instrument]
     pub async fn async_http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
         let client = {
             let builder = reqwest::Client::builder();
@@ -82,6 +84,12 @@ mod async_client {
 
             builder.build()?
         };
+
+
+        match std::str::from_utf8(request.body.as_slice()) {
+            Ok(request_body) => tracing::debug!(%request_body, "request body"),
+            Err(e) => tracing::debug!("request body is not valid utf-8: {}", e),
+        }
 
         let mut request_builder = client
             .request(request.method, request.url.as_str())

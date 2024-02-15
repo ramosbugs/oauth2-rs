@@ -497,10 +497,10 @@ impl PkceCodeChallenge {
         // The RFC specifies that the code verifier must have "a minimum length of 43
         // characters and a maximum length of 128 characters".
         // This implies 32-96 octets of random data to be base64 encoded.
-        assert!(num_bytes >= 32 && num_bytes <= 96);
+        assert!((32..=96).contains(&num_bytes));
         let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
         PkceCodeVerifier::new(base64::encode_config(
-            &random_bytes,
+            random_bytes,
             base64::URL_SAFE_NO_PAD,
         ))
     }
@@ -519,7 +519,7 @@ impl PkceCodeChallenge {
         assert!(code_verifier.secret().len() >= 43 && code_verifier.secret().len() <= 128);
 
         let digest = Sha256::digest(code_verifier.secret().as_bytes());
-        let code_challenge = base64::encode_config(&digest, base64::URL_SAFE_NO_PAD);
+        let code_challenge = base64::encode_config(digest, base64::URL_SAFE_NO_PAD);
 
         Self {
             code_challenge,
@@ -615,7 +615,7 @@ new_secret_type![
         ///
         pub fn new_random_len(num_bytes: u32) -> Self {
             let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
-            CsrfToken::new(base64::encode_config(&random_bytes, base64::URL_SAFE_NO_PAD))
+            CsrfToken::new(base64::encode_config(random_bytes, base64::URL_SAFE_NO_PAD))
         }
     }
 ];

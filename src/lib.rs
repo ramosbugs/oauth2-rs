@@ -1318,6 +1318,7 @@ where
     ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -1329,6 +1330,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -1417,6 +1419,7 @@ where
     ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -1427,6 +1430,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -1537,6 +1541,7 @@ where
     ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -1548,6 +1553,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -1657,6 +1663,7 @@ where
     ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -1668,6 +1675,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -1803,6 +1811,7 @@ where
     ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub fn request<F, RE>(self, http_client: F) -> Result<TIR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -1814,6 +1823,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -1909,6 +1919,7 @@ where
     /// Error [`UnsupportedTokenType`](crate::revocation::RevocationErrorResponseType::UnsupportedTokenType) will be returned if the
     /// type of token type given is not supported by the server.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub fn request<F, RE>(self, http_client: F) -> Result<(), RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -1923,6 +1934,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -2027,6 +2039,7 @@ fn endpoint_request<'a>(
     }
 }
 
+#[tracing::instrument(err)]
 fn endpoint_response<RE, TE, DO>(
     http_response: HttpResponse,
 ) -> Result<DO, RequestTokenError<RE, TE>>
@@ -2054,6 +2067,7 @@ where
     check_response_status(&http_response)
 }
 
+#[tracing::instrument(err)]
 fn check_response_status<RE, TE>(
     http_response: &HttpResponse,
 ) -> Result<(), RequestTokenError<RE, TE>>
@@ -2081,6 +2095,7 @@ where
     Ok(())
 }
 
+#[tracing::instrument(err)]
 fn check_response_body<RE, TE>(
     http_response: &HttpResponse,
 ) -> Result<(), RequestTokenError<RE, TE>>
@@ -2205,6 +2220,7 @@ where
     ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub fn request<F, RE, EF>(
         self,
         http_client: F,
@@ -2220,6 +2236,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
     ///
+    #[tracing::instrument(err, skip(self, http_client))]
     pub async fn request_async<C, F, RE, EF>(
         self,
         http_client: C,
@@ -2315,6 +2332,7 @@ where
     /// Synchronously polls the authorization server for a response, waiting
     /// using a user defined sleep function.
     ///
+    #[tracing::instrument(err, skip(self, http_client, sleep_fn))]
     pub fn request<F, S, RE>(
         self,
         http_client: F,
@@ -2358,6 +2376,7 @@ where
     ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
     ///
+    #[tracing::instrument(err, skip(self, http_client, sleep_fn))]
     pub async fn request_async<C, F, S, SF, RE>(
         self,
         http_client: C,

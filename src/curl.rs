@@ -26,6 +26,7 @@ pub enum Error {
 ///
 /// Synchronous HTTP client.
 ///
+#[tracing::instrument]
 pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
     let mut easy = Easy::new();
     easy.url(&request.url.to_string()[..])?;

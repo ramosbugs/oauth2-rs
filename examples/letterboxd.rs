@@ -117,7 +117,7 @@ impl SigningHttpClient {
             .append_pair("timestamp", &format!("{}", timestamp));
 
         // create signature
-        let mut hmac = Hmac::<Sha256>::new_from_slice(&self.client_secret.secret().as_bytes())
+        let mut hmac = Hmac::<Sha256>::new_from_slice(self.client_secret.secret().as_bytes())
             .expect("HMAC can take key of any size");
         hmac.update(method.as_str().as_bytes());
         hmac.update(&[b'\0']);

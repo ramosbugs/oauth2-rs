@@ -30,6 +30,7 @@ use oauth2::{
 use std::env;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
+
 use url::Url;
 
 fn main() {
@@ -78,75 +79,61 @@ fn main() {
         .set_pkce_challenge(pkce_code_challenge)
         .url();
 
+    println!("Open this URL in your browser:\n{authorize_url}\n");
+
+    let (code, state) = {
+        // A very naive implementation of the redirect server.
+        let listener = TcpListener::bind("127.0.0.1:3003").unwrap();
+
+        // The server will terminate itself after collecting the first code.
+        let Some(mut stream) = listener.incoming().flatten().next() else {
+            panic!("listener terminated without accepting a connection");
+        };
+
+        let mut reader = BufReader::new(&stream);
+
+        let mut request_line = String::new();
+        reader.read_line(&mut request_line).unwrap();
+
+        let redirect_url = request_line.split_whitespace().nth(1).unwrap();
+        let url = Url::parse(&("http://localhost".to_string() + redirect_url)).unwrap();
+
+        let code = url
+            .query_pairs()
+            .find(|(key, _)| key == "code")
+            .map(|(_, code)| AuthorizationCode::new(code.into_owned()))
+            .unwrap();
+
+        let state = url
+            .query_pairs()
+            .find(|(key, _)| key == "state")
+            .map(|(_, state)| CsrfToken::new(state.into_owned()))
+            .unwrap();
+
+        let message = "Go back to your terminal :)";
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}",
+            message.len(),
+            message
+        );
+        stream.write_all(response.as_bytes()).unwrap();
+
+        (code, state)
+    };
+
+    println!("MS Graph returned the following code:\n{}\n", code.secret());
     println!(
-        "Open this URL in your browser:\n{}\n",
-        authorize_url.to_string()
+        "MS Graph returned the following state:\n{} (expected `{}`)\n",
+        state.secret(),
+        csrf_state.secret()
     );
 
-    // A very naive implementation of the redirect server.
-    let listener = TcpListener::bind("127.0.0.1:3003").unwrap();
-    for stream in listener.incoming() {
-        if let Ok(mut stream) = stream {
-            let code;
-            let state;
-            {
-                let mut reader = BufReader::new(&stream);
+    // Exchange the code with a token.
+    let token = client
+        .exchange_code(code)
+        // Send the PKCE code verifier in the token request
+        .set_pkce_verifier(pkce_code_verifier)
+        .request(http_client);
 
-                let mut request_line = String::new();
-                reader.read_line(&mut request_line).unwrap();
-
-                let redirect_url = request_line.split_whitespace().nth(1).unwrap();
-                let url = Url::parse(&("http://localhost".to_string() + redirect_url)).unwrap();
-
-                let code_pair = url
-                    .query_pairs()
-                    .find(|pair| {
-                        let &(ref key, _) = pair;
-                        key == "code"
-                    })
-                    .unwrap();
-
-                let (_, value) = code_pair;
-                code = AuthorizationCode::new(value.into_owned());
-
-                let state_pair = url
-                    .query_pairs()
-                    .find(|pair| {
-                        let &(ref key, _) = pair;
-                        key == "state"
-                    })
-                    .unwrap();
-
-                let (_, value) = state_pair;
-                state = CsrfToken::new(value.into_owned());
-            }
-
-            let message = "Go back to your terminal :)";
-            let response = format!(
-                "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}",
-                message.len(),
-                message
-            );
-            stream.write_all(response.as_bytes()).unwrap();
-
-            println!("MS Graph returned the following code:\n{}\n", code.secret());
-            println!(
-                "MS Graph returned the following state:\n{} (expected `{}`)\n",
-                state.secret(),
-                csrf_state.secret()
-            );
-
-            // Exchange the code with a token.
-            let token = client
-                .exchange_code(code)
-                // Send the PKCE code verifier in the token request
-                .set_pkce_verifier(pkce_code_verifier)
-                .request(http_client);
-
-            println!("MS Graph returned the following token:\n{:?}\n", token);
-
-            // The server will terminate itself after collecting the first code.
-            break;
-        }
-    }
+    println!("MS Graph returned the following token:\n{:?}\n", token);
 }

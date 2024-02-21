@@ -14,17 +14,17 @@
 //!
 
 use oauth2::basic::BasicClient;
-
 // Alternatively, this can be `oauth2::curl::http_client` or a custom client.
 use oauth2::reqwest::async_http_client;
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope,
     TokenResponse, TokenUrl,
 };
-use std::env;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 use url::Url;
+
+use std::env;
 
 #[tokio::main]
 async fn main() {
@@ -61,18 +61,14 @@ async fn main() {
         .add_scope(Scope::new("user:email".to_string()))
         .url();
 
-    println!(
-        "Open this URL in your browser:\n{}\n",
-        authorize_url.to_string()
-    );
+    println!("Open this URL in your browser:\n{authorize_url}\n");
 
-    // A very naive implementation of the redirect server.
-    let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
-    loop {
-        if let Ok((mut stream, _)) = listener.accept().await {
-            let code;
-            let state;
-            {
+    let (code, state) = {
+        // A very naive implementation of the redirect server.
+        let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
+
+        loop {
+            if let Ok((mut stream, _)) = listener.accept().await {
                 let mut reader = BufReader::new(&mut stream);
 
                 let mut request_line = String::new();
@@ -81,71 +77,60 @@ async fn main() {
                 let redirect_url = request_line.split_whitespace().nth(1).unwrap();
                 let url = Url::parse(&("http://localhost".to_string() + redirect_url)).unwrap();
 
-                let code_pair = url
+                let code = url
                     .query_pairs()
-                    .find(|pair| {
-                        let &(ref key, _) = pair;
-                        key == "code"
-                    })
+                    .find(|(key, _)| key == "code")
+                    .map(|(_, code)| AuthorizationCode::new(code.into_owned()))
                     .unwrap();
 
-                let (_, value) = code_pair;
-                code = AuthorizationCode::new(value.into_owned());
-
-                let state_pair = url
+                let state = url
                     .query_pairs()
-                    .find(|pair| {
-                        let &(ref key, _) = pair;
-                        key == "state"
-                    })
+                    .find(|(key, _)| key == "state")
+                    .map(|(_, state)| CsrfToken::new(state.into_owned()))
                     .unwrap();
 
-                let (_, value) = state_pair;
-                state = CsrfToken::new(value.into_owned());
+                let message = "Go back to your terminal :)";
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}",
+                    message.len(),
+                    message
+                );
+                stream.write_all(response.as_bytes()).await.unwrap();
+
+                // The server will terminate itself after collecting the first code.
+                break (code, state);
             }
-
-            let message = "Go back to your terminal :)";
-            let response = format!(
-                "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}",
-                message.len(),
-                message
-            );
-            stream.write_all(response.as_bytes()).await.unwrap();
-
-            println!("Github returned the following code:\n{}\n", code.secret());
-            println!(
-                "Github returned the following state:\n{} (expected `{}`)\n",
-                state.secret(),
-                csrf_state.secret()
-            );
-
-            // Exchange the code with a token.
-            let token_res = client
-                .exchange_code(code)
-                .request_async(async_http_client)
-                .await;
-
-            println!("Github returned the following token:\n{:?}\n", token_res);
-
-            if let Ok(token) = token_res {
-                // NB: Github returns a single comma-separated "scope" parameter instead of multiple
-                // space-separated scopes. Github-specific clients can parse this scope into
-                // multiple scopes by splitting at the commas. Note that it's not safe for the
-                // library to do this by default because RFC 6749 allows scopes to contain commas.
-                let scopes = if let Some(scopes_vec) = token.scopes() {
-                    scopes_vec
-                        .iter()
-                        .map(|comma_separated| comma_separated.split(','))
-                        .flatten()
-                        .collect::<Vec<_>>()
-                } else {
-                    Vec::new()
-                };
-                println!("Github returned the following scopes:\n{:?}\n", scopes);
-            }
-
-            // The server will terminate itself after collecting the first code.
-            break;
         }
+    };
+
+    println!("Github returned the following code:\n{}\n", code.secret());
+    println!(
+        "Github returned the following state:\n{} (expected `{}`)\n",
+        state.secret(),
+        csrf_state.secret()
+    );
+
+    // Exchange the code with a token.
+    let token_res = client
+        .exchange_code(code)
+        .request_async(async_http_client)
+        .await;
+
+    println!("Github returned the following token:\n{:?}\n", token_res);
+
+    if let Ok(token) = token_res {
+        // NB: Github returns a single comma-separated "scope" parameter instead of multiple
+        // space-separated scopes. Github-specific clients can parse this scope into
+        // multiple scopes by splitting at the commas. Note that it's not safe for the
+        // library to do this by default because RFC 6749 allows scopes to contain commas.
+        let scopes = if let Some(scopes_vec) = token.scopes() {
+            scopes_vec
+                .iter()
+                .flat_map(|comma_separated| comma_separated.split(','))
+                .collect::<Vec<_>>()
+        } else {
+            Vec::new()
+        };
+        println!("Github returned the following scopes:\n{:?}\n", scopes);
     }
 }

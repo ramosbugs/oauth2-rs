@@ -394,7 +394,7 @@ fn test_exchange_code_successful_with_complete_json_response() {
         token.scopes()
     );
     assert_eq!(3600, token.expires_in().unwrap().as_secs());
-    assert_eq!("foobar", token.refresh_token().clone().unwrap().secret());
+    assert_eq!("foobar", token.refresh_token().unwrap().secret());
 
     // Ensure that serialization produces an equivalent JSON value.
     let serialized_json = serde_json::to_string(&token).unwrap();
@@ -960,8 +960,8 @@ fn test_exchange_code_with_simple_json_error() {
     assert!(token.is_err());
 
     let token_err = token.err().unwrap();
-    match &token_err {
-        &RequestTokenError::ServerResponse(ref error_response) => {
+    match token_err {
+        RequestTokenError::ServerResponse(ref error_response) => {
             assert_eq!(
                 BasicErrorResponseType::InvalidRequest,
                 *error_response.error()
@@ -1217,7 +1217,7 @@ mod colorful_extension {
         StandardErrorResponse<ColorfulErrorResponseType>,
     >;
 
-    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+    #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
     #[serde(rename_all = "lowercase")]
     pub enum ColorfulTokenType {
         Green,
@@ -1225,7 +1225,7 @@ mod colorful_extension {
     }
     impl TokenType for ColorfulTokenType {}
 
-    #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+    #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
     pub struct ColorfulFields {
         #[serde(rename = "shape")]
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -1243,7 +1243,7 @@ mod colorful_extension {
     }
     impl ExtraTokenFields for ColorfulFields {}
 
-    #[derive(Clone, Deserialize, PartialEq, Serialize)]
+    #[derive(Clone, Deserialize, PartialEq, Eq, Serialize)]
     #[serde(rename_all = "snake_case")]
     pub enum ColorfulErrorResponseType {
         TooDark,
@@ -1285,7 +1285,7 @@ mod colorful_extension {
     impl RevocableToken for ColorfulRevocableToken {
         fn secret(&self) -> &str {
             match self {
-                ColorfulRevocableToken::Red(secret) => &secret,
+                ColorfulRevocableToken::Red(secret) => secret,
             }
         }
 
@@ -1402,7 +1402,7 @@ fn test_extension_successful_with_complete_json_response() {
         token.scopes()
     );
     assert_eq!(3600, token.expires_in().unwrap().as_secs());
-    assert_eq!("foobar", token.refresh_token().clone().unwrap().secret());
+    assert_eq!("foobar", token.refresh_token().unwrap().secret());
     assert_eq!(Some(&"round".to_string()), token.extra_fields().shape());
     assert_eq!(12, token.extra_fields().height());
 
@@ -1458,7 +1458,7 @@ fn test_extension_with_simple_json_error() {
 
     let token_err = token.err().unwrap();
     match &token_err {
-        &RequestTokenError::ServerResponse(ref error_response) => {
+        RequestTokenError::ServerResponse(ref error_response) => {
             assert_eq!(ColorfulErrorResponseType::TooLight, *error_response.error());
             assert_eq!(
                 Some(&"stuff happened".to_string()),
@@ -1694,7 +1694,7 @@ fn test_token_introspection_successful_with_basic_auth_minimal_response() {
         ))
         .unwrap();
 
-    assert_eq!(true, introspection_response.active);
+    assert!(introspection_response.active);
     assert_eq!(None, introspection_response.scopes);
     assert_eq!(None, introspection_response.client_id);
     assert_eq!(None, introspection_response.username);
@@ -1757,7 +1757,7 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
         ))
         .unwrap();
 
-    assert_eq!(true, introspection_response.active);
+    assert!(introspection_response.active);
     assert_eq!(
         Some(vec![
             Scope::new("email".to_string()),

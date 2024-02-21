@@ -1116,7 +1116,7 @@ impl<'a> AuthorizationRequest<'a> {
     /// Enables custom flows other than the `code` and `token` (implicit flow) grant.
     ///
     pub fn set_response_type(mut self, response_type: &ResponseType) -> Self {
-        self.response_type = (&**response_type).to_owned().into();
+        self.response_type = (**response_type).to_owned().into();
         self
     }
 
@@ -1156,13 +1156,13 @@ impl<'a> AuthorizationRequest<'a> {
         let url = {
             let mut pairs: Vec<(&str, &str)> = vec![
                 ("response_type", self.response_type.as_ref()),
-                ("client_id", &self.client_id),
+                ("client_id", self.client_id),
                 ("state", self.state.secret()),
             ];
 
             if let Some(ref pkce_challenge) = self.pkce_challenge {
-                pairs.push(("code_challenge", &pkce_challenge.as_str()));
-                pairs.push(("code_challenge_method", &pkce_challenge.method().as_str()));
+                pairs.push(("code_challenge", pkce_challenge.as_str()));
+                pairs.push(("code_challenge_method", pkce_challenge.method().as_str()));
             }
 
             if let Some(ref redirect_url) = self.redirect_url {
@@ -1176,7 +1176,7 @@ impl<'a> AuthorizationRequest<'a> {
             let mut url: Url = self.auth_url.url().to_owned();
 
             url.query_pairs_mut()
-                .extend_pairs(pairs.iter().map(|&(k, v)| (k, &v[..])));
+                .extend_pairs(pairs.iter().map(|&(k, v)| (k, v)));
 
             url.query_pairs_mut()
                 .extend_pairs(self.extra_params.iter().cloned());
@@ -1976,11 +1976,11 @@ fn endpoint_request<'a>(
             // before using them as HTTP Basic auth username and password. Note that this is
             // not standard for ordinary Basic auth, so curl won't do it for us.
             let urlencoded_id: String =
-                form_urlencoded::byte_serialize(&client_id.as_bytes()).collect();
+                form_urlencoded::byte_serialize(client_id.as_bytes()).collect();
             let urlencoded_secret: String =
                 form_urlencoded::byte_serialize(secret.secret().as_bytes()).collect();
             let b64_credential =
-                base64::encode(&format!("{}:{}", &urlencoded_id, urlencoded_secret));
+                base64::encode(format!("{}:{}", &urlencoded_id, urlencoded_secret));
             headers.append(
                 AUTHORIZATION,
                 HeaderValue::from_str(&format!("Basic {}", &b64_credential)).unwrap(),
@@ -1988,7 +1988,7 @@ fn endpoint_request<'a>(
         }
         (AuthType::RequestBody, _) | (AuthType::BasicAuth, None) => {
             params.push(("client_id", client_id));
-            if let Some(ref client_secret) = client_secret {
+            if let Some(client_secret) = client_secret {
                 params.push(("client_secret", client_secret.secret()));
             }
         }
@@ -2001,7 +2001,7 @@ fn endpoint_request<'a>(
     params.extend_from_slice(
         extra_params
             .iter()
-            .map(|&(ref k, ref v)| (k.as_ref(), v.as_ref()))
+            .map(|(k, v)| (k.as_ref(), v.as_ref()))
             .collect::<Vec<_>>()
             .as_slice(),
     );

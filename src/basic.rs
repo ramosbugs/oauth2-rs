@@ -13,13 +13,24 @@ use crate::{
 ///
 /// Basic OAuth2 client specialization, suitable for most applications.
 ///
-pub type BasicClient = Client<
+pub type BasicClient<
+    const HAS_AUTH_URL: bool = false,
+    const HAS_DEVICE_AUTH_URL: bool = false,
+    const HAS_INTROSPECTION_URL: bool = false,
+    const HAS_REVOCATION_URL: bool = false,
+    const HAS_TOKEN_URL: bool = false,
+> = Client<
     BasicErrorResponse,
     BasicTokenResponse,
     BasicTokenType,
     BasicTokenIntrospectionResponse,
     StandardRevocableToken,
     BasicRevocationErrorResponse,
+    HAS_AUTH_URL,
+    HAS_DEVICE_AUTH_URL,
+    HAS_INTROSPECTION_URL,
+    HAS_REVOCATION_URL,
+    HAS_TOKEN_URL,
 >;
 
 ///

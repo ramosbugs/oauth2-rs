@@ -11,26 +11,22 @@ const TENANT_ID: &str = "{tenant}";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let device_auth_url = DeviceAuthorizationUrl::new(format!(
-        "https://login.microsoftonline.com/{}/oauth2/v2.0/devicecode",
-        TENANT_ID
-    ))?;
-    let client = BasicClient::new(
-        ClientId::new("client_id".to_string()),
-        None,
-        AuthUrl::new(format!(
+    let client = BasicClient::new(ClientId::new("client_id".to_string()))
+        .set_auth_url(AuthUrl::new(format!(
             "https://login.microsoftonline.com/{}/oauth2/v2.0/authorize",
             TENANT_ID
-        ))?,
-        Some(TokenUrl::new(format!(
+        ))?)
+        .set_token_url(TokenUrl::new(format!(
             "https://login.microsoftonline.com/{}/oauth2/v2.0/token",
             TENANT_ID
-        ))?),
-    )
-    .set_device_authorization_url(device_auth_url);
+        ))?)
+        .set_device_authorization_url(DeviceAuthorizationUrl::new(format!(
+            "https://login.microsoftonline.com/{}/oauth2/v2.0/devicecode",
+            TENANT_ID
+        ))?);
 
     let details: StandardDeviceAuthorizationResponse = client
-        .exchange_device_code()?
+        .exchange_device_code()
         .add_scope(Scope::new("read".to_string()))
         .request_async(async_http_client)
         .await?;

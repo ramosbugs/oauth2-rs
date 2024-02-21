@@ -1,3 +1,4 @@
+use chrono::TimeZone;
 use http::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
 use revocation::RevocationErrorResponseType;
@@ -10,15 +11,12 @@ use crate::revocation::StandardRevocableToken;
 use super::basic::*;
 use super::devicecode::*;
 use super::*;
-use chrono::TimeZone;
 
-fn new_client() -> BasicClient {
-    BasicClient::new(
-        ClientId::new("aaa".to_string()),
-        Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
-        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
-    )
+fn new_client() -> BasicClient<true, false, false, false, true> {
+    BasicClient::new(ClientId::new("aaa".to_string()))
+        .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap())
+        .set_client_secret(ClientSecret::new("bbb".to_string()))
 }
 
 fn mock_http_client(
@@ -155,12 +153,10 @@ fn test_authorize_url_implicit() {
 
 #[test]
 fn test_authorize_url_with_param() {
-    let client = BasicClient::new(
-        ClientId::new("aaa".to_string()),
-        Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new("https://example.com/auth?foo=bar".to_string()).unwrap(),
-        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
-    );
+    let client = BasicClient::new(ClientId::new("aaa".to_string()))
+        .set_client_secret(ClientSecret::new("bbb".to_string()))
+        .set_auth_url(AuthUrl::new("https://example.com/auth?foo=bar".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap());
 
     let (url, _) = client
         .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
@@ -309,12 +305,11 @@ where
 
 #[test]
 fn test_exchange_code_successful_with_minimal_json_response() {
-    let client = BasicClient::new(
-        ClientId::new("aaa".to_string()),
-        Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
-        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
-    );
+    let client = BasicClient::new(ClientId::new("aaa".to_string()))
+        .set_client_secret(ClientSecret::new("bbb".to_string()))
+        .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap());
+
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
@@ -411,13 +406,12 @@ fn test_exchange_code_successful_with_complete_json_response() {
 
 #[test]
 fn test_exchange_client_credentials_with_basic_auth() {
-    let client = BasicClient::new(
-        ClientId::new("aaa/;&".to_string()),
-        Some(ClientSecret::new("bbb/;&".to_string())),
-        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
-        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
-    )
-    .set_auth_type(AuthType::BasicAuth);
+    let client = BasicClient::new(ClientId::new("aaa/;&".to_string()))
+        .set_client_secret(ClientSecret::new("bbb/;&".to_string()))
+        .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap())
+        .set_auth_type(AuthType::BasicAuth);
+
     let token = client
         .exchange_client_credentials()
         .request(mock_http_client(
@@ -457,13 +451,11 @@ fn test_exchange_client_credentials_with_basic_auth() {
 
 #[test]
 fn test_exchange_client_credentials_with_basic_auth_but_no_client_secret() {
-    let client = BasicClient::new(
-        ClientId::new("aaa/;&".to_string()),
-        None,
-        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
-        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
-    )
-    .set_auth_type(AuthType::BasicAuth);
+    let client = BasicClient::new(ClientId::new("aaa/;&".to_string()))
+        .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap())
+        .set_auth_type(AuthType::BasicAuth);
+
     let token = client
         .exchange_client_credentials()
         .request(mock_http_client(
@@ -1095,12 +1087,9 @@ fn test_exchange_code_with_unexpected_content_type() {
 
 #[test]
 fn test_exchange_code_with_invalid_token_type() {
-    let client = BasicClient::new(
-        ClientId::new("aaa".to_string()),
-        None,
-        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
-        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
-    );
+    let client = BasicClient::new(ClientId::new("aaa".to_string()))
+        .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap());
 
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -1191,12 +1180,11 @@ fn test_exchange_code_with_400_status_code() {
 
 #[test]
 fn test_exchange_code_fails_gracefully_on_transport_error() {
-    let client = BasicClient::new(
-        ClientId::new("aaa".to_string()),
-        Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new("https://auth".to_string()).unwrap(),
-        Some(TokenUrl::new("https://token".to_string()).unwrap()),
-    );
+    let client = BasicClient::new(ClientId::new("aaa".to_string()))
+        .set_client_secret(ClientSecret::new("bbb".to_string()))
+        .set_auth_url(AuthUrl::new("https://auth".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://token".to_string()).unwrap());
+
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(|_| Err(FakeError::Err));
@@ -1216,13 +1204,24 @@ mod colorful_extension {
     use std::fmt::Error as FormatterError;
     use std::fmt::{Debug, Display, Formatter};
 
-    pub type ColorfulClient = Client<
+    pub type ColorfulClient<
+        const HAS_AUTH_URL: bool,
+        const HAS_DEVICE_AUTH_URL: bool,
+        const HAS_INTROSPECTION_URL: bool,
+        const HAS_REVOCATION_URL: bool,
+        const HAS_TOKEN_URL: bool,
+    > = Client<
         StandardErrorResponse<ColorfulErrorResponseType>,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
         StandardTokenIntrospectionResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulRevocableToken,
         StandardErrorResponse<ColorfulErrorResponseType>,
+        HAS_AUTH_URL,
+        HAS_DEVICE_AUTH_URL,
+        HAS_INTROSPECTION_URL,
+        HAS_REVOCATION_URL,
+        HAS_TOKEN_URL,
     >;
 
     #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -1308,12 +1307,11 @@ mod colorful_extension {
 #[test]
 fn test_extension_successful_with_minimal_json_response() {
     use self::colorful_extension::*;
-    let client = ColorfulClient::new(
-        ClientId::new("aaa".to_string()),
-        Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
-        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
-    );
+    let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
+        .set_client_secret(ClientSecret::new("bbb".to_string()))
+        .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap());
+
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
@@ -1361,13 +1359,12 @@ fn test_extension_successful_with_minimal_json_response() {
 #[test]
 fn test_extension_successful_with_complete_json_response() {
     use self::colorful_extension::*;
-    let client = ColorfulClient::new(
-        ClientId::new("aaa".to_string()),
-        Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
-        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
-    )
-    .set_auth_type(AuthType::RequestBody);
+    let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
+        .set_client_secret(ClientSecret::new("bbb".to_string()))
+        .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap())
+        .set_auth_type(AuthType::RequestBody);
+
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
@@ -1431,12 +1428,11 @@ fn test_extension_successful_with_complete_json_response() {
 #[test]
 fn test_extension_with_simple_json_error() {
     use self::colorful_extension::*;
-    let client = ColorfulClient::new(
-        ClientId::new("aaa".to_string()),
-        Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
-        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
-    );
+    let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
+        .set_client_secret(ClientSecret::new("bbb".to_string()))
+        .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap());
+
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
@@ -1530,25 +1526,34 @@ mod custom_errors {
 
     impl ErrorResponse for CustomErrorResponse {}
 
-    pub type CustomErrorClient = Client<
+    pub type CustomErrorClient<
+        const HAS_AUTH_URL: bool,
+        const HAS_DEVICE_AUTH_URL: bool,
+        const HAS_INTROSPECTION_URL: bool,
+        const HAS_REVOCATION_URL: bool,
+        const HAS_TOKEN_URL: bool,
+    > = Client<
         CustomErrorResponse,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulTokenType,
         StandardTokenIntrospectionResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulRevocableToken,
         CustomErrorResponse,
+        HAS_AUTH_URL,
+        HAS_DEVICE_AUTH_URL,
+        HAS_INTROSPECTION_URL,
+        HAS_REVOCATION_URL,
+        HAS_TOKEN_URL,
     >;
 }
 
 #[test]
 fn test_extension_with_custom_json_error() {
     use self::custom_errors::*;
-    let client = CustomErrorClient::new(
-        ClientId::new("aaa".to_string()),
-        Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
-        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
-    );
+    let client = CustomErrorClient::new(ClientId::new("aaa".to_string()))
+        .set_client_secret(ClientSecret::new("bbb".to_string()))
+        .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap());
 
     let token = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
@@ -1810,20 +1815,6 @@ fn test_token_introspection_successful_with_basic_auth_full_response() {
 }
 
 #[test]
-fn test_token_revocation_with_missing_url() {
-    let client = new_client();
-
-    let result = client
-        .revoke_token(AccessToken::new("access_token_123".to_string()).into())
-        .unwrap_err();
-
-    assert_eq!(
-        format!("{}", result),
-        "No revocation endpoint URL specified"
-    );
-}
-
-#[test]
 fn test_token_revocation_with_non_https_url() {
     let client = new_client();
 
@@ -1997,13 +1988,11 @@ fn test_token_revocation_with_refresh_token() {
 #[test]
 fn test_extension_token_revocation_successful() {
     use self::colorful_extension::*;
-    let client = ColorfulClient::new(
-        ClientId::new("aaa".to_string()),
-        Some(ClientSecret::new("bbb".to_string())),
-        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
-        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
-    )
-    .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+    let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
+        .set_client_secret(ClientSecret::new("bbb".to_string()))
+        .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap())
+        .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
     client
         .revoke_token(ColorfulRevocableToken::Red(
@@ -2057,7 +2046,6 @@ fn new_device_auth_details(expires_in: u32) -> StandardDeviceAuthorizationRespon
     let client = new_client().set_device_authorization_url(device_auth_url.clone());
     client
         .exchange_device_code()
-        .unwrap()
         .add_extra_param("foo", "bar")
         .add_scope(Scope::new("openid".to_string()))
         .request(mock_http_client(
@@ -2553,6 +2541,11 @@ fn test_send_sync_impl() {
             StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
             StandardRevocableToken,
             BasicRevocationErrorResponse,
+            false,
+            false,
+            false,
+            false,
+            false,
         >,
     >();
     is_sync_and_send::<

@@ -41,12 +41,10 @@ fn main() -> Result<(), anyhow::Error> {
     let token_url = TokenUrl::new("https://api.letterboxd.com/api/v0/auth/token".to_string())?;
 
     // Set up the config for the Letterboxd OAuth2 process.
-    let client = BasicClient::new(
-        letterboxd_client_id.clone(),
-        Some(letterboxd_client_secret.clone()),
-        auth_url,
-        Some(token_url),
-    );
+    let client = BasicClient::new(letterboxd_client_id.clone())
+        .set_client_secret(letterboxd_client_secret.clone())
+        .set_auth_url(auth_url)
+        .set_token_url(token_url);
 
     // Resource Owner flow uses username and password for authentication
     let letterboxd_username = ResourceOwnerUsername::new(

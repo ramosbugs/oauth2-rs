@@ -7,21 +7,19 @@ use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let device_auth_url = DeviceAuthorizationUrl::new(
-        "https://login.microsoftonline.com/common/oauth2/v2.0/devicecode".to_string(),
-    )?;
-    let client = BasicClient::new(
-        ClientId::new("client_id".to_string()),
-        None,
-        AuthUrl::new("https://login.microsoftonline.com/common/oauth2/v2.0/authorize".to_string())?,
-        Some(TokenUrl::new(
+    let client = BasicClient::new(ClientId::new("client_id".to_string()))
+        .set_auth_url(AuthUrl::new(
+            "https://login.microsoftonline.com/common/oauth2/v2.0/authorize".to_string(),
+        )?)
+        .set_token_url(TokenUrl::new(
             "https://login.microsoftonline.com/common/oauth2/v2.0/token".to_string(),
-        )?),
-    )
-    .set_device_authorization_url(device_auth_url);
+        )?)
+        .set_device_authorization_url(DeviceAuthorizationUrl::new(
+            "https://login.microsoftonline.com/common/oauth2/v2.0/devicecode".to_string(),
+        )?);
 
     let details: StandardDeviceAuthorizationResponse = client
-        .exchange_device_code()?
+        .exchange_device_code()
         .add_scope(Scope::new("read".to_string()))
         .request_async(async_http_client)
         .await?;

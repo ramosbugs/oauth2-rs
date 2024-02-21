@@ -39,13 +39,24 @@ use std::net::TcpListener;
 use std::time::Duration;
 
 type SpecialTokenResponse = NonStandardTokenResponse<EmptyExtraTokenFields>;
-type SpecialClient = Client<
+type SpecialClient<
+    const HAS_AUTH_URL: bool,
+    const HAS_DEVICE_AUTH_URL: bool,
+    const HAS_INTROSPECTION_URL: bool,
+    const HAS_REVOCATION_URL: bool,
+    const HAS_TOKEN_URL: bool,
+> = Client<
     BasicErrorResponse,
     SpecialTokenResponse,
     BasicTokenType,
     BasicTokenIntrospectionResponse,
     StandardRevocableToken,
     BasicRevocationErrorResponse,
+    HAS_AUTH_URL,
+    HAS_DEVICE_AUTH_URL,
+    HAS_INTROSPECTION_URL,
+    HAS_REVOCATION_URL,
+    HAS_TOKEN_URL,
 >;
 
 fn default_token_type() -> Option<BasicTokenType> {
@@ -151,17 +162,15 @@ fn main() {
         .expect("Invalid token endpoint URL");
 
     // Set up the config for the Wunderlist OAuth2 process.
-    let client = SpecialClient::new(
-        wunder_client_id,
-        Some(wunderlist_client_secret),
-        auth_url,
-        Some(token_url),
-    )
-    // This example will be running its own server at localhost:8080.
-    // See below for the server implementation.
-    .set_redirect_uri(
-        RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
-    );
+    let client = SpecialClient::new(wunder_client_id)
+        .set_client_secret(wunderlist_client_secret)
+        .set_auth_url(auth_url)
+        .set_token_url(token_url)
+        // This example will be running its own server at localhost:8080.
+        // See below for the server implementation.
+        .set_redirect_uri(
+            RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
+        );
 
     // Generate the authorization URL to which we'll redirect the user.
     let (authorize_url, csrf_state) = client.authorize_url(CsrfToken::new_random).url();

@@ -49,19 +49,16 @@ fn main() {
     //
     // Google's OAuth endpoint expects the client_id to be in the request body,
     // so ensure that option is set.
-    let device_client = BasicClient::new(
-        google_client_id,
-        Some(google_client_secret),
-        auth_url,
-        Some(token_url),
-    )
-    .set_device_authorization_url(device_auth_url)
-    .set_auth_type(AuthType::RequestBody);
+    let device_client = BasicClient::new(google_client_id)
+        .set_client_secret(google_client_secret)
+        .set_auth_url(auth_url)
+        .set_token_url(token_url)
+        .set_device_authorization_url(device_auth_url)
+        .set_auth_type(AuthType::RequestBody);
 
     // Request the set of codes from the Device Authorization endpoint.
     let details: StoringDeviceAuthorizationResponse = device_client
         .exchange_device_code()
-        .unwrap()
         .add_scope(Scope::new("profile".to_string()))
         .request(http_client)
         .expect("Failed to request codes from device auth endpoint");

@@ -49,21 +49,19 @@ fn main() {
             .expect("Invalid token endpoint URL");
 
     // Set up the config for the Microsoft Graph OAuth2 process.
-    let client = BasicClient::new(
-        graph_client_id,
-        Some(graph_client_secret),
-        auth_url,
-        Some(token_url),
-    )
-    // Microsoft Graph requires client_id and client_secret in URL rather than
-    // using Basic authentication.
-    .set_auth_type(AuthType::RequestBody)
-    // This example will be running its own server at localhost:3003.
-    // See below for the server implementation.
-    .set_redirect_uri(
-        RedirectUrl::new("http://localhost:3003/redirect".to_string())
-            .expect("Invalid redirect URL"),
-    );
+    let client = BasicClient::new(graph_client_id)
+        .set_client_secret(graph_client_secret)
+        .set_auth_url(auth_url)
+        .set_token_url(token_url)
+        // Microsoft Graph requires client_id and client_secret in URL rather than
+        // using Basic authentication.
+        .set_auth_type(AuthType::RequestBody)
+        // This example will be running its own server at localhost:3003.
+        // See below for the server implementation.
+        .set_redirect_uri(
+            RedirectUrl::new("http://localhost:3003/redirect".to_string())
+                .expect("Invalid redirect URL"),
+        );
 
     // Microsoft Graph supports Proof Key for Code Exchange (PKCE - https://oauth.net/2/pkce/).
     // Create a PKCE code verifier and SHA-256 encode it as a code challenge.

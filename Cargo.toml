@@ -1,12 +1,13 @@
 [package]
 name = "oauth2"
 authors = ["Alex Crichton <alex@alexcrichton.com>", "Florin Lipan <florinlipan@gmail.com>", "David A. Ramos <ramos@cs.stanford.edu>"]
-version = "4.4.2"
+version = "5.0.0-alpha.1"
 license = "MIT OR Apache-2.0"
 description = "An extensible, strongly-typed implementation of OAuth2"
 repository = "https://github.com/ramosbugs/oauth2-rs"
-edition = "2018"
+edition = "2021"
 readme = "README.md"
+rust-version = "1.65"
 
 [package.metadata.docs.rs]
 all-features = true

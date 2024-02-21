@@ -272,6 +272,11 @@ macro_rules! new_url_type {
                 &self.1
             }
         }
+        impl ::std::fmt::Display for $name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+                write!(f, "{}", self.1)
+            }
+        }
         impl ::std::fmt::Debug for $name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
                 let mut debug_trait_builder = f.debug_tuple(stringify!($name));

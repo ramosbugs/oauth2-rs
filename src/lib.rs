@@ -1779,16 +1779,13 @@ where
         self
     }
 
-    fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
-    where
-        RE: Error + 'static,
-    {
+    fn prepare_request(self) -> HttpRequest {
         let mut params: Vec<(&str, &str)> = vec![("token", self.token.secret())];
         if let Some(ref token_type_hint) = self.token_type_hint {
             params.push(("token_type_hint", token_type_hint));
         }
 
-        Ok(endpoint_request(
+        endpoint_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -1797,7 +1794,7 @@ where
             None,
             self.introspection_url.url(),
             params,
-        ))
+        )
     }
 
     ///
@@ -1808,7 +1805,7 @@ where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
         RE: Error + 'static,
     {
-        endpoint_response(http_client(self.prepare_request()?)?)
+        endpoint_response(http_client(self.prepare_request())?)
     }
 
     ///
@@ -1823,8 +1820,7 @@ where
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request).await?;
+        let http_response = http_client(self.prepare_request()).await?;
         endpoint_response(http_response)
     }
 }
@@ -1879,16 +1875,13 @@ where
         self
     }
 
-    fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
-    where
-        RE: Error + 'static,
-    {
+    fn prepare_request(self) -> HttpRequest {
         let mut params: Vec<(&str, &str)> = vec![("token", self.token.secret())];
         if let Some(type_hint) = self.token.type_hint() {
             params.push(("token_type_hint", type_hint));
         }
 
-        Ok(endpoint_request(
+        endpoint_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -1897,7 +1890,7 @@ where
             None,
             self.revocation_url.url(),
             params,
-        ))
+        )
     }
 
     ///
@@ -1917,7 +1910,7 @@ where
         // From https://tools.ietf.org/html/rfc7009#section-2.2:
         //   "The content of the response body is ignored by the client as all
         //    necessary information is conveyed in the response code."
-        endpoint_response_status_only(http_client(self.prepare_request()?)?)
+        endpoint_response_status_only(http_client(self.prepare_request())?)
     }
 
     ///
@@ -1932,8 +1925,7 @@ where
         F: Future<Output = Result<HttpResponse, RE>>,
         RE: Error + 'static,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request).await?;
+        let http_response = http_client(self.prepare_request()).await?;
         endpoint_response_status_only(http_response)
     }
 }
@@ -2186,11 +2178,8 @@ where
         self
     }
 
-    fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
-    where
-        RE: Error + 'static,
-    {
-        Ok(endpoint_request(
+    fn prepare_request(self) -> HttpRequest {
+        endpoint_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -2199,7 +2188,7 @@ where
             Some(&self.scopes),
             self.device_authorization_url.url(),
             vec![],
-        ))
+        )
     }
 
     ///
@@ -2214,7 +2203,7 @@ where
         RE: Error + 'static,
         EF: ExtraDeviceAuthorizationFields,
     {
-        endpoint_response(http_client(self.prepare_request()?)?)
+        endpoint_response(http_client(self.prepare_request())?)
     }
 
     ///
@@ -2230,8 +2219,7 @@ where
         RE: Error + 'static,
         EF: ExtraDeviceAuthorizationFields,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request).await?;
+        let http_response = http_client(self.prepare_request()).await?;
         endpoint_response(http_response)
     }
 }

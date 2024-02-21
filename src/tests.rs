@@ -1011,7 +1011,10 @@ fn test_exchange_code_with_simple_json_error() {
         format!("{:?}", token_err)
     );
     // Test Display trait for RequestTokenError
-    assert_eq!("Server returned error response", format!("{}", token_err));
+    assert_eq!(
+        "Server returned error response: invalid_request: stuff happened",
+        token_err.to_string()
+    );
 }
 
 #[test]
@@ -1141,7 +1144,7 @@ fn test_exchange_code_with_invalid_token_type() {
 fn test_exchange_code_with_400_status_code() {
     let body = r#"{"error":"invalid_request","error_description":"Expired code."}"#;
     let client = new_client();
-    let token = client
+    let token_err = client
         .exchange_code(AuthorizationCode::new("ccc".to_string()))
         .request(mock_http_client(
             vec![
@@ -1161,12 +1164,12 @@ fn test_exchange_code_with_400_status_code() {
                 .collect(),
                 body: body.to_string().into_bytes(),
             },
-        ));
+        ))
+        .err()
+        .unwrap();
 
-    assert!(token.is_err());
-
-    match token.err().unwrap() {
-        RequestTokenError::ServerResponse(error_response) => {
+    match token_err {
+        RequestTokenError::ServerResponse(ref error_response) => {
             assert_eq!(
                 BasicErrorResponseType::InvalidRequest,
                 *error_response.error()
@@ -1179,6 +1182,11 @@ fn test_exchange_code_with_400_status_code() {
         }
         other => panic!("Unexpected error: {:?}", other),
     }
+
+    assert_eq!(
+        "Server returned error response: invalid_request: Expired code.",
+        token_err.to_string(),
+    );
 }
 
 #[test]
@@ -1457,7 +1465,7 @@ fn test_extension_with_simple_json_error() {
     assert!(token.is_err());
 
     let token_err = token.err().unwrap();
-    match &token_err {
+    match token_err {
         RequestTokenError::ServerResponse(ref error_response) => {
             assert_eq!(ColorfulErrorResponseType::TooLight, *error_response.error());
             assert_eq!(
@@ -1494,7 +1502,10 @@ fn test_extension_with_simple_json_error() {
         format!("{:?}", token_err)
     );
     // Test Display trait for RequestTokenError
-    assert_eq!("Server returned error response", format!("{}", token_err));
+    assert_eq!(
+        "Server returned error response: too_light: stuff happened (see https://errors)",
+        token_err.to_string()
+    );
 }
 
 mod custom_errors {

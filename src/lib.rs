@@ -3028,11 +3028,15 @@ where
 ///
 /// Server Error Response
 ///
+/// See [Section 5.2](https://datatracker.ietf.org/doc/html/rfc6749#section-5.2) of RFC 6749.
 /// This trait exists separately from the `StandardErrorResponse` struct
 /// to support customization by clients, such as supporting interoperability with
-/// non-standards-complaint OAuth2 providers
+/// non-standards-complaint OAuth2 providers.
 ///
-pub trait ErrorResponse: Debug + DeserializeOwned + Serialize {}
+/// The [`Display`] trait implementation for types implementing [`ErrorResponse`] should be a
+/// human-readable string suitable for printing (e.g., within a [`RequestTokenError`]).
+///
+pub trait ErrorResponse: Debug + Display + DeserializeOwned + Serialize {}
 
 ///
 /// Error types enum.
@@ -3114,7 +3118,7 @@ impl<T: ErrorResponseType> StandardErrorResponse<T> {
     }
 }
 
-impl<T> ErrorResponse for StandardErrorResponse<T> where T: ErrorResponseType + 'static {}
+impl<T> ErrorResponse for StandardErrorResponse<T> where T: ErrorResponseType + Display + 'static {}
 
 impl<TE> Display for StandardErrorResponse<TE>
 where
@@ -3129,8 +3133,9 @@ where
         }
 
         if let Some(error_uri) = self.error_uri() {
-            formatted.push_str(" / See ");
+            formatted.push_str(" (see ");
             formatted.push_str(error_uri);
+            formatted.push(')');
         }
 
         write!(f, "{}", formatted)
@@ -3150,7 +3155,7 @@ where
     /// Error response returned by authorization server. Contains the parsed `ErrorResponse`
     /// returned by the server.
     ///
-    #[error("Server returned error response")]
+    #[error("Server returned error response: {0}")]
     ServerResponse(T),
     ///
     /// An error occurred while sending the request or receiving the response (e.g., network

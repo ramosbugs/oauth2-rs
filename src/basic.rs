@@ -25,7 +25,7 @@ pub type BasicClient = Client<
 ///
 /// Basic OAuth2 authorization token types.
 ///
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BasicTokenType {
     ///
     /// Bearer token
@@ -96,7 +96,7 @@ pub type BasicTokenIntrospectionResponse =
 /// These error types are defined in
 /// [Section 5.2 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.2).
 ///
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum BasicErrorResponseType {
     ///
     /// Client authentication failed (e.g., unknown client, no client authentication included,

@@ -135,7 +135,7 @@ pub type StandardDeviceAuthorizationResponse =
 /// [Section 5.2 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.2) and
 /// [Section 3.5 of RFC 6749](https://tools.ietf.org/html/rfc8628#section-3.5)
 ///
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum DeviceCodeErrorResponseType {
     ///
     /// The authorization request is still pending as the end user hasn't

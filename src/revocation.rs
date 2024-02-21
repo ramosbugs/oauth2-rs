@@ -118,7 +118,7 @@ impl From<&RefreshToken> for StandardRevocableToken {
 /// [Section 2.2.1 of RFC 7009](https://tools.ietf.org/html/rfc7009#section-2.2.1) and
 /// [Section 5.2 of RFC 6749](https://tools.ietf.org/html/rfc8628#section-5.2)
 ///
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum RevocationErrorResponseType {
     ///
     /// The authorization server does not support the revocation of the presented token type.

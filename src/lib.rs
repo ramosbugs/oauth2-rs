@@ -2507,7 +2507,7 @@ pub trait ExtraTokenFields: DeserializeOwned + Debug + Serialize {}
 ///
 /// Empty (default) extra token fields.
 ///
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct EmptyExtraTokenFields {}
 impl ExtraTokenFields for EmptyExtraTokenFields {}
 
@@ -3051,7 +3051,7 @@ pub trait ErrorResponseType: Debug + DeserializeOwned + Serialize {}
 /// trait is parameterized by a `ErrorResponseType` to support error types specific to future OAuth2
 /// authentication schemes and extensions.
 ///
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct StandardErrorResponse<T: ErrorResponseType> {
     #[serde(bound = "T: ErrorResponseType")]
     error: T,

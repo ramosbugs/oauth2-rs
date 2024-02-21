@@ -444,7 +444,7 @@ new_secret_type![
 /// Code Challenge used for [PKCE](https://tools.ietf.org/html/rfc7636) protection via the
 /// `code_challenge` parameter.
 ///
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct PkceCodeChallenge {
     code_challenge: String,
     code_challenge_method: PkceCodeChallengeMethod,

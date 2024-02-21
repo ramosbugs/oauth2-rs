@@ -1,4 +1,3 @@
-use std::convert::Into;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Formatter};
 #[cfg(feature = "timing-resistant-secret-traits")]
@@ -96,9 +95,9 @@ macro_rules! new_type {
                 &self.0
             }
         }
-        impl Into<$type> for $name {
-            fn into(self) -> $type {
-                self.0
+        impl From<$name> for $type {
+            fn from(t: $name) -> $type {
+                t.0
             }
         }
     }

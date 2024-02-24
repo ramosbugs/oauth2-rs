@@ -1,7 +1,7 @@
 //!
 //! This example showcases the Auth0 device authorization flow using the async methods.
 //!
-//! Before running it, you'll need to create an API and an Application on [auth0.com](https://auth0.com). Take a look at this tutorial, for the details: [Call Your API Using the Device Authorization Flow](https://auth0.com/docs/flows/call-your-api-using-the-device-authorization-flow).
+//! Before running it, you'll need to create an API and an Application on [auth0.com](https://auth0.com). Take a look at this tutorial, for the details: [Call Your API Using the Device Authorization Flow](https://auth0.com/docs/get-started/authentication-and-authorization-flow/device-authorization-flow/call-your-api-using-the-device-authorization-flow).
 //!
 //! In order to run the example call:
 //!

@@ -1,4 +1,11 @@
+use crate::{AsyncHttpClient, HttpRequest, HttpResponse};
+
 use thiserror::Error;
+
+use std::future::Future;
+use std::pin::Pin;
+
+pub use reqwest;
 
 /// Error type returned by failed reqwest HTTP requests.
 #[non_exhaustive]
@@ -15,85 +22,56 @@ pub enum Error {
     Io(#[from] std::io::Error),
 }
 
-#[cfg(all(feature = "reqwest-blocking", not(target_arch = "wasm32")))]
-pub use blocking::http_client;
+impl<'c> AsyncHttpClient<'c> for reqwest::Client {
+    type Error = Error;
 
-pub use async_client::async_http_client;
+    fn call(
+        &'c self,
+        request: HttpRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Error>> + 'c>> {
+        Box::pin(async move {
+            let response = self.execute(request.try_into()?).await?;
 
-#[cfg(all(feature = "reqwest-blocking", not(target_arch = "wasm32")))]
-mod blocking {
-    use crate::reqwest::Error;
-    use crate::{HttpRequest, HttpResponse};
+            // This should be simpler once https://github.com/seanmonstar/reqwest/pull/2060 is
+            // merged.
+            let mut builder = http::Response::builder().status(response.status());
 
-    pub use reqwest;
-    use reqwest::blocking;
-    use reqwest::redirect::Policy as RedirectPolicy;
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                builder = builder.version(response.version());
+            }
 
-    use std::io::Read;
+            for (name, value) in response.headers().iter() {
+                builder = builder.header(name, value);
+            }
 
-    /// Synchronous HTTP client.
-    pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
-        let client = blocking::Client::builder()
-            // Following redirects opens the client up to SSRF vulnerabilities.
-            .redirect(RedirectPolicy::none())
-            .build()?;
-
-        let mut request_builder = client
-            .request(request.method, request.url.as_str())
-            .body(request.body);
-
-        for (name, value) in &request.headers {
-            request_builder = request_builder.header(name.as_str(), value.as_bytes());
-        }
-        let mut response = client.execute(request_builder.build()?)?;
-
-        let mut body = Vec::new();
-        response.read_to_end(&mut body)?;
-
-        Ok(HttpResponse {
-            status_code: response.status(),
-            headers: response.headers().to_owned(),
-            body,
+            builder
+                .body(response.bytes().await?.to_vec())
+                .map_err(Error::Http)
         })
     }
 }
 
-mod async_client {
-    use crate::reqwest::Error;
-    use crate::{HttpRequest, HttpResponse};
+#[cfg(all(feature = "reqwest-blocking", not(target_arch = "wasm32")))]
+impl crate::SyncHttpClient for reqwest::blocking::Client {
+    type Error = Error;
 
-    pub use reqwest;
+    fn call(&self, request: HttpRequest) -> Result<HttpResponse, Self::Error> {
+        let mut response = self.execute(request.try_into()?)?;
 
-    /// Asynchronous HTTP client.
-    pub async fn async_http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
-        let client = {
-            let builder = reqwest::Client::builder();
+        // This should be simpler once https://github.com/seanmonstar/reqwest/pull/2060 is
+        // merged.
+        let mut builder = http::Response::builder()
+            .status(response.status())
+            .version(response.version());
 
-            // Following redirects opens the client up to SSRF vulnerabilities.
-            // but this is not possible to prevent on wasm targets
-            #[cfg(not(target_arch = "wasm32"))]
-            let builder = builder.redirect(reqwest::redirect::Policy::none());
-
-            builder.build()?
-        };
-
-        let mut request_builder = client
-            .request(request.method, request.url.as_str())
-            .body(request.body);
-        for (name, value) in &request.headers {
-            request_builder = request_builder.header(name.as_str(), value.as_bytes());
+        for (name, value) in response.headers().iter() {
+            builder = builder.header(name, value);
         }
-        let request = request_builder.build()?;
 
-        let response = client.execute(request).await?;
+        let mut body = Vec::new();
+        <reqwest::blocking::Response as std::io::Read>::read_to_end(&mut response, &mut body)?;
 
-        let status_code = response.status();
-        let headers = response.headers().to_owned();
-        let chunks = response.bytes().await?;
-        Ok(HttpResponse {
-            status_code,
-            headers,
-            body: chunks.to_vec(),
-        })
+        builder.body(body).map_err(Error::Http)
     }
 }

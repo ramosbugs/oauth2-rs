@@ -1,8 +1,9 @@
 use crate::basic::BasicErrorResponseType;
-use crate::endpoint::{endpoint_request, endpoint_response_status_only};
+use crate::endpoint::{endpoint_request, endpoint_response, endpoint_response_status_only};
 use crate::{
-    AccessToken, AuthType, ClientId, ClientSecret, ErrorResponse, ErrorResponseType, HttpRequest,
-    HttpResponse, RefreshToken, RequestTokenError, RevocationUrl,
+    AccessToken, AsyncHttpClient, AuthType, ClientId, ClientSecret, ErrorResponse,
+    ErrorResponseType, HttpRequest, RefreshToken, RequestTokenError, RevocationUrl, SyncHttpClient,
+    TokenRequestFuture,
 };
 
 use serde::{Deserialize, Serialize};
@@ -11,8 +12,8 @@ use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
-use std::future::Future;
 use std::marker::PhantomData;
+use std::pin::Pin;
 
 /// A revocable token.
 ///
@@ -42,16 +43,48 @@ pub trait RevocableToken {
 /// if issued to the client, must be supported by the server, otherwise fallback to access token (which may or may not
 /// be supported by the server).
 ///
-/// ```ignore
+/// ```rust
+/// # use http::{Response, StatusCode};
+/// # use oauth2::{
+/// #     AccessToken, AuthUrl, ClientId, EmptyExtraTokenFields, HttpResponse, RequestTokenError,
+/// #     RevocationUrl, StandardRevocableToken, StandardTokenResponse, TokenResponse, TokenUrl,
+/// # };
+/// # use oauth2::basic::{BasicClient, BasicRequestTokenError, BasicTokenResponse, BasicTokenType};
+/// #
+/// # fn err_wrapper() -> Result<(), anyhow::Error> {
+/// #
+/// # let token_response = BasicTokenResponse::new(
+/// #   AccessToken::new("access".to_string()),
+/// #   BasicTokenType::Bearer,
+/// #   EmptyExtraTokenFields {},
+/// # );
+/// #
+/// # let http_client = |_| -> Result<HttpResponse, BasicRequestTokenError<reqwest::Error>> {
+/// #     Ok(Response::builder()
+/// #         .status(StatusCode::OK)
+/// #         .body(Vec::new())
+/// #         .unwrap())
+/// # };
+/// #
+/// let client = BasicClient::new(ClientId::new("aaa".to_string()))
+///     .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+///     .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap())
+///     // Be sure to set a revocation URL.
+///     .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+///
+/// // ...
+///
 /// let token_to_revoke: StandardRevocableToken = match token_response.refresh_token() {
 ///     Some(token) => token.into(),
 ///     None => token_response.access_token().into(),
 /// };
 ///
 /// client
-///     .revoke_token(token_to_revoke)
-///     .request(http_client)
-///     .unwrap();
+///     .revoke_token(token_to_revoke)?
+///     .request(&http_client)
+/// #   .unwrap();
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// [`revoke_token()`]: crate::Client::revoke_token()
@@ -154,7 +187,10 @@ where
         self
     }
 
-    fn prepare_request(self) -> HttpRequest {
+    fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Error + 'static,
+    {
         let mut params: Vec<(&str, &str)> = vec![("token", self.token.secret())];
         if let Some(type_hint) = self.token.type_hint() {
             params.push(("token_type_hint", type_hint));
@@ -170,6 +206,7 @@ where
             self.revocation_url.url(),
             params,
         )
+        .map_err(|err| RequestTokenError::Other(format!("failed to prepare request: {err}")))
     }
 
     /// Synchronously sends the request to the authorization server and awaits a response.
@@ -179,29 +216,29 @@ where
     ///
     /// Error [`UnsupportedTokenType`](RevocationErrorResponseType::UnsupportedTokenType) will be returned if the
     /// type of token type given is not supported by the server.
-    pub fn request<F, RE>(self, http_client: F) -> Result<(), RequestTokenError<RE, TE>>
+    pub fn request<C>(
+        self,
+        http_client: &C,
+    ) -> Result<(), RequestTokenError<<C as SyncHttpClient>::Error, TE>>
     where
-        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Error + 'static,
+        C: SyncHttpClient,
     {
         // From https://tools.ietf.org/html/rfc7009#section-2.2:
         //   "The content of the response body is ignored by the client as all
         //    necessary information is conveyed in the response code."
-        endpoint_response_status_only(http_client(self.prepare_request())?)
+        endpoint_response_status_only(http_client.call(self.prepare_request()?)?)
     }
 
     /// Asynchronously sends the request to the authorization server and returns a Future.
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<'c, C>(
         self,
-        http_client: C,
-    ) -> Result<(), RequestTokenError<RE, TE>>
+        http_client: &'c C,
+    ) -> Pin<Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, ()>>>
     where
-        C: FnOnce(HttpRequest) -> F,
-        F: Future<Output = Result<HttpResponse, RE>>,
-        RE: Error + 'static,
+        Self: 'c,
+        C: AsyncHttpClient<'c>,
     {
-        let http_response = http_client(self.prepare_request()).await?;
-        endpoint_response_status_only(http_response)
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
     }
 }
 
@@ -272,12 +309,12 @@ mod tests {
     use crate::tests::colorful_extension::{ColorfulClient, ColorfulRevocableToken};
     use crate::tests::{mock_http_client, new_client};
     use crate::{
-        AccessToken, AuthUrl, ClientId, ClientSecret, HttpResponse, RefreshToken,
-        RequestTokenError, RevocationErrorResponseType, RevocationUrl, TokenUrl,
+        AccessToken, AuthUrl, ClientId, ClientSecret, RefreshToken, RequestTokenError,
+        RevocationErrorResponseType, RevocationUrl, TokenUrl,
     };
 
     use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
-    use http::{HeaderValue, StatusCode};
+    use http::{HeaderValue, Response, StatusCode};
 
     #[test]
     fn test_token_revocation_with_non_https_url() {
@@ -301,7 +338,7 @@ mod tests {
 
         let revocation_response = client
           .revoke_token(AccessToken::new("access_token_123".to_string()).into()).unwrap()
-          .request(mock_http_client(
+          .request(&mock_http_client(
               vec![
                   (ACCEPT, "application/json"),
                   (CONTENT_TYPE, "application/x-www-form-urlencoded"),
@@ -309,19 +346,21 @@ mod tests {
               ],
               "token=access_token_123&token_type_hint=access_token",
               Some("https://revocation/url".parse().unwrap()),
-              HttpResponse {
-                  status_code: StatusCode::BAD_REQUEST,
-                  headers: vec![(
-                      CONTENT_TYPE,
-                      HeaderValue::from_str("application/json").unwrap(),
-                  )]
-                    .into_iter()
-                    .collect(),
-                  body: "{\"error\": \"unsupported_token_type\", \"error_description\": \"stuff happened\", \
-                       \"error_uri\": \"https://errors\"}"
-                    .to_string()
-                    .into_bytes(),
-              },
+              Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .header(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )
+                .body(
+                    "{\
+                        \"error\": \"unsupported_token_type\", \"error_description\": \"stuff happened\", \
+                        \"error_uri\": \"https://errors\"\
+                    }"
+                      .to_string()
+                      .into_bytes(),
+                )
+                .unwrap(),
           ));
 
         assert!(matches!(
@@ -343,7 +382,7 @@ mod tests {
         client
             .revoke_token(AccessToken::new("access_token_123".to_string()).into())
             .unwrap()
-            .request(mock_http_client(
+            .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
                     (CONTENT_TYPE, "application/x-www-form-urlencoded"),
@@ -351,16 +390,14 @@ mod tests {
                 ],
                 "token=access_token_123&token_type_hint=access_token",
                 Some("https://revocation/url".parse().unwrap()),
-                HttpResponse {
-                    status_code: StatusCode::OK,
-                    headers: vec![(
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header(
                         CONTENT_TYPE,
                         HeaderValue::from_str("application/json").unwrap(),
-                    )]
-                    .into_iter()
-                    .collect(),
-                    body: b"{}".to_vec(),
-                },
+                    )
+                    .body(b"{}".to_vec())
+                    .unwrap(),
             ))
             .unwrap();
     }
@@ -373,7 +410,7 @@ mod tests {
         client
             .revoke_token(AccessToken::new("access_token_123".to_string()).into())
             .unwrap()
-            .request(mock_http_client(
+            .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
                     (CONTENT_TYPE, "application/x-www-form-urlencoded"),
@@ -381,11 +418,10 @@ mod tests {
                 ],
                 "token=access_token_123&token_type_hint=access_token",
                 Some("https://revocation/url".parse().unwrap()),
-                HttpResponse {
-                    status_code: StatusCode::OK,
-                    headers: vec![].into_iter().collect(),
-                    body: vec![],
-                },
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .body(vec![])
+                    .unwrap(),
             ))
             .unwrap();
     }
@@ -398,7 +434,7 @@ mod tests {
         client
             .revoke_token(AccessToken::new("access_token_123".to_string()).into())
             .unwrap()
-            .request(mock_http_client(
+            .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
                     (CONTENT_TYPE, "application/x-www-form-urlencoded"),
@@ -406,16 +442,14 @@ mod tests {
                 ],
                 "token=access_token_123&token_type_hint=access_token",
                 Some("https://revocation/url".parse().unwrap()),
-                HttpResponse {
-                    status_code: StatusCode::OK,
-                    headers: vec![(
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header(
                         CONTENT_TYPE,
                         HeaderValue::from_str("application/octet-stream").unwrap(),
-                    )]
-                    .into_iter()
-                    .collect(),
-                    body: vec![1, 2, 3],
-                },
+                    )
+                    .body(vec![1, 2, 3])
+                    .unwrap(),
             ))
             .unwrap();
     }
@@ -428,7 +462,7 @@ mod tests {
         client
             .revoke_token(RefreshToken::new("refresh_token_123".to_string()).into())
             .unwrap()
-            .request(mock_http_client(
+            .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
                     (CONTENT_TYPE, "application/x-www-form-urlencoded"),
@@ -436,16 +470,14 @@ mod tests {
                 ],
                 "token=refresh_token_123&token_type_hint=refresh_token",
                 Some("https://revocation/url".parse().unwrap()),
-                HttpResponse {
-                    status_code: StatusCode::OK,
-                    headers: vec![(
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header(
                         CONTENT_TYPE,
                         HeaderValue::from_str("application/json").unwrap(),
-                    )]
-                    .into_iter()
-                    .collect(),
-                    body: b"{}".to_vec(),
-                },
+                    )
+                    .body(b"{}".to_vec())
+                    .unwrap(),
             ))
             .unwrap();
     }
@@ -463,7 +495,7 @@ mod tests {
                 "colorful_token_123".to_string(),
             ))
             .unwrap()
-            .request(mock_http_client(
+            .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
                     (CONTENT_TYPE, "application/x-www-form-urlencoded"),
@@ -471,16 +503,14 @@ mod tests {
                 ],
                 "token=colorful_token_123&token_type_hint=red_token",
                 Some("https://revocation/url".parse().unwrap()),
-                HttpResponse {
-                    status_code: StatusCode::OK,
-                    headers: vec![(
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header(
                         CONTENT_TYPE,
                         HeaderValue::from_str("application/json").unwrap(),
-                    )]
-                    .into_iter()
-                    .collect(),
-                    body: b"{}".to_vec(),
-                },
+                    )
+                    .body(b"{}".to_vec())
+                    .unwrap(),
             ))
             .unwrap();
     }

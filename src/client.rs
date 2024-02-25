@@ -41,7 +41,9 @@ use std::sync::Arc;
 /// # use thiserror::Error;
 /// # use http::status::StatusCode;
 /// # use http::header::{HeaderValue, CONTENT_TYPE};
+/// # use http::Response;
 /// # use oauth2::{*, basic::*};
+/// #
 /// # let client = BasicClient::new(ClientId::new("aaa".to_string()))
 /// #     .set_client_secret(ClientSecret::new("bbb".to_string()))
 /// #     .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
@@ -55,25 +57,23 @@ use std::sync::Arc;
 /// # }
 /// #
 /// # let http_client = |_| -> Result<HttpResponse, FakeError> {
-/// #     Ok(HttpResponse {
-/// #         status_code: StatusCode::BAD_REQUEST,
-/// #         headers: vec![(
-/// #             CONTENT_TYPE,
-/// #             HeaderValue::from_str("application/json").unwrap(),
-/// #         )]
-/// #         .into_iter()
-/// #         .collect(),
-/// #         body: "{\"error\": \"unsupported_token_type\", \"error_description\": \"stuff happened\", \
-/// #                \"error_uri\": \"https://errors\"}"
+/// #     Ok(Response::builder()
+/// #         .status(StatusCode::BAD_REQUEST)
+/// #         .header(CONTENT_TYPE, HeaderValue::from_str("application/json").unwrap())
+/// #         .body(
+/// #             r#"{"error": "unsupported_token_type",
+/// #                 "error_description": "stuff happened",
+/// #                 "error_uri": "https://errors"}"#
 /// #             .to_string()
 /// #             .into_bytes(),
-/// #     })
+/// #         )
+/// #         .unwrap())
 /// # };
 /// #
 /// let res = client
 ///     .revoke_token(AccessToken::new("some token".to_string()).into())
 ///     .unwrap()
-///     .request(http_client);
+///     .request(&http_client);
 ///
 /// assert!(matches!(res, Err(
 ///     RequestTokenError::ServerResponse(err)) if matches!(err.error(),

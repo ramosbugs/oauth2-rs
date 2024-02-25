@@ -1,7 +1,7 @@
-use crate::{HttpRequest, HttpResponse};
+use crate::{HttpRequest, HttpResponse, SyncHttpClient};
 
 use curl::easy::Easy;
-use http::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
+use http::header::{HeaderValue, CONTENT_TYPE};
 use http::method::Method;
 use http::status::StatusCode;
 
@@ -21,62 +21,65 @@ pub enum Error {
     Other(String),
 }
 
-/// Synchronous HTTP client.
-pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
-    let mut easy = Easy::new();
-    easy.url(&request.url.to_string()[..])?;
+/// A synchronous HTTP client using [`curl`].
+pub struct CurlHttpClient;
+impl SyncHttpClient for CurlHttpClient {
+    type Error = Error;
 
-    let mut headers = curl::easy::List::new();
-    for (name, value) in &request.headers {
-        headers.append(&format!(
-            "{}: {}",
-            name,
-            // TODO: Unnecessary fallibility, curl uses a CString under the hood
-            value.to_str().map_err(|_| Error::Other(format!(
-                "invalid {} header value {:?}",
+    fn call(&self, request: HttpRequest) -> Result<HttpResponse, Self::Error> {
+        let mut easy = Easy::new();
+        easy.url(&request.uri().to_string()[..])?;
+
+        let mut headers = curl::easy::List::new();
+        for (name, value) in request.headers() {
+            headers.append(&format!(
+                "{}: {}",
                 name,
-                value.as_bytes()
-            )))?
-        ))?
-    }
+                // TODO: Unnecessary fallibility, curl uses a CString under the hood
+                value.to_str().map_err(|_| Error::Other(format!(
+                    "invalid {} header value {:?}",
+                    name,
+                    value.as_bytes()
+                )))?
+            ))?
+        }
 
-    easy.http_headers(headers)?;
+        easy.http_headers(headers)?;
 
-    if let Method::POST = request.method {
-        easy.post(true)?;
-        easy.post_field_size(request.body.len() as u64)?;
-    } else {
-        assert_eq!(request.method, Method::GET);
-    }
+        if let Method::POST = *request.method() {
+            easy.post(true)?;
+            easy.post_field_size(request.body().len() as u64)?;
+        } else {
+            assert_eq!(*request.method(), Method::GET);
+        }
 
-    let mut form_slice = &request.body[..];
-    let mut data = Vec::new();
-    {
-        let mut transfer = easy.transfer();
+        let mut form_slice = &request.body()[..];
+        let mut data = Vec::new();
+        {
+            let mut transfer = easy.transfer();
 
-        transfer.read_function(|buf| Ok(form_slice.read(buf).unwrap_or(0)))?;
+            transfer.read_function(|buf| Ok(form_slice.read(buf).unwrap_or(0)))?;
 
-        transfer.write_function(|new_data| {
-            data.extend_from_slice(new_data);
-            Ok(new_data.len())
-        })?;
+            transfer.write_function(|new_data| {
+                data.extend_from_slice(new_data);
+                Ok(new_data.len())
+            })?;
 
-        transfer.perform()?;
-    }
+            transfer.perform()?;
+        }
 
-    let status_code = easy.response_code()? as u16;
+        let mut builder = http::Response::builder()
+            .status(StatusCode::from_u16(easy.response_code()? as u16).map_err(http::Error::from)?);
 
-    Ok(HttpResponse {
-        status_code: StatusCode::from_u16(status_code).map_err(http::Error::from)?,
-        headers: easy
+        if let Some(content_type) = easy
             .content_type()?
-            .map(|content_type| HeaderValue::from_str(content_type).map_err(http::Error::from))
-            .transpose()?
-            .map_or_else(HeaderMap::new, |content_type| {
-                vec![(CONTENT_TYPE, content_type)]
-                    .into_iter()
-                    .collect::<HeaderMap>()
-            }),
-        body: data,
-    })
+            .map(HeaderValue::from_str)
+            .transpose()
+            .map_err(http::Error::from)?
+        {
+            builder = builder.header(CONTENT_TYPE, content_type);
+        }
+
+        builder.body(data).map_err(Error::Http)
+    }
 }

@@ -4,37 +4,70 @@ use crate::{
 };
 
 use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
-use http::{HeaderMap, HeaderValue, StatusCode};
+use http::{HeaderValue, StatusCode};
 use serde::de::DeserializeOwned;
 use url::{form_urlencoded, Url};
 
 use std::borrow::Cow;
 use std::error::Error;
+use std::future::Future;
+use std::pin::Pin;
 
 /// An HTTP request.
-#[derive(Clone, Debug)]
-pub struct HttpRequest {
-    // These are all owned values so that the request can safely be passed between
-    // threads.
-    /// URL to which the HTTP request is being made.
-    pub url: Url,
-    /// HTTP request method for this request.
-    pub method: http::method::Method,
-    /// HTTP request headers to send.
-    pub headers: HeaderMap,
-    /// HTTP request body (typically for POST requests only).
-    pub body: Vec<u8>,
-}
+pub type HttpRequest = http::Request<Vec<u8>>;
 
 /// An HTTP response.
-#[derive(Clone, Debug)]
-pub struct HttpResponse {
-    /// HTTP status code returned by the server.
-    pub status_code: StatusCode,
-    /// HTTP response headers returned by the server.
-    pub headers: HeaderMap,
-    /// HTTP response body returned by the server.
-    pub body: Vec<u8>,
+pub type HttpResponse = http::Response<Vec<u8>>;
+
+/// An asynchronous (future-based) HTTP client.
+pub trait AsyncHttpClient<'c> {
+    /// Error type returned by HTTP client.
+    type Error: Error + 'static;
+
+    /// Perform a single HTTP request.
+    fn call(
+        &'c self,
+        request: HttpRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c>>;
+}
+impl<'c, E, F, T> AsyncHttpClient<'c> for T
+where
+    E: Error + 'static,
+    F: Future<Output = Result<HttpResponse, E>> + 'c,
+    // We can't implement this for FnOnce because the device code flow requires clients to support
+    // multiple calls.
+    T: Fn(HttpRequest) -> F,
+{
+    type Error = E;
+
+    fn call(
+        &'c self,
+        request: HttpRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c>> {
+        Box::pin(self(request))
+    }
+}
+
+/// A synchronous (blocking) HTTP client.
+pub trait SyncHttpClient {
+    /// Error type returned by HTTP client.
+    type Error: Error + 'static;
+
+    /// Perform a single HTTP request.
+    fn call(&self, request: HttpRequest) -> Result<HttpResponse, Self::Error>;
+}
+impl<E, T> SyncHttpClient for T
+where
+    E: Error + 'static,
+    // We can't implement this for FnOnce because the device code flow requires clients to support
+    // multiple calls.
+    T: Fn(HttpRequest) -> Result<HttpResponse, E>,
+{
+    type Error = E;
+
+    fn call(&self, request: HttpRequest) -> Result<HttpResponse, Self::Error> {
+        self(request)
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -47,13 +80,15 @@ pub(crate) fn endpoint_request<'a>(
     scopes: Option<&'a Vec<Cow<'a, Scope>>>,
     url: &'a Url,
     params: Vec<(&'a str, &'a str)>,
-) -> HttpRequest {
-    let mut headers = HeaderMap::new();
-    headers.append(ACCEPT, HeaderValue::from_static(CONTENT_TYPE_JSON));
-    headers.append(
-        CONTENT_TYPE,
-        HeaderValue::from_static(CONTENT_TYPE_FORMENCODED),
-    );
+) -> Result<HttpRequest, http::Error> {
+    let mut builder = http::Request::builder()
+        .uri(url.to_string())
+        .method(http::Method::POST)
+        .header(ACCEPT, HeaderValue::from_static(CONTENT_TYPE_JSON))
+        .header(
+            CONTENT_TYPE,
+            HeaderValue::from_static(CONTENT_TYPE_FORMENCODED),
+        );
 
     let scopes_opt = scopes.and_then(|scopes| {
         if !scopes.is_empty() {
@@ -88,7 +123,7 @@ pub(crate) fn endpoint_request<'a>(
                 form_urlencoded::byte_serialize(secret.secret().as_bytes()).collect();
             let b64_credential =
                 base64::encode(format!("{}:{}", &urlencoded_id, urlencoded_secret));
-            headers.append(
+            builder = builder.header(
                 AUTHORIZATION,
                 HeaderValue::from_str(&format!("Basic {}", &b64_credential)).unwrap(),
             );
@@ -118,19 +153,14 @@ pub(crate) fn endpoint_request<'a>(
         .finish()
         .into_bytes();
 
-    HttpRequest {
-        url: url.to_owned(),
-        method: http::method::Method::POST,
-        headers,
-        body,
-    }
+    builder.body(body)
 }
 
 pub(crate) fn endpoint_response<RE, TE, DO>(
     http_response: HttpResponse,
 ) -> Result<DO, RequestTokenError<RE, TE>>
 where
-    RE: Error + 'static,
+    RE: Error,
     TE: ErrorResponse,
     DO: DeserializeOwned,
 {
@@ -138,7 +168,7 @@ where
 
     check_response_body(&http_response)?;
 
-    let response_body = http_response.body.as_slice();
+    let response_body = http_response.body().as_slice();
     serde_path_to_error::deserialize(&mut serde_json::Deserializer::from_slice(response_body))
         .map_err(|e| RequestTokenError::Parse(e, response_body.to_vec()))
 }
@@ -160,11 +190,11 @@ where
     RE: Error + 'static,
     TE: ErrorResponse,
 {
-    if http_response.status_code != StatusCode::OK {
-        let reason = http_response.body.as_slice();
+    if http_response.status() != StatusCode::OK {
+        let reason = http_response.body().as_slice();
         if reason.is_empty() {
             Err(RequestTokenError::Other(
-                "Server returned empty error response".to_string(),
+                "server returned empty error response".to_string(),
             ))
         } else {
             let error = match serde_path_to_error::deserialize::<_, TE>(
@@ -189,7 +219,7 @@ where
 {
     // Validate that the response Content-Type is JSON.
     http_response
-    .headers
+    .headers()
     .get(CONTENT_TYPE)
     .map_or(Ok(()), |content_type|
       // Section 3.1.1.1 of RFC 7231 indicates that media types are case-insensitive and
@@ -199,7 +229,7 @@ where
         Err(
           RequestTokenError::Other(
             format!(
-              "Unexpected response Content-Type: {:?}, should be `{}`",
+              "unexpected response Content-Type: {:?}, should be `{}`",
               content_type,
               CONTENT_TYPE_JSON
             )
@@ -210,11 +240,44 @@ where
       }
     )?;
 
-    if http_response.body.is_empty() {
+    if http_response.body().is_empty() {
         return Err(RequestTokenError::Other(
-            "Server returned empty response body".to_string(),
+            "server returned empty response body".to_string(),
         ));
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::tests::{clone_response, new_client, FakeError};
+    use crate::{AuthorizationCode, TokenResponse};
+
+    use http::{Response, StatusCode};
+
+    #[tokio::test]
+    async fn test_async_client_closure() {
+        let client = new_client();
+
+        let http_response = Response::builder()
+            .status(StatusCode::OK)
+            .body(
+                "{\"access_token\": \"12/34\", \"token_type\": \"BEARER\"}"
+                    .to_string()
+                    .into_bytes(),
+            )
+            .unwrap();
+
+        let token = client
+            .exchange_code(AuthorizationCode::new("ccc".to_string()))
+            // NB: This tests that the closure doesn't require a static lifetime.
+            .request_async(&|_| async {
+                Ok(clone_response(&http_response)) as Result<_, FakeError>
+            })
+            .await
+            .unwrap();
+
+        assert_eq!("12/34", token.access_token().secret());
+    }
 }

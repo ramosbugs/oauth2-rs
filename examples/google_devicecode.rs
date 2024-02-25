@@ -14,8 +14,7 @@
 //!
 
 use oauth2::basic::BasicClient;
-// Alternatively, this can be oauth2::curl::http_client or a custom.
-use oauth2::reqwest::http_client;
+use oauth2::reqwest::reqwest;
 use oauth2::{
     AuthType, AuthUrl, ClientId, ClientSecret, DeviceAuthorizationResponse, DeviceAuthorizationUrl,
     ExtraDeviceAuthorizationFields, Scope, TokenUrl,
@@ -58,11 +57,17 @@ fn main() {
         .set_device_authorization_url(device_auth_url)
         .set_auth_type(AuthType::RequestBody);
 
+    let http_client = reqwest::blocking::ClientBuilder::new()
+        // Following redirects opens the client up to SSRF vulnerabilities.
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .expect("Client should build");
+
     // Request the set of codes from the Device Authorization endpoint.
     let details: StoringDeviceAuthorizationResponse = device_client
         .exchange_device_code()
         .add_scope(Scope::new("profile".to_string()))
-        .request(http_client)
+        .request(&http_client)
         .expect("Failed to request codes from device auth endpoint");
 
     // Display the URL and user-code.
@@ -75,7 +80,7 @@ fn main() {
     // Now poll for the token
     let token = device_client
         .exchange_device_access_token(&details)
-        .request(http_client, std::thread::sleep, None)
+        .request(&http_client, std::thread::sleep, None)
         .expect("Failed to get token");
 
     println!("Google returned the following token:\n{:?}\n", token);

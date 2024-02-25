@@ -26,6 +26,17 @@ pub(crate) fn new_client() -> BasicClient<true, false, false, false, true> {
         .set_client_secret(ClientSecret::new("bbb".to_string()))
 }
 
+// FIXME: just clone `response` directly once we update `http` to 1.0, which implements `Clone`.
+pub(crate) fn clone_response(response: &HttpResponse) -> HttpResponse {
+    let mut response_copy = http::Response::builder()
+        .status(response.status())
+        .version(response.version());
+    for (name, value) in response.headers() {
+        response_copy = response_copy.header(name, value);
+    }
+    response_copy.body(response.body().to_owned()).unwrap()
+}
+
 pub(crate) fn mock_http_client(
     request_headers: Vec<(HeaderName, &'static str)>,
     request_body: &'static str,
@@ -34,21 +45,24 @@ pub(crate) fn mock_http_client(
 ) -> impl Fn(HttpRequest) -> Result<HttpResponse, FakeError> {
     move |request: HttpRequest| {
         assert_eq!(
-            &request.url,
+            &Url::parse(&request.uri().to_string()).unwrap(),
             request_url
                 .as_ref()
                 .unwrap_or(&Url::parse("https://example.com/token").unwrap())
         );
         assert_eq!(
-            request.headers,
-            request_headers
+            request.headers(),
+            &request_headers
                 .iter()
                 .map(|(name, value)| (name.clone(), HeaderValue::from_str(value).unwrap()))
                 .collect(),
         );
-        assert_eq!(&String::from_utf8(request.body).unwrap(), request_body);
+        assert_eq!(
+            &String::from_utf8(request.body().to_owned()).unwrap(),
+            request_body
+        );
 
-        Ok(response.clone())
+        Ok(clone_response(&response))
     }
 }
 
@@ -179,27 +193,31 @@ pub(crate) fn mock_http_client_success_fail(
     num_failures: usize,
     success_response: HttpResponse,
 ) -> impl Fn(HttpRequest) -> Result<HttpResponse, FakeError> {
-    let responses: Vec<HttpResponse> = std::iter::repeat(failure_response)
-        .take(num_failures)
-        .chain(std::iter::once(success_response))
-        .collect();
+    let responses: Vec<HttpResponse> =
+        std::iter::from_fn(|| Some(clone_response(&failure_response)))
+            .take(num_failures)
+            .chain(std::iter::once(success_response))
+            .collect();
     let sync_responses = std::sync::Mutex::new(responses);
 
     move |request: HttpRequest| {
         assert_eq!(
-            &request.url,
+            &Url::parse(&request.uri().to_string()).unwrap(),
             request_url
                 .as_ref()
                 .unwrap_or(&Url::parse("https://example.com/token").unwrap())
         );
         assert_eq!(
-            request.headers,
-            request_headers
+            request.headers(),
+            &request_headers
                 .iter()
                 .map(|(name, value)| (name.clone(), HeaderValue::from_str(value).unwrap()))
                 .collect(),
         );
-        assert_eq!(&String::from_utf8(request.body).unwrap(), request_body);
+        assert_eq!(
+            &String::from_utf8(request.body().to_owned()).unwrap(),
+            request_body
+        );
 
         {
             let mut rsp_vec = sync_responses.lock().unwrap();
@@ -314,6 +332,6 @@ fn test_send_sync_impl() {
 
     #[cfg(feature = "curl")]
     is_sync_and_send::<crate::curl::Error>();
-    #[cfg(feature = "reqwest")]
+    #[cfg(any(feature = "reqwest", feature = "reqwest-blocking"))]
     is_sync_and_send::<crate::reqwest::Error>();
 }

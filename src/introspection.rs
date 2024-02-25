@@ -1,7 +1,8 @@
 use crate::endpoint::{endpoint_request, endpoint_response};
 use crate::{
-    AccessToken, AuthType, ClientId, ClientSecret, ErrorResponse, ExtraTokenFields, HttpRequest,
-    HttpResponse, IntrospectionUrl, RequestTokenError, Scope, TokenType,
+    AccessToken, AsyncHttpClient, AuthType, ClientId, ClientSecret, ErrorResponse,
+    ExtraTokenFields, HttpRequest, IntrospectionUrl, RequestTokenError, Scope, SyncHttpClient,
+    TokenRequestFuture, TokenType,
 };
 
 use chrono::serde::ts_seconds_option;
@@ -12,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::Debug;
-use std::future::Future;
 use std::marker::PhantomData;
+use std::pin::Pin;
 
 /// A request to introspect an access token.
 ///
@@ -85,7 +86,10 @@ where
         self
     }
 
-    fn prepare_request(self) -> HttpRequest {
+    fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Error + 'static,
+    {
         let mut params: Vec<(&str, &str)> = vec![("token", self.token.secret())];
         if let Some(ref token_type_hint) = self.token_type_hint {
             params.push(("token_type_hint", token_type_hint));
@@ -101,29 +105,30 @@ where
             self.introspection_url.url(),
             params,
         )
+        .map_err(|err| RequestTokenError::Other(format!("failed to prepare request: {err}")))
     }
 
     /// Synchronously sends the request to the authorization server and awaits a response.
-    pub fn request<F, RE>(self, http_client: F) -> Result<TIR, RequestTokenError<RE, TE>>
+    pub fn request<C>(
+        self,
+        http_client: &C,
+    ) -> Result<TIR, RequestTokenError<<C as SyncHttpClient>::Error, TE>>
     where
-        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Error + 'static,
+        C: SyncHttpClient,
     {
-        endpoint_response(http_client(self.prepare_request())?)
+        endpoint_response(http_client.call(self.prepare_request()?)?)
     }
 
     /// Asynchronously sends the request to the authorization server and returns a Future.
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<'c, C>(
         self,
-        http_client: C,
-    ) -> Result<TIR, RequestTokenError<RE, TE>>
+        http_client: &'c C,
+    ) -> Pin<Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, TIR>>>
     where
-        C: FnOnce(HttpRequest) -> F,
-        F: Future<Output = Result<HttpResponse, RE>>,
-        RE: Error + 'static,
+        Self: 'c,
+        C: AsyncHttpClient<'c>,
     {
-        let http_response = http_client(self.prepare_request()).await?;
-        endpoint_response(http_response)
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
     }
 }
 
@@ -393,13 +398,11 @@ where
 mod tests {
     use crate::basic::BasicTokenType;
     use crate::tests::{mock_http_client, new_client};
-    use crate::{
-        AccessToken, AuthType, ClientId, HttpResponse, IntrospectionUrl, RedirectUrl, Scope,
-    };
+    use crate::{AccessToken, AuthType, ClientId, IntrospectionUrl, RedirectUrl, Scope};
 
     use chrono::{TimeZone, Utc};
     use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
-    use http::{HeaderValue, StatusCode};
+    use http::{HeaderValue, Response, StatusCode};
 
     #[test]
     fn test_token_introspection_successful_with_basic_auth_minimal_response() {
@@ -413,7 +416,7 @@ mod tests {
         let introspection_response = client
             .introspect(&AccessToken::new("access_token_123".to_string()))
             .unwrap()
-            .request(mock_http_client(
+            .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
                     (CONTENT_TYPE, "application/x-www-form-urlencoded"),
@@ -421,20 +424,20 @@ mod tests {
                 ],
                 "token=access_token_123",
                 Some("https://introspection/url".parse().unwrap()),
-                HttpResponse {
-                    status_code: StatusCode::OK,
-                    headers: vec![(
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header(
                         CONTENT_TYPE,
                         HeaderValue::from_str("application/json").unwrap(),
-                    )]
-                    .into_iter()
-                    .collect(),
-                    body: "{\
+                    )
+                    .body(
+                        "{\
                        \"active\": true\
                        }"
-                    .to_string()
-                    .into_bytes(),
-                },
+                        .to_string()
+                        .into_bytes(),
+                    )
+                    .unwrap(),
             ))
             .unwrap();
 
@@ -465,7 +468,7 @@ mod tests {
             .introspect(&AccessToken::new("access_token_123".to_string()))
             .unwrap()
             .set_token_type_hint("access_token")
-            .request(mock_http_client(
+            .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
                     (CONTENT_TYPE, "application/x-www-form-urlencoded"),
@@ -473,31 +476,31 @@ mod tests {
                 ],
                 "token=access_token_123&token_type_hint=access_token",
                 Some("https://introspection/url".parse().unwrap()),
-                HttpResponse {
-                    status_code: StatusCode::OK,
-                    headers: vec![(
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header(
                         CONTENT_TYPE,
                         HeaderValue::from_str("application/json").unwrap(),
-                    )]
-                    .into_iter()
-                    .collect(),
-                    body: r#"{
-                    "active": true,
-                    "scope": "email profile",
-                    "client_id": "aaa",
-                    "username": "demo",
-                    "token_type": "bearer",
-                    "exp": 1604073517,
-                    "iat": 1604073217,
-                    "nbf": 1604073317,
-                    "sub": "demo",
-                    "aud": "demo",
-                    "iss": "http://127.0.0.1:8080/auth/realms/test-realm",
-                    "jti": "be1b7da2-fc18-47b3-bdf1-7a4f50bcf53f"
-                }"#
-                    .to_string()
-                    .into_bytes(),
-                },
+                    )
+                    .body(
+                        r#"{
+                            "active": true,
+                            "scope": "email profile",
+                            "client_id": "aaa",
+                            "username": "demo",
+                            "token_type": "bearer",
+                            "exp": 1604073517,
+                            "iat": 1604073217,
+                            "nbf": 1604073317,
+                            "sub": "demo",
+                            "aud": "demo",
+                            "iss": "http://127.0.0.1:8080/auth/realms/test-realm",
+                            "jti": "be1b7da2-fc18-47b3-bdf1-7a4f50bcf53f"
+                        }"#
+                        .to_string()
+                        .into_bytes(),
+                    )
+                    .unwrap(),
             ))
             .unwrap();
 

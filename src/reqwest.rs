@@ -15,12 +15,12 @@ pub enum Error {
     Io(#[from] std::io::Error),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "reqwest-blocking", not(target_arch = "wasm32")))]
 pub use blocking::http_client;
 
 pub use async_client::async_http_client;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "reqwest-blocking", not(target_arch = "wasm32")))]
 mod blocking {
     use crate::reqwest::Error;
     use crate::{HttpRequest, HttpResponse};

@@ -440,7 +440,7 @@ mod introspection;
 
 /// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
 /// Requires "reqwest" feature.
-#[cfg(feature = "reqwest")]
+#[cfg(any(feature = "reqwest", feature = "reqwest-blocking"))]
 pub mod reqwest;
 
 /// OAuth 2.0 Token Revocation implementation

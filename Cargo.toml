@@ -19,15 +19,40 @@ maintenance = { status = "actively-developed" }
 default = ["reqwest", "rustls-tls"]
 pkce-plain = []
 native-tls = ["reqwest/native-tls"]
+reqwest-blocking = ["reqwest/blocking"]
 rustls-tls = ["reqwest/rustls-tls"]
 timing-resistant-secret-traits = []
+
+[[example]]
+name = "github"
+required-features = ["reqwest-blocking"]
+
+[[example]]
+name = "google"
+required-features = ["reqwest-blocking"]
+
+[[example]]
+name = "google_devicecode"
+required-features = ["reqwest-blocking"]
+
+[[example]]
+name = "letterboxd"
+required-features = ["reqwest-blocking"]
+
+[[example]]
+name = "msgraph"
+required-features = ["reqwest-blocking"]
+
+[[example]]
+name = "wunderlist"
+required-features = ["reqwest-blocking"]
 
 [dependencies]
 base64 = "0.13"
 thiserror = "1.0"
 http = "0.2"
 rand = "0.8"
-reqwest = { version = "0.11", optional = true, default-features = false, features = ["blocking"] }
+reqwest = { version = "0.11", optional = true, default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"

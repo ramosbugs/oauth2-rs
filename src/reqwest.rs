@@ -22,8 +22,8 @@ pub use async_client::async_http_client;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod blocking {
-    use super::super::{HttpRequest, HttpResponse};
-    use super::Error;
+    use crate::reqwest::Error;
+    use crate::{HttpRequest, HttpResponse};
 
     pub use reqwest;
     use reqwest::blocking;
@@ -59,8 +59,8 @@ mod blocking {
 }
 
 mod async_client {
-    use super::super::{HttpRequest, HttpResponse};
-    use super::Error;
+    use crate::reqwest::Error;
+    use crate::{HttpRequest, HttpResponse};
 
     pub use reqwest;
 

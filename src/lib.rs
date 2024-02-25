@@ -407,14 +407,7 @@
 //!
 //! - [`actix-web-oauth2`](https://github.com/pka/actix-web-oauth2) (version 2.x of this crate)
 //!
-use std::borrow::Cow;
-use std::error::Error;
-use std::fmt::Error as FormatterError;
-use std::fmt::{Debug, Display, Formatter};
-use std::future::Future;
-use std::marker::PhantomData;
-use std::sync::Arc;
-use std::time::Duration;
+use crate::devicecode::DeviceAccessTokenPollResult;
 
 use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};
@@ -424,7 +417,14 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use url::{form_urlencoded, Url};
 
-use crate::devicecode::DeviceAccessTokenPollResult;
+use std::borrow::Cow;
+use std::error::Error;
+use std::fmt::Error as FormatterError;
+use std::fmt::{Debug, Display, Formatter};
+use std::future::Future;
+use std::marker::PhantomData;
+use std::sync::Arc;
+use std::time::Duration;
 
 /// Basic OAuth2 implementation with no extensions
 /// ([RFC 6749](https://tools.ietf.org/html/rfc6749)).

@@ -1,11 +1,11 @@
-use std::io::Read;
+use crate::{HttpRequest, HttpResponse};
 
 use curl::easy::Easy;
 use http::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use http::method::Method;
 use http::status::StatusCode;
 
-use super::{HttpRequest, HttpResponse};
+use std::io::Read;
 
 /// Error type returned by failed curl HTTP requests.
 #[derive(Debug, thiserror::Error)]

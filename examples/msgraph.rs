@@ -27,11 +27,11 @@ use oauth2::{
     AuthType, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
     RedirectUrl, Scope, TokenUrl,
 };
+use url::Url;
+
 use std::env;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
-
-use url::Url;
 
 fn main() {
     let graph_client_id = ClientId::new(

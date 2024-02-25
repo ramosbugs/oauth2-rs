@@ -1,7 +1,10 @@
+use serde::de::value::SeqAccessDeserializer;
 use serde::ser::{Impossible, SerializeStructVariant, SerializeTupleVariant};
-use serde::{de, ser};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::fmt;
+use serde_json::Value;
+
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
 /// Serde case-insensitive deserializer for an untagged `enum`.
@@ -45,12 +48,10 @@ where
     T: Deserialize<'de>,
     D: Deserializer<'de>,
 {
-    use serde::de::Error;
-    use serde_json::Value;
     T::deserialize(Value::String(
         String::deserialize(deserializer)?.to_lowercase(),
     ))
-    .map_err(Error::custom)
+    .map_err(serde::de::Error::custom)
 }
 
 /// Serde space-delimited string deserializer for a `Vec<String>`.
@@ -89,14 +90,12 @@ where
     T: Default + Deserialize<'de>,
     D: Deserializer<'de>,
 {
-    use serde::de::Error;
-    use serde_json::Value;
     if let Some(space_delimited) = Option::<String>::deserialize(deserializer)? {
         let entries = space_delimited
             .split(' ')
             .map(|s| Value::String(s.to_string()))
             .collect();
-        T::deserialize(Value::Array(entries)).map_err(Error::custom)
+        T::deserialize(Value::Array(entries)).map_err(serde::de::Error::custom)
     } else {
         // If the JSON value is null, use the default value.
         Ok(T::default())
@@ -112,39 +111,39 @@ where
 {
     struct StringOrVec(PhantomData<Vec<String>>);
 
-    impl<'de> de::Visitor<'de> for StringOrVec {
+    impl<'de> serde::de::Visitor<'de> for StringOrVec {
         type Value = Option<Vec<String>>;
 
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
             formatter.write_str("string or list of strings")
         }
 
         fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
         where
-            E: de::Error,
+            E: serde::de::Error,
         {
             Ok(Some(vec![value.to_owned()]))
         }
 
         fn visit_none<E>(self) -> Result<Self::Value, E>
         where
-            E: de::Error,
+            E: serde::de::Error,
         {
             Ok(None)
         }
 
         fn visit_unit<E>(self) -> Result<Self::Value, E>
         where
-            E: de::Error,
+            E: serde::de::Error,
         {
             Ok(None)
         }
 
         fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
         where
-            S: de::SeqAccess<'de>,
+            S: serde::de::SeqAccess<'de>,
         {
-            Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor)).map(Some)
+            Deserialize::deserialize(SeqAccessDeserializer::new(visitor)).map(Some)
         }
     }
 
@@ -181,18 +180,18 @@ pub fn variant_name<T: Serialize>(t: &T) -> &'static str {
     #[derive(Debug)]
     struct NotEnum;
     type Result<T> = std::result::Result<T, NotEnum>;
-    impl std::error::Error for NotEnum {
+    impl Error for NotEnum {
         fn description(&self) -> &str {
             "not struct"
         }
     }
-    impl std::fmt::Display for NotEnum {
-        fn fmt(&self, _f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    impl Display for NotEnum {
+        fn fmt(&self, _f: &mut Formatter) -> std::fmt::Result {
             unimplemented!()
         }
     }
-    impl ser::Error for NotEnum {
-        fn custom<T: std::fmt::Display>(_msg: T) -> Self {
+    impl serde::ser::Error for NotEnum {
+        fn custom<T: Display>(_msg: T) -> Self {
             NotEnum
         }
     }

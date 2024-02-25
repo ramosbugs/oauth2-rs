@@ -1,18 +1,18 @@
+use crate::basic::BasicErrorResponseType;
+use crate::types::VerificationUriComplete;
+use crate::{
+    DeviceCode, EndUserVerificationUrl, ErrorResponse, ErrorResponseType, RequestTokenError,
+    StandardErrorResponse, TokenResponse, TokenType, UserCode,
+};
+
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+
 use std::error::Error;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::time::Duration;
-
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-
-use super::{
-    DeviceCode, EndUserVerificationUrl, ErrorResponse, ErrorResponseType, RequestTokenError,
-    StandardErrorResponse, TokenResponse, TokenType, UserCode,
-};
-use crate::basic::BasicErrorResponseType;
-use crate::types::VerificationUriComplete;
 
 /// The minimum amount of time in seconds that the client SHOULD wait
 /// between polling requests to the token endpoint.  If no value is

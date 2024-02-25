@@ -1,10 +1,10 @@
+use crate::{HttpRequest, HttpResponse};
+
 use http::{
     header::{HeaderMap, HeaderValue, CONTENT_TYPE},
     method::Method,
     status::StatusCode,
 };
-
-use super::{HttpRequest, HttpResponse};
 
 /// Error type returned by failed ureq HTTP requests.
 #[derive(Debug, thiserror::Error)]

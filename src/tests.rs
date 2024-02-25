@@ -1,16 +1,37 @@
-use chrono::TimeZone;
+use crate::basic::{
+    BasicClient, BasicErrorResponse, BasicErrorResponseType, BasicRevocationErrorResponse,
+    BasicTokenResponse, BasicTokenType,
+};
+use crate::revocation::StandardRevocableToken;
+use crate::tests::colorful_extension::{
+    ColorfulClient, ColorfulErrorResponseType, ColorfulFields, ColorfulRevocableToken,
+    ColorfulTokenResponse, ColorfulTokenType,
+};
+use crate::tests::custom_errors::CustomErrorClient;
+use crate::{
+    AccessToken, AuthType, AuthUrl, AuthorizationCode, AuthorizationRequest, Client,
+    ClientCredentialsTokenRequest, ClientId, ClientSecret, CodeTokenRequest, CsrfToken,
+    DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationUrl, DeviceCode,
+    DeviceCodeErrorResponse, DeviceCodeErrorResponseType, EmptyExtraDeviceAuthorizationFields,
+    EmptyExtraTokenFields, EndUserVerificationUrl, ExtraTokenFields, HttpRequest, HttpResponse,
+    IntrospectionUrl, PasswordTokenRequest, PkceCodeChallenge, PkceCodeChallengeMethod,
+    PkceCodeVerifier, RedirectUrl, RefreshToken, RefreshTokenRequest, RequestTokenError,
+    ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, RevocationErrorResponseType,
+    RevocationUrl, Scope, StandardDeviceAuthorizationResponse, StandardErrorResponse,
+    StandardTokenIntrospectionResponse, StandardTokenResponse, TokenResponse, TokenType, TokenUrl,
+    UserCode,
+};
+
+use chrono::{DateTime, TimeZone, Utc};
 use http::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::status::StatusCode;
-use revocation::RevocationErrorResponseType;
+use serde::Deserialize;
 use thiserror::Error;
 use url::form_urlencoded::byte_serialize;
 use url::Url;
 
-use crate::revocation::StandardRevocableToken;
-
-use super::basic::*;
-use super::devicecode::*;
-use super::*;
+use std::borrow::Cow;
+use std::time::Duration;
 
 fn new_client() -> BasicClient<true, false, false, false, true> {
     BasicClient::new(ClientId::new("aaa".to_string()))
@@ -1200,7 +1221,13 @@ fn test_exchange_code_fails_gracefully_on_transport_error() {
 mod colorful_extension {
     extern crate serde_json;
 
-    use super::super::*;
+    use crate::{
+        Client, ErrorResponseType, ExtraTokenFields, RevocableToken, StandardErrorResponse,
+        StandardTokenIntrospectionResponse, StandardTokenResponse, TokenType,
+    };
+
+    use serde::{Deserialize, Serialize};
+
     use std::fmt::Error as FormatterError;
     use std::fmt::{Debug, Display, Formatter};
 
@@ -1306,7 +1333,6 @@ mod colorful_extension {
 
 #[test]
 fn test_extension_successful_with_minimal_json_response() {
-    use self::colorful_extension::*;
     let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
         .set_client_secret(ClientSecret::new("bbb".to_string()))
         .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
@@ -1358,7 +1384,6 @@ fn test_extension_successful_with_minimal_json_response() {
 
 #[test]
 fn test_extension_successful_with_complete_json_response() {
-    use self::colorful_extension::*;
     let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
         .set_client_secret(ClientSecret::new("bbb".to_string()))
         .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
@@ -1427,7 +1452,6 @@ fn test_extension_successful_with_complete_json_response() {
 
 #[test]
 fn test_extension_with_simple_json_error() {
-    use self::colorful_extension::*;
     let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
         .set_client_secret(ClientSecret::new("bbb".to_string()))
         .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
@@ -1505,13 +1529,17 @@ fn test_extension_with_simple_json_error() {
 }
 
 mod custom_errors {
+    use crate::tests::colorful_extension::{
+        ColorfulFields, ColorfulRevocableToken, ColorfulTokenType,
+    };
+    use crate::{Client, ErrorResponse, StandardTokenIntrospectionResponse, StandardTokenResponse};
+
+    use serde::{Deserialize, Serialize};
+
     use std::fmt::Error as FormatterError;
     use std::fmt::{Display, Formatter};
 
     extern crate serde_json;
-
-    use super::super::*;
-    use super::colorful_extension::*;
 
     #[derive(Serialize, Deserialize, Debug)]
     pub struct CustomErrorResponse {
@@ -1549,7 +1577,6 @@ mod custom_errors {
 
 #[test]
 fn test_extension_with_custom_json_error() {
-    use self::custom_errors::*;
     let client = CustomErrorClient::new(ClientId::new("aaa".to_string()))
         .set_client_secret(ClientSecret::new("bbb".to_string()))
         .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
@@ -1591,7 +1618,6 @@ fn test_extension_with_custom_json_error() {
 
 #[test]
 fn test_extension_serializer() {
-    use self::colorful_extension::{ColorfulFields, ColorfulTokenResponse, ColorfulTokenType};
     let mut token_response = ColorfulTokenResponse::new(
         AccessToken::new("mysecret".to_string()),
         ColorfulTokenType::Red,
@@ -1645,7 +1671,7 @@ fn test_error_response_serializer() {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ObjectWithOptionalStringOrVecString {
-    #[serde(deserialize_with = "helpers::deserialize_optional_string_or_vec_string")]
+    #[serde(deserialize_with = "crate::helpers::deserialize_optional_string_or_vec_string")]
     pub strings: Option<Vec<String>>,
 }
 
@@ -1987,7 +2013,6 @@ fn test_token_revocation_with_refresh_token() {
 
 #[test]
 fn test_extension_token_revocation_successful() {
-    use self::colorful_extension::*;
     let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
         .set_client_secret(ClientSecret::new("bbb".to_string()))
         .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
@@ -2618,7 +2643,7 @@ fn test_send_sync_impl() {
     is_sync_and_send::<DeviceCodeErrorResponse>();
 
     #[cfg(feature = "curl")]
-    is_sync_and_send::<super::curl::Error>();
+    is_sync_and_send::<crate::curl::Error>();
     #[cfg(feature = "reqwest")]
-    is_sync_and_send::<super::reqwest::Error>();
+    is_sync_and_send::<crate::reqwest::Error>();
 }

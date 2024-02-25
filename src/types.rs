@@ -1,13 +1,13 @@
+use rand::{thread_rng, Rng};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use url::Url;
+
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Formatter};
 #[cfg(feature = "timing-resistant-secret-traits")]
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
-
-use rand::{thread_rng, Rng};
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
-use url::Url;
 
 macro_rules! new_type {
     // Convenience pattern without an impl.

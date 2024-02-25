@@ -6,9 +6,7 @@ use http::{
 
 use super::{HttpRequest, HttpResponse};
 
-///
 /// Error type returned by failed ureq HTTP requests.
-///
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Non-ureq HTTP error.
@@ -26,9 +24,7 @@ pub enum Error {
     Ureq(#[from] Box<ureq::Error>),
 }
 
-///
 /// Synchronous HTTP client for ureq.
-///
 pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
     let mut req = if request.method == Method::POST {
         ureq::post(request.url.as_ref())

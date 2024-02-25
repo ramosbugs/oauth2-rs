@@ -10,9 +10,7 @@ use crate::{
     StandardTokenIntrospectionResponse,
 };
 
-///
 /// Basic OAuth2 client specialization, suitable for most applications.
-///
 pub type BasicClient<
     const HAS_AUTH_URL: bool = false,
     const HAS_DEVICE_AUTH_URL: bool = false,
@@ -33,24 +31,16 @@ pub type BasicClient<
     HAS_TOKEN_URL,
 >;
 
-///
 /// Basic OAuth2 authorization token types.
-///
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BasicTokenType {
-    ///
     /// Bearer token
     /// ([OAuth 2.0 Bearer Tokens - RFC 6750](https://tools.ietf.org/html/rfc6750)).
-    ///
     Bearer,
-    ///
     /// MAC ([OAuth 2.0 Message Authentication Code (MAC)
     /// Tokens](https://tools.ietf.org/html/draft-ietf-oauth-v2-http-mac-05)).
-    ///
     Mac,
-    ///
     /// An extension not defined by RFC 6749.
-    ///
     Extension(String),
 }
 impl BasicTokenType {
@@ -90,58 +80,38 @@ impl serde::ser::Serialize for BasicTokenType {
 }
 impl TokenType for BasicTokenType {}
 
-///
 /// Basic OAuth2 token response.
-///
 pub type BasicTokenResponse = StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>;
 
-///
 /// Basic OAuth2 token introspection response.
-///
 pub type BasicTokenIntrospectionResponse =
     StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>;
 
-///
 /// Basic access token error types.
 ///
 /// These error types are defined in
 /// [Section 5.2 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.2).
-///
 #[derive(Clone, PartialEq, Eq)]
 pub enum BasicErrorResponseType {
-    ///
     /// Client authentication failed (e.g., unknown client, no client authentication included,
     /// or unsupported authentication method).
-    ///
     InvalidClient,
-    ///
     /// The provided authorization grant (e.g., authorization code, resource owner credentials)
     /// or refresh token is invalid, expired, revoked, does not match the redirection URI used
     /// in the authorization request, or was issued to another client.
-    ///
     InvalidGrant,
-    ///
     /// The request is missing a required parameter, includes an unsupported parameter value
     /// (other than grant type), repeats a parameter, includes multiple credentials, utilizes
     /// more than one mechanism for authenticating the client, or is otherwise malformed.
-    ///
     InvalidRequest,
-    ///
     /// The requested scope is invalid, unknown, malformed, or exceeds the scope granted by the
     /// resource owner.
-    ///
     InvalidScope,
-    ///
     /// The authenticated client is not authorized to use this authorization grant type.
-    ///
     UnauthorizedClient,
-    ///
     /// The authorization grant type is not supported by the authorization server.
-    ///
     UnsupportedGrantType,
-    ///
     /// An extension not defined by RFC 6749.
-    ///
     Extension(String),
 }
 impl BasicErrorResponseType {
@@ -200,17 +170,11 @@ impl Display for BasicErrorResponseType {
     }
 }
 
-///
 /// Error response specialization for basic OAuth2 implementation.
-///
 pub type BasicErrorResponse = StandardErrorResponse<BasicErrorResponseType>;
 
-///
 /// Token error specialization for basic OAuth2 implementation.
-///
 pub type BasicRequestTokenError<RE> = RequestTokenError<RE, BasicErrorResponse>;
 
-///
 /// Revocation error response specialization for basic OAuth2 implementation.
-///
 pub type BasicRevocationErrorResponse = StandardErrorResponse<RevocationErrorResponseType>;

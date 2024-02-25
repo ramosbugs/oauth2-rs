@@ -158,13 +158,11 @@ macro_rules! new_secret_type {
             pub fn new(s: $type) -> Self {
                 $name(s)
             }
-            ///
             #[doc = $secret_doc]
             ///
             /// # Security Warning
             ///
             /// Leaking this value may compromise the security of the OAuth2 flow.
-            ///
             pub fn secret(&self) -> &$type { &self.0 }
         }
         impl Debug for $name {
@@ -190,7 +188,6 @@ macro_rules! new_secret_type {
     };
 }
 
-///
 /// Creates a URL-specific new type
 ///
 /// Types created by this macro enforce during construction that the contained value represents a
@@ -201,7 +198,6 @@ macro_rules! new_secret_type {
 ///
 /// In addition to the raw string representation, these types include a `url` method to retrieve a
 /// parsed `Url` struct.
-///
 macro_rules! new_url_type {
     // Convenience pattern without an impl.
     (
@@ -343,77 +339,55 @@ macro_rules! new_url_type {
 }
 
 new_type![
-    ///
     /// Client identifier issued to the client during the registration process described by
     /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
-    ///
     #[derive(Deserialize, Serialize, Eq, Hash)]
     ClientId(String)
 ];
 
 new_url_type![
-    ///
     /// URL of the authorization server's authorization endpoint.
-    ///
     AuthUrl
 ];
 new_url_type![
-    ///
     /// URL of the authorization server's token endpoint.
-    ///
     TokenUrl
 ];
 new_url_type![
-    ///
     /// URL of the client's redirection endpoint.
-    ///
     RedirectUrl
 ];
 new_url_type![
-    ///
     /// URL of the client's [RFC 7662 OAuth 2.0 Token Introspection](https://tools.ietf.org/html/rfc7662) endpoint.
-    ///
     IntrospectionUrl
 ];
 new_url_type![
-    ///
     /// URL of the authorization server's RFC 7009 token revocation endpoint.
-    ///
     RevocationUrl
 ];
 new_url_type![
-    ///
     /// URL of the client's device authorization endpoint.
-    ///
     DeviceAuthorizationUrl
 ];
 new_url_type![
-    ///
     /// URL of the end-user verification URI on the authorization server.
-    ///
     EndUserVerificationUrl
 ];
 new_type![
-    ///
     /// Authorization endpoint response (grant) type defined in
     /// [Section 3.1.1](https://tools.ietf.org/html/rfc6749#section-3.1.1).
-    ///
     #[derive(Deserialize, Serialize, Eq, Hash)]
     ResponseType(String)
 ];
 new_type![
-    ///
     /// Resource owner's username used directly as an authorization grant to obtain an access
     /// token.
-    ///
     #[derive(Deserialize, Serialize, Eq, Hash)]
     ResourceOwnerUsername(String)
 ];
 
 new_type![
-    ///
     /// Access token scope, as defined by the authorization server.
-    ///
     #[derive(Deserialize, Serialize, Eq, Hash)]
     Scope(String)
 ];
@@ -424,44 +398,35 @@ impl AsRef<str> for Scope {
 }
 
 new_type![
-    ///
     /// Code Challenge Method used for [PKCE](https://tools.ietf.org/html/rfc7636) protection
     /// via the `code_challenge_method` parameter.
-    ///
     #[derive(Deserialize, Serialize, Eq, Hash)]
     PkceCodeChallengeMethod(String)
 ];
 // This type intentionally does not implement Clone in order to make it difficult to reuse PKCE
 // challenges across multiple requests.
 new_secret_type![
-    ///
     /// Code Verifier used for [PKCE](https://tools.ietf.org/html/rfc7636) protection via the
     /// `code_verifier` parameter. The value must have a minimum length of 43 characters and a
     /// maximum length of 128 characters.  Each character must be ASCII alphanumeric or one of
     /// the characters "-" / "." / "_" / "~".
-    ///
     #[derive(Deserialize, Serialize)]
     PkceCodeVerifier(String)
 ];
 
-///
 /// Code Challenge used for [PKCE](https://tools.ietf.org/html/rfc7636) protection via the
 /// `code_challenge` parameter.
-///
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct PkceCodeChallenge {
     code_challenge: String,
     code_challenge_method: PkceCodeChallengeMethod,
 }
 impl PkceCodeChallenge {
-    ///
     /// Generate a new random, base64-encoded SHA-256 PKCE code.
-    ///
     pub fn new_random_sha256() -> (Self, PkceCodeVerifier) {
         Self::new_random_sha256_len(32)
     }
 
-    ///
     /// Generate a new random, base64-encoded SHA-256 PKCE challenge code and verifier.
     ///
     /// # Arguments
@@ -474,7 +439,6 @@ impl PkceCodeChallenge {
     ///
     /// This method panics if the resulting PKCE code verifier is not of a suitable length
     /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
-    ///
     pub fn new_random_sha256_len(num_bytes: u32) -> (Self, PkceCodeVerifier) {
         let code_verifier = Self::new_random_len(num_bytes);
         (
@@ -483,7 +447,6 @@ impl PkceCodeChallenge {
         )
     }
 
-    ///
     /// Generate a new random, base64-encoded PKCE code verifier.
     ///
     /// # Arguments
@@ -496,7 +459,6 @@ impl PkceCodeChallenge {
     ///
     /// This method panics if the resulting PKCE code verifier is not of a suitable length
     /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
-    ///
     fn new_random_len(num_bytes: u32) -> PkceCodeVerifier {
         // The RFC specifies that the code verifier must have "a minimum length of 43
         // characters and a maximum length of 128 characters".
@@ -506,14 +468,12 @@ impl PkceCodeChallenge {
         PkceCodeVerifier::new(base64::encode_config(random_bytes, base64::URL_SAFE_NO_PAD))
     }
 
-    ///
     /// Generate a SHA-256 PKCE code challenge from the supplied PKCE code verifier.
     ///
     /// # Panics
     ///
     /// This method panics if the supplied PKCE code verifier is not of a suitable length
     /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
-    ///
     pub fn from_code_verifier_sha256(code_verifier: &PkceCodeVerifier) -> Self {
         // The RFC specifies that the code verifier must have "a minimum length of 43
         // characters and a maximum length of 128 characters".
@@ -528,7 +488,6 @@ impl PkceCodeChallenge {
         }
     }
 
-    ///
     /// Generate a new random, base64-encoded PKCE code.
     /// Use is discouraged unless the endpoint does not support SHA-256.
     ///
@@ -536,7 +495,6 @@ impl PkceCodeChallenge {
     ///
     /// This method panics if the supplied PKCE code verifier is not of a suitable length
     /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
-    ///
     #[cfg(feature = "pkce-plain")]
     pub fn new_random_plain() -> (Self, PkceCodeVerifier) {
         let code_verifier = Self::new_random_len(32);
@@ -546,7 +504,6 @@ impl PkceCodeChallenge {
         )
     }
 
-    ///
     /// Generate a plain PKCE code challenge from the supplied PKCE code verifier.
     /// Use is discouraged unless the endpoint does not support SHA-256.
     ///
@@ -554,7 +511,6 @@ impl PkceCodeChallenge {
     ///
     /// This method panics if the supplied PKCE code verifier is not of a suitable length
     /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
-    ///
     #[cfg(feature = "pkce-plain")]
     pub fn from_code_verifier_plain(code_verifier: &PkceCodeVerifier) -> Self {
         // The RFC specifies that the code verifier must have "a minimum length of 43
@@ -569,51 +525,39 @@ impl PkceCodeChallenge {
         }
     }
 
-    ///
     /// Returns the PKCE code challenge as a string.
-    ///
     pub fn as_str(&self) -> &str {
         &self.code_challenge
     }
 
-    ///
     /// Returns the PKCE code challenge method as a string.
-    ///
     pub fn method(&self) -> &PkceCodeChallengeMethod {
         &self.code_challenge_method
     }
 }
 
 new_secret_type![
-    ///
     /// Client password issued to the client during the registration process described by
     /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
-    ///
     #[derive(Clone, Deserialize, Serialize)]
     ClientSecret(String)
 ];
 new_secret_type![
-    ///
     /// Value used for [CSRF](https://tools.ietf.org/html/rfc6749#section-10.12) protection
     /// via the `state` parameter.
-    ///
     #[must_use]
     #[derive(Clone, Deserialize, Serialize)]
     CsrfToken(String)
     impl {
-        ///
         /// Generate a new random, base64-encoded 128-bit CSRF token.
-        ///
         pub fn new_random() -> Self {
             CsrfToken::new_random_len(16)
         }
-        ///
         /// Generate a new random, base64-encoded CSRF token of the specified length.
         ///
         /// # Arguments
         ///
         /// * `num_bytes` - Number of random bytes to generate, prior to base64-encoding.
-        ///
         pub fn new_random_len(num_bytes: u32) -> Self {
             let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
             CsrfToken::new(base64::encode_config(random_bytes, base64::URL_SAFE_NO_PAD))
@@ -621,54 +565,40 @@ new_secret_type![
     }
 ];
 new_secret_type![
-    ///
     /// Authorization code returned from the authorization endpoint.
-    ///
     #[derive(Clone, Deserialize, Serialize)]
     AuthorizationCode(String)
 ];
 new_secret_type![
-    ///
     /// Refresh token used to obtain a new access token (if supported by the authorization server).
-    ///
     #[derive(Clone, Deserialize, Serialize)]
     RefreshToken(String)
 ];
 new_secret_type![
-    ///
     /// Access token returned by the token endpoint and used to access protected resources.
-    ///
     #[derive(Clone, Deserialize, Serialize)]
     AccessToken(String)
 ];
 new_secret_type![
-    ///
     /// Resource owner's password used directly as an authorization grant to obtain an access
     /// token.
-    ///
     #[derive(Clone)]
     ResourceOwnerPassword(String)
 ];
 new_secret_type![
-    ///
     /// Device code returned by the device authorization endpoint and used to query the token endpoint.
-    ///
     #[derive(Clone, Deserialize, Serialize)]
     DeviceCode(String)
 ];
 new_secret_type![
-    ///
     /// Verification URI returned by the device authorization endpoint and visited by the user
     /// to authorize.  Contains the user code.
-    ///
     #[derive(Clone, Deserialize, Serialize)]
     VerificationUriComplete(String)
 ];
 new_secret_type![
-    ///
     /// User code returned by the device authorization endpoint and used by the user to authorize at
     /// the verification URI.
-    ///
     #[derive(Clone, Deserialize, Serialize)]
     UserCode(String)
 ];

@@ -426,43 +426,31 @@ use url::{form_urlencoded, Url};
 
 use crate::devicecode::DeviceAccessTokenPollResult;
 
-///
 /// Basic OAuth2 implementation with no extensions
 /// ([RFC 6749](https://tools.ietf.org/html/rfc6749)).
-///
 pub mod basic;
 
-///
 /// HTTP client backed by the [curl](https://crates.io/crates/curl) crate.
 /// Requires "curl" feature.
-///
 #[cfg(all(feature = "curl", not(target_arch = "wasm32")))]
 pub mod curl;
 
 #[cfg(all(feature = "curl", target_arch = "wasm32"))]
 compile_error!("wasm32 is not supported with the `curl` feature. Use the `reqwest` backend or a custom backend for wasm32 support");
 
-///
 /// Device Code Flow OAuth2 implementation
 /// ([RFC 8628](https://tools.ietf.org/html/rfc8628)).
-///
 pub mod devicecode;
 
-///
 /// OAuth 2.0 Token Revocation implementation
 /// ([RFC 7009](https://tools.ietf.org/html/rfc7009)).
-///
 pub mod revocation;
 
-///
 /// Helper methods used by OAuth2 implementations/extensions.
-///
 pub mod helpers;
 
-///
 /// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
 /// Requires "reqwest" feature.
-///
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
 
@@ -471,16 +459,12 @@ mod tests;
 
 mod types;
 
-///
 /// HTTP client backed by the [ureq](https://crates.io/crates/ureq) crate.
 /// Requires "ureq" feature.
-///
 #[cfg(feature = "ureq")]
 pub mod ureq;
 
-///
 /// Public re-exports of types used for HTTP client interfaces.
-///
 pub use http;
 pub use url;
 
@@ -503,26 +487,20 @@ pub use revocation::{RevocableToken, RevocationErrorResponseType, StandardRevoca
 const CONTENT_TYPE_JSON: &str = "application/json";
 const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";
 
-///
 /// There was a problem configuring the request.
-///
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigurationError {
-    ///
     /// The endpoint URL to be contacted MUST be HTTPS.
-    ///
     #[error("Scheme for {0} endpoint URL must be HTTPS")]
     InsecureUrl(&'static str),
 }
 
-///
 /// Indicates whether requests to the authorization server should use basic authentication or
 /// include the parameters in the request body for requests in which either is valid.
 ///
 /// The default AuthType is *BasicAuth*, following the recommendation of
 /// [Section 2.3.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-2.3.1).
-///
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum AuthType {
@@ -532,7 +510,6 @@ pub enum AuthType {
     BasicAuth,
 }
 
-///
 /// Stores the configuration for an OAuth2 client.
 ///
 /// This type implements the
@@ -643,9 +620,7 @@ where
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
 {
-    ///
     /// Initializes an OAuth2 client with the specified client ID.
-    ///
     pub fn new(client_id: ClientId) -> Self {
         Self {
             client_id,
@@ -695,7 +670,6 @@ where
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
 {
-    ///
     /// Configures the type of client authentication used for communicating with the authorization
     /// server.
     ///
@@ -704,21 +678,18 @@ where
     /// if a client secret is omitted (i.e., `client_secret` is set to `None` when calling
     /// [`Client::new`]), [`AuthType::RequestBody`] is used regardless of the `auth_type` passed to
     /// this function.
-    ///
     pub fn set_auth_type(mut self, auth_type: AuthType) -> Self {
         self.auth_type = auth_type;
 
         self
     }
 
-    ///
     /// Sets the authorization endpoint.
     ///
     /// The client uses the authorization endpoint to obtain authorization from the resource owner
     /// via user-agent redirection. This URL is used in all standard OAuth2 flows except the
     /// [Resource Owner Password Credentials Grant](https://tools.ietf.org/html/rfc6749#section-4.3)
     /// and the [Client Credentials Grant](https://tools.ietf.org/html/rfc6749#section-4.4).
-    ///
     pub fn set_auth_url(
         self,
         auth_url: AuthUrl,
@@ -760,10 +731,8 @@ where
         self
     }
 
-    ///
     /// Sets the the device authorization URL used by the device authorization endpoint.
     /// Used for Device Code Flow, as per [RFC 8628](https://tools.ietf.org/html/rfc8628).
-    ///
     pub fn set_device_authorization_url(
         self,
         device_authorization_url: DeviceAuthorizationUrl,
@@ -794,10 +763,8 @@ where
         }
     }
 
-    ///
     /// Sets the introspection URL for contacting the ([RFC 7662](https://tools.ietf.org/html/rfc7662))
     /// introspection endpoint.
-    ///
     pub fn set_introspection_uri(
         self,
         introspection_url: IntrospectionUrl,
@@ -828,20 +795,16 @@ where
         }
     }
 
-    ///
     /// Sets the redirect URL used by the authorization endpoint.
-    ///
     pub fn set_redirect_uri(mut self, redirect_url: RedirectUrl) -> Self {
         self.redirect_url = Some(redirect_url);
 
         self
     }
 
-    ///
     /// Sets the revocation URL for contacting the revocation endpoint ([RFC 7009](https://tools.ietf.org/html/rfc7009)).
     ///
     /// See: [`revoke_token()`](Self::revoke_token())
-    ///
     pub fn set_revocation_uri(
         self,
         revocation_url: RevocationUrl,
@@ -908,24 +871,18 @@ where
         }
     }
 
-    ///
     /// Returns the Client ID.
-    ///
     pub fn client_id(&self) -> &ClientId {
         &self.client_id
     }
 
-    ///
     /// Returns the type of client authentication used for communicating with the authorization
     /// server.
-    ///
     pub fn auth_type(&self) -> &AuthType {
         &self.auth_type
     }
 
-    ///
     /// Returns the redirect URL used by the authorization endpoint.
-    ///
     pub fn redirect_url(&self) -> Option<&RedirectUrl> {
         self.redirect_url.as_ref()
     }
@@ -965,15 +922,12 @@ where
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
 {
-    ///
     /// Returns the authorization endpoint.
-    ///
     pub fn auth_url(&self) -> &AuthUrl {
         // This is enforced statically via the HAS_AUTH_URL const generic.
         self.auth_url.as_ref().expect("should have auth_url")
     }
 
-    ///
     /// Generates an authorization URL for a new authorization request.
     ///
     /// # Arguments
@@ -990,7 +944,6 @@ where
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12)
     ///  attacks. To disable CSRF protections (NOT recommended), use `insecure::authorize_url`
     ///  instead.
-    ///
     pub fn authorize_url<S>(&self, state_fn: S) -> AuthorizationRequest
     where
         S: FnOnce() -> CsrfToken,
@@ -1043,11 +996,9 @@ where
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
 {
-    ///
     /// Requests an access token for the *client credentials* grant type.
     ///
     /// See <https://tools.ietf.org/html/rfc6749#section-4.4.2>.
-    ///
     pub fn exchange_client_credentials(&self) -> ClientCredentialsTokenRequest<TE, TR, TT> {
         ClientCredentialsTokenRequest {
             auth_type: &self.auth_type,
@@ -1061,14 +1012,12 @@ where
         }
     }
 
-    ///
     /// Exchanges a code produced by a successful authorization process with an access token.
     ///
     /// Acquires ownership of the `code` because authorization codes may only be used once to
     /// retrieve an access token from the authorization server.
     ///
     /// See <https://tools.ietf.org/html/rfc6749#section-4.1.3>.
-    ///
     pub fn exchange_code(&self, code: AuthorizationCode) -> CodeTokenRequest<TE, TR, TT> {
         CodeTokenRequest {
             auth_type: &self.auth_type,
@@ -1084,10 +1033,8 @@ where
         }
     }
 
-    ///
     /// Perform a device access token request as per
     /// <https://tools.ietf.org/html/rfc8628#section-3.4>.
-    ///
     pub fn exchange_device_access_token<'a, 'b, 'c, EF>(
         &'a self,
         auth_response: &'b DeviceAuthorizationResponse<EF>,
@@ -1110,11 +1057,9 @@ where
         }
     }
 
-    ///
     /// Requests an access token for the *password* grant type.
     ///
     /// See <https://tools.ietf.org/html/rfc6749#section-4.3.2>.
-    ///
     pub fn exchange_password<'a, 'b>(
         &'a self,
         username: &'b ResourceOwnerUsername,
@@ -1137,11 +1082,9 @@ where
         }
     }
 
-    ///
     /// Exchanges a refresh token for an access token
     ///
     /// See <https://tools.ietf.org/html/rfc6749#section-6>.
-    ///
     pub fn exchange_refresh_token<'a, 'b>(
         &'a self,
         refresh_token: &'b RefreshToken,
@@ -1162,9 +1105,7 @@ where
         }
     }
 
-    ///
     /// Returns the token endpoint.
-    ///
     pub fn token_url(&self) -> &TokenUrl {
         // This is enforced statically via the HAS_TOKEN_URL const generic.
         self.token_url.as_ref().expect("should have token_url")
@@ -1205,10 +1146,8 @@ where
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
 {
-    ///
     /// Perform a device authorization request as per
     /// <https://tools.ietf.org/html/rfc8628#section-3.1>.
-    ///
     pub fn exchange_device_code(&self) -> DeviceAuthorizationRequest<TE> {
         DeviceAuthorizationRequest {
             auth_type: &self.auth_type,
@@ -1225,9 +1164,7 @@ where
         }
     }
 
-    ///
     /// Returns the device authorization URL used by the device authorization endpoint.
-    ///
     pub fn device_authorization_url(&self) -> &DeviceAuthorizationUrl {
         // This is enforced statically via the HAS_DEVICE_AUTH_URL const generic.
         self.device_authorization_url
@@ -1270,13 +1207,11 @@ where
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
 {
-    ///
     /// Query the authorization server [`RFC 7662 compatible`](https://tools.ietf.org/html/rfc7662) introspection
     /// endpoint to determine the set of metadata for a previously received token.
     ///
     /// Requires [`set_introspection_uri()`](Self::set_introspection_uri) to have been previously
     /// called to set the introspection endpoint URL.
-    ///
     pub fn introspect<'a>(
         &'a self,
         token: &'a AccessToken,
@@ -1297,10 +1232,8 @@ where
         })
     }
 
-    ///
     /// Returns the introspection URL for contacting the ([RFC 7662](https://tools.ietf.org/html/rfc7662))
     /// introspection endpoint.
-    ///
     pub fn introspection_url(&self) -> &IntrospectionUrl {
         // This is enforced statically via the HAS_INTROSPECTION_URL const generic.
         self.introspection_url
@@ -1343,14 +1276,12 @@ where
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
 {
-    ///
     /// Attempts to revoke the given previously received token using an
     /// [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009) compatible
     /// endpoint.
     ///
     /// Requires [`set_revocation_uri()`](Self::set_revocation_uri) to have been previously
     /// called to set the revocation endpoint URL.
-    ///
     pub fn revoke_token(
         &self,
         token: RT,
@@ -1382,12 +1313,10 @@ where
         })
     }
 
-    ///
     /// Returns the revocation URL for contacting the revocation endpoint
     /// ([RFC 7009](https://tools.ietf.org/html/rfc7009)).
     ///
     /// See: [`revoke_token()`](Self::revoke_token())
-    ///
     pub fn revocation_url(&self) -> &RevocationUrl {
         // This is enforced statically via the HAS_REVOCATION_URL const generic.
         self.revocation_url
@@ -1396,9 +1325,7 @@ where
     }
 }
 
-///
 /// A request to the authorization endpoint
-///
 #[derive(Debug)]
 pub struct AuthorizationRequest<'a> {
     auth_url: &'a AuthUrl,
@@ -1411,17 +1338,13 @@ pub struct AuthorizationRequest<'a> {
     state: CsrfToken,
 }
 impl<'a> AuthorizationRequest<'a> {
-    ///
     /// Appends a new scope to the authorization URL.
-    ///
     pub fn add_scope(mut self, scope: Scope) -> Self {
         self.scopes.push(Cow::Owned(scope));
         self
     }
 
-    ///
     /// Appends a collection of scopes to the token request.
-    ///
     pub fn add_scopes<I>(mut self, scopes: I) -> Self
     where
         I: IntoIterator<Item = Scope>,
@@ -1430,7 +1353,6 @@ impl<'a> AuthorizationRequest<'a> {
         self
     }
 
-    ///
     /// Appends an extra param to the authorization URL.
     ///
     /// This method allows extensions to be used without direct support from
@@ -1444,7 +1366,6 @@ impl<'a> AuthorizationRequest<'a> {
     /// Callers should follow the security recommendations for any OAuth2 extensions used with
     /// this function, which are beyond the scope of
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
-    ///
     pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
     where
         N: Into<Cow<'a, str>>,
@@ -1454,47 +1375,37 @@ impl<'a> AuthorizationRequest<'a> {
         self
     }
 
-    ///
     /// Enables the [Implicit Grant](https://tools.ietf.org/html/rfc6749#section-4.2) flow.
-    ///
     pub fn use_implicit_flow(mut self) -> Self {
         self.response_type = "token".into();
         self
     }
 
-    ///
     /// Enables custom flows other than the `code` and `token` (implicit flow) grant.
-    ///
     pub fn set_response_type(mut self, response_type: &ResponseType) -> Self {
         self.response_type = (**response_type).to_owned().into();
         self
     }
 
-    ///
     /// Enables the use of [Proof Key for Code Exchange](https://tools.ietf.org/html/rfc7636)
     /// (PKCE).
     ///
     /// PKCE is *highly recommended* for all public clients (i.e., those for which there
     /// is no client secret or for which the client secret is distributed with the client,
     /// such as in a native, mobile app, or browser app).
-    ///
     pub fn set_pkce_challenge(mut self, pkce_code_challenge: PkceCodeChallenge) -> Self {
         self.pkce_challenge = Some(pkce_code_challenge);
         self
     }
 
-    ///
     /// Overrides the `redirect_url` to the one specified.
-    ///
     pub fn set_redirect_uri(mut self, redirect_url: Cow<'a, RedirectUrl>) -> Self {
         self.redirect_url = Some(redirect_url);
         self
     }
 
-    ///
     /// Returns the full authorization URL and CSRF state for this authorization
     /// request.
-    ///
     pub fn url(self) -> (Url, CsrfToken) {
         let scopes = self
             .scopes
@@ -1537,9 +1448,7 @@ impl<'a> AuthorizationRequest<'a> {
     }
 }
 
-///
 /// An HTTP request.
-///
 #[derive(Clone, Debug)]
 pub struct HttpRequest {
     // These are all owned values so that the request can safely be passed between
@@ -1554,9 +1463,7 @@ pub struct HttpRequest {
     pub body: Vec<u8>,
 }
 
-///
 /// An HTTP response.
-///
 #[derive(Clone, Debug)]
 pub struct HttpResponse {
     /// HTTP status code returned by the server.
@@ -1567,11 +1474,9 @@ pub struct HttpResponse {
     pub body: Vec<u8>,
 }
 
-///
 /// A request to exchange an authorization code for an access token.
 ///
 /// See <https://tools.ietf.org/html/rfc6749#section-4.1.3>.
-///
 #[derive(Debug)]
 pub struct CodeTokenRequest<'a, TE, TR, TT>
 where
@@ -1595,7 +1500,6 @@ where
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
-    ///
     /// Appends an extra param to the token request.
     ///
     /// This method allows extensions to be used without direct support from
@@ -1609,7 +1513,6 @@ where
     /// Callers should follow the security recommendations for any OAuth2 extensions used with
     /// this function, which are beyond the scope of
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
-    ///
     pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
     where
         N: Into<Cow<'a, str>>,
@@ -1619,21 +1522,17 @@ where
         self
     }
 
-    ///
     /// Completes the [Proof Key for Code Exchange](https://tools.ietf.org/html/rfc7636)
     /// (PKCE) protocol flow.
     ///
     /// This method must be called if [`AuthorizationRequest::set_pkce_challenge`] was used during
     /// the authorization request.
-    ///
     pub fn set_pkce_verifier(mut self, pkce_verifier: PkceCodeVerifier) -> Self {
         self.pkce_verifier = Some(pkce_verifier);
         self
     }
 
-    ///
     /// Overrides the `redirect_url` to the one specified.
-    ///
     pub fn set_redirect_uri(mut self, redirect_url: Cow<'a, RedirectUrl>) -> Self {
         self.redirect_url = Some(redirect_url);
         self
@@ -1660,9 +1559,7 @@ where
         )
     }
 
-    ///
     /// Synchronously sends the request to the authorization server and awaits a response.
-    ///
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -1671,9 +1568,7 @@ where
         endpoint_response(http_client(self.prepare_request())?)
     }
 
-    ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
-    ///
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -1688,11 +1583,9 @@ where
     }
 }
 
-///
 /// A request to exchange a refresh token for an access token.
 ///
 /// See <https://tools.ietf.org/html/rfc6749#section-6>.
-///
 #[derive(Debug)]
 pub struct RefreshTokenRequest<'a, TE, TR, TT>
 where
@@ -1715,7 +1608,6 @@ where
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
-    ///
     /// Appends an extra param to the token request.
     ///
     /// This method allows extensions to be used without direct support from
@@ -1729,7 +1621,6 @@ where
     /// Callers should follow the security recommendations for any OAuth2 extensions used with
     /// this function, which are beyond the scope of
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
-    ///
     pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
     where
         N: Into<Cow<'a, str>>,
@@ -1739,17 +1630,13 @@ where
         self
     }
 
-    ///
     /// Appends a new scope to the token request.
-    ///
     pub fn add_scope(mut self, scope: Scope) -> Self {
         self.scopes.push(Cow::Owned(scope));
         self
     }
 
-    ///
     /// Appends a collection of scopes to the token request.
-    ///
     pub fn add_scopes<I>(mut self, scopes: I) -> Self
     where
         I: IntoIterator<Item = Scope>,
@@ -1758,9 +1645,7 @@ where
         self
     }
 
-    ///
     /// Synchronously sends the request to the authorization server and awaits a response.
-    ///
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -1768,9 +1653,7 @@ where
     {
         endpoint_response(http_client(self.prepare_request()?)?)
     }
-    ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
-    ///
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -1805,11 +1688,9 @@ where
     }
 }
 
-///
 /// A request to exchange resource owner credentials for an access token.
 ///
 /// See <https://tools.ietf.org/html/rfc6749#section-4.3>.
-///
 #[derive(Debug)]
 pub struct PasswordTokenRequest<'a, TE, TR, TT>
 where
@@ -1833,7 +1714,6 @@ where
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
-    ///
     /// Appends an extra param to the token request.
     ///
     /// This method allows extensions to be used without direct support from
@@ -1847,7 +1727,6 @@ where
     /// Callers should follow the security recommendations for any OAuth2 extensions used with
     /// this function, which are beyond the scope of
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
-    ///
     pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
     where
         N: Into<Cow<'a, str>>,
@@ -1857,17 +1736,13 @@ where
         self
     }
 
-    ///
     /// Appends a new scope to the token request.
-    ///
     pub fn add_scope(mut self, scope: Scope) -> Self {
         self.scopes.push(Cow::Owned(scope));
         self
     }
 
-    ///
     /// Appends a collection of scopes to the token request.
-    ///
     pub fn add_scopes<I>(mut self, scopes: I) -> Self
     where
         I: IntoIterator<Item = Scope>,
@@ -1876,9 +1751,7 @@ where
         self
     }
 
-    ///
     /// Synchronously sends the request to the authorization server and awaits a response.
-    ///
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -1887,9 +1760,7 @@ where
         endpoint_response(http_client(self.prepare_request()?)?)
     }
 
-    ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
-    ///
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -1925,11 +1796,9 @@ where
     }
 }
 
-///
 /// A request to exchange client credentials for an access token.
 ///
 /// See <https://tools.ietf.org/html/rfc6749#section-4.4>.
-///
 #[derive(Debug)]
 pub struct ClientCredentialsTokenRequest<'a, TE, TR, TT>
 where
@@ -1951,7 +1820,6 @@ where
     TR: TokenResponse<TT>,
     TT: TokenType,
 {
-    ///
     /// Appends an extra param to the token request.
     ///
     /// This method allows extensions to be used without direct support from
@@ -1965,7 +1833,6 @@ where
     /// Callers should follow the security recommendations for any OAuth2 extensions used with
     /// this function, which are beyond the scope of
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
-    ///
     pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
     where
         N: Into<Cow<'a, str>>,
@@ -1975,17 +1842,13 @@ where
         self
     }
 
-    ///
     /// Appends a new scope to the token request.
-    ///
     pub fn add_scope(mut self, scope: Scope) -> Self {
         self.scopes.push(Cow::Owned(scope));
         self
     }
 
-    ///
     /// Appends a collection of scopes to the token request.
-    ///
     pub fn add_scopes<I>(mut self, scopes: I) -> Self
     where
         I: IntoIterator<Item = Scope>,
@@ -1994,9 +1857,7 @@ where
         self
     }
 
-    ///
     /// Synchronously sends the request to the authorization server and awaits a response.
-    ///
     pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -2005,9 +1866,7 @@ where
         endpoint_response(http_client(self.prepare_request()?)?)
     }
 
-    ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
-    ///
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -2039,11 +1898,9 @@ where
     }
 }
 
-///
 /// A request to introspect an access token.
 ///
 /// See <https://tools.ietf.org/html/rfc7662#section-2.1>.
-///
 #[derive(Debug)]
 pub struct IntrospectionRequest<'a, TE, TIR, TT>
 where
@@ -2069,7 +1926,6 @@ where
     TIR: TokenIntrospectionResponse<TT>,
     TT: TokenType,
 {
-    ///
     /// Sets the optional token_type_hint parameter.
     ///
     /// See <https://tools.ietf.org/html/rfc7662#section-2.1>.
@@ -2083,7 +1939,6 @@ where
     ///      is able to detect the token type automatically.  Values for this
     ///      field are defined in the "OAuth Token Type Hints" registry defined
     ///      in OAuth Token Revocation [RFC7009](https://tools.ietf.org/html/rfc7009).
-    ///
     pub fn set_token_type_hint<V>(mut self, value: V) -> Self
     where
         V: Into<Cow<'a, str>>,
@@ -2093,7 +1948,6 @@ where
         self
     }
 
-    ///
     /// Appends an extra param to the token introspection request.
     ///
     /// This method allows extensions to be used without direct support from
@@ -2107,7 +1961,6 @@ where
     /// Callers should follow the security recommendations for any OAuth2 extensions used with
     /// this function, which are beyond the scope of
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
-    ///
     pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
     where
         N: Into<Cow<'a, str>>,
@@ -2135,9 +1988,7 @@ where
         )
     }
 
-    ///
     /// Synchronously sends the request to the authorization server and awaits a response.
-    ///
     pub fn request<F, RE>(self, http_client: F) -> Result<TIR, RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -2146,9 +1997,7 @@ where
         endpoint_response(http_client(self.prepare_request())?)
     }
 
-    ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
-    ///
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -2163,10 +2012,8 @@ where
     }
 }
 
-///
 /// A request to revoke a token via an [`RFC 7009`](https://tools.ietf.org/html/rfc7009#section-2.1) compatible
 /// endpoint.
-///
 #[derive(Debug)]
 pub struct RevocationRequest<'a, RT, TE>
 where
@@ -2189,7 +2036,6 @@ where
     RT: RevocableToken,
     TE: ErrorResponse + 'static,
 {
-    ///
     /// Appends an extra param to the token revocation request.
     ///
     /// This method allows extensions to be used without direct support from
@@ -2203,7 +2049,6 @@ where
     /// Callers should follow the security recommendations for any OAuth2 extensions used with
     /// this function, which are beyond the scope of
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
-    ///
     pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
     where
         N: Into<Cow<'a, str>>,
@@ -2231,7 +2076,6 @@ where
         )
     }
 
-    ///
     /// Synchronously sends the request to the authorization server and awaits a response.
     ///
     /// A successful response indicates that the server either revoked the token or the token was not known to the
@@ -2239,7 +2083,6 @@ where
     ///
     /// Error [`UnsupportedTokenType`](crate::revocation::RevocationErrorResponseType::UnsupportedTokenType) will be returned if the
     /// type of token type given is not supported by the server.
-    ///
     pub fn request<F, RE>(self, http_client: F) -> Result<(), RequestTokenError<RE, TE>>
     where
         F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
@@ -2251,9 +2094,7 @@ where
         endpoint_response_status_only(http_client(self.prepare_request())?)
     }
 
-    ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
-    ///
     pub async fn request_async<C, F, RE>(
         self,
         http_client: C,
@@ -2450,11 +2291,9 @@ where
     Ok(())
 }
 
-///
 /// The request for a set of verification codes from the authorization server.
 ///
 /// See <https://tools.ietf.org/html/rfc8628#section-3.1>.
-///
 #[derive(Debug)]
 pub struct DeviceAuthorizationRequest<'a, TE>
 where
@@ -2473,7 +2312,6 @@ impl<'a, TE> DeviceAuthorizationRequest<'a, TE>
 where
     TE: ErrorResponse + 'static,
 {
-    ///
     /// Appends an extra param to the token request.
     ///
     /// This method allows extensions to be used without direct support from
@@ -2487,7 +2325,6 @@ where
     /// Callers should follow the security recommendations for any OAuth2 extensions used with
     /// this function, which are beyond the scope of
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
-    ///
     pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
     where
         N: Into<Cow<'a, str>>,
@@ -2497,17 +2334,13 @@ where
         self
     }
 
-    ///
     /// Appends a new scope to the token request.
-    ///
     pub fn add_scope(mut self, scope: Scope) -> Self {
         self.scopes.push(Cow::Owned(scope));
         self
     }
 
-    ///
     /// Appends a collection of scopes to the token request.
-    ///
     pub fn add_scopes<I>(mut self, scopes: I) -> Self
     where
         I: IntoIterator<Item = Scope>,
@@ -2529,9 +2362,7 @@ where
         )
     }
 
-    ///
     /// Synchronously sends the request to the authorization server and awaits a response.
-    ///
     pub fn request<F, RE, EF>(
         self,
         http_client: F,
@@ -2544,9 +2375,7 @@ where
         endpoint_response(http_client(self.prepare_request())?)
     }
 
-    ///
     /// Asynchronously sends the request to the authorization server and returns a Future.
-    ///
     pub async fn request_async<C, F, RE, EF>(
         self,
         http_client: C,
@@ -2562,11 +2391,9 @@ where
     }
 }
 
-///
 /// The request for an device access token from the authorization server.
 ///
 /// See <https://tools.ietf.org/html/rfc8628#section-3.4>.
-///
 #[derive(Clone)]
 pub struct DeviceAccessTokenRequest<'a, 'b, TR, TT, EF>
 where
@@ -2591,7 +2418,6 @@ where
     TT: TokenType,
     EF: ExtraDeviceAuthorizationFields,
 {
-    ///
     /// Appends an extra param to the token request.
     ///
     /// This method allows extensions to be used without direct support from
@@ -2605,7 +2431,6 @@ where
     /// Callers should follow the security recommendations for any OAuth2 extensions used with
     /// this function, which are beyond the scope of
     /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
-    ///
     pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
     where
         N: Into<Cow<'a, str>>,
@@ -2615,11 +2440,9 @@ where
         self
     }
 
-    ///
     /// Specifies a function for returning the current time.
     ///
     /// This function is used while polling the authorization server.
-    ///
     pub fn set_time_fn<T>(mut self, time_fn: T) -> Self
     where
         T: Fn() -> DateTime<Utc> + 'b + Send + Sync,
@@ -2628,19 +2451,15 @@ where
         self
     }
 
-    ///
     /// Sets the upper limit of the sleep interval to use for polling the token endpoint when the
     /// HTTP client returns an error (e.g., in case of connection timeout).
-    ///
     pub fn set_max_backoff_interval(mut self, interval: Duration) -> Self {
         self.max_backoff_interval = Some(interval);
         self
     }
 
-    ///
     /// Synchronously polls the authorization server for a response, waiting
     /// using a user defined sleep function.
-    ///
     pub fn request<F, S, RE>(
         self,
         http_client: F,
@@ -2681,9 +2500,7 @@ where
         }
     }
 
-    ///
     /// Asynchronously sends the request to the authorization server and awaits a response.
-    ///
     pub async fn request_async<C, F, S, SF, RE>(
         self,
         http_client: C,
@@ -2825,75 +2642,55 @@ where
     }
 }
 
-///
 /// Trait for OAuth2 access tokens.
-///
 pub trait TokenType: Clone + DeserializeOwned + Debug + PartialEq + Serialize {}
 
-///
 /// Trait for adding extra fields to the `TokenResponse`.
-///
 pub trait ExtraTokenFields: DeserializeOwned + Debug + Serialize {}
 
-///
 /// Empty (default) extra token fields.
-///
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct EmptyExtraTokenFields {}
 impl ExtraTokenFields for EmptyExtraTokenFields {}
 
-///
 /// Common methods shared by all OAuth2 token implementations.
 ///
 /// The methods in this trait are defined in
 /// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1). This trait exists
 /// separately from the `StandardTokenResponse` struct to support customization by clients,
 /// such as supporting interoperability with non-standards-complaint OAuth2 providers.
-///
 pub trait TokenResponse<TT>: Debug + DeserializeOwned + Serialize
 where
     TT: TokenType,
 {
-    ///
     /// REQUIRED. The access token issued by the authorization server.
-    ///
     fn access_token(&self) -> &AccessToken;
-    ///
     /// REQUIRED. The type of the token issued as described in
     /// [Section 7.1](https://tools.ietf.org/html/rfc6749#section-7.1).
     /// Value is case insensitive and deserialized to the generic `TokenType` parameter.
-    ///
     fn token_type(&self) -> &TT;
-    ///
     /// RECOMMENDED. The lifetime in seconds of the access token. For example, the value 3600
     /// denotes that the access token will expire in one hour from the time the response was
     /// generated. If omitted, the authorization server SHOULD provide the expiration time via
     /// other means or document the default value.
-    ///
     fn expires_in(&self) -> Option<Duration>;
-    ///
     /// OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
     /// authorization grant as described in
     /// [Section 6](https://tools.ietf.org/html/rfc6749#section-6).
-    ///
     fn refresh_token(&self) -> Option<&RefreshToken>;
-    ///
     /// OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The
     /// scope of the access token as described by
     /// [Section 3.3](https://tools.ietf.org/html/rfc6749#section-3.3). If included in the response,
     /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
     /// the response, this field is `None`.
-    ///
     fn scopes(&self) -> Option<&Vec<Scope>>;
 }
 
-///
 /// Standard OAuth2 token response.
 ///
 /// This struct includes the fields defined in
 /// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1), as well as
 /// extensions defined by the `EF` type parameter.
-///
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StandardTokenResponse<EF, TT>
 where
@@ -2924,9 +2721,7 @@ where
     EF: ExtraTokenFields,
     TT: TokenType,
 {
-    ///
     /// Instantiate a new OAuth2 token response.
-    ///
     pub fn new(access_token: AccessToken, token_type: TT, extra_fields: EF) -> Self {
         Self {
             access_token,
@@ -2938,51 +2733,37 @@ where
         }
     }
 
-    ///
     /// Set the `access_token` field.
-    ///
     pub fn set_access_token(&mut self, access_token: AccessToken) {
         self.access_token = access_token;
     }
 
-    ///
     /// Set the `token_type` field.
-    ///
     pub fn set_token_type(&mut self, token_type: TT) {
         self.token_type = token_type;
     }
 
-    ///
     /// Set the `expires_in` field.
-    ///
     pub fn set_expires_in(&mut self, expires_in: Option<&Duration>) {
         self.expires_in = expires_in.map(Duration::as_secs);
     }
 
-    ///
     /// Set the `refresh_token` field.
-    ///
     pub fn set_refresh_token(&mut self, refresh_token: Option<RefreshToken>) {
         self.refresh_token = refresh_token;
     }
 
-    ///
     /// Set the `scopes` field.
-    ///
     pub fn set_scopes(&mut self, scopes: Option<Vec<Scope>>) {
         self.scopes = scopes;
     }
 
-    ///
     /// Extra fields defined by the client application.
-    ///
     pub fn extra_fields(&self) -> &EF {
         &self.extra_fields
     }
 
-    ///
     /// Set the extra fields defined by the client application.
-    ///
     pub fn set_extra_fields(&mut self, extra_fields: EF) {
         self.extra_fields = extra_fields;
     }
@@ -2992,62 +2773,49 @@ where
     EF: ExtraTokenFields,
     TT: TokenType,
 {
-    ///
     /// REQUIRED. The access token issued by the authorization server.
-    ///
     fn access_token(&self) -> &AccessToken {
         &self.access_token
     }
-    ///
     /// REQUIRED. The type of the token issued as described in
     /// [Section 7.1](https://tools.ietf.org/html/rfc6749#section-7.1).
     /// Value is case insensitive and deserialized to the generic `TokenType` parameter.
-    ///
     fn token_type(&self) -> &TT {
         &self.token_type
     }
-    ///
     /// RECOMMENDED. The lifetime in seconds of the access token. For example, the value 3600
     /// denotes that the access token will expire in one hour from the time the response was
     /// generated. If omitted, the authorization server SHOULD provide the expiration time via
     /// other means or document the default value.
-    ///
     fn expires_in(&self) -> Option<Duration> {
         self.expires_in.map(Duration::from_secs)
     }
-    ///
     /// OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
     /// authorization grant as described in
     /// [Section 6](https://tools.ietf.org/html/rfc6749#section-6).
-    ///
     fn refresh_token(&self) -> Option<&RefreshToken> {
         self.refresh_token.as_ref()
     }
-    ///
     /// OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The
     /// scope of the access token as described by
     /// [Section 3.3](https://tools.ietf.org/html/rfc6749#section-3.3). If included in the response,
     /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
     /// the response, this field is `None`.
-    ///
     fn scopes(&self) -> Option<&Vec<Scope>> {
         self.scopes.as_ref()
     }
 }
 
-///
 /// Common methods shared by all OAuth2 token introspection implementations.
 ///
 /// The methods in this trait are defined in
 /// [Section 2.2 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-2.2). This trait exists
 /// separately from the `StandardTokenIntrospectionResponse` struct to support customization by
 /// clients, such as supporting interoperability with non-standards-complaint OAuth2 providers.
-///
 pub trait TokenIntrospectionResponse<TT>: Debug + DeserializeOwned + Serialize
 where
     TT: TokenType,
 {
-    ///
     /// REQUIRED.  Boolean indicator of whether or not the presented token
     /// is currently active.  The specifics of a token's "active" state
     /// will vary depending on the implementation of the authorization
@@ -3057,83 +2825,57 @@ where
     /// has not been revoked by the resource owner, and is within its
     /// given time window of validity (e.g., after its issuance time and
     /// before its expiration time).
-    ///
     fn active(&self) -> bool;
-    ///
-    ///
     /// OPTIONAL.  A JSON string containing a space-separated list of
     /// scopes associated with this token, in the format described in
     /// [Section 3.3 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-3.3).
     /// If included in the response,
     /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
     /// the response, this field is `None`.
-    ///
     fn scopes(&self) -> Option<&Vec<Scope>>;
-    ///
     /// OPTIONAL.  Client identifier for the OAuth 2.0 client that
     /// requested this token.
-    ///
     fn client_id(&self) -> Option<&ClientId>;
-    ///
     /// OPTIONAL.  Human-readable identifier for the resource owner who
     /// authorized this token.
-    ///
     fn username(&self) -> Option<&str>;
-    ///
     /// OPTIONAL.  Type of the token as defined in
     /// [Section 5.1 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-5.1).
     /// Value is case insensitive and deserialized to the generic `TokenType` parameter.
-    ///
     fn token_type(&self) -> Option<&TT>;
-    ///
     /// OPTIONAL.  Integer timestamp, measured in the number of seconds
     /// since January 1 1970 UTC, indicating when this token will expire,
     /// as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
-    ///
     fn exp(&self) -> Option<DateTime<Utc>>;
-    ///
     /// OPTIONAL.  Integer timestamp, measured in the number of seconds
     /// since January 1 1970 UTC, indicating when this token was
     /// originally issued, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
-    ///
     fn iat(&self) -> Option<DateTime<Utc>>;
-    ///
     /// OPTIONAL.  Integer timestamp, measured in the number of seconds
     /// since January 1 1970 UTC, indicating when this token is not to be
     /// used before, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
-    ///
     fn nbf(&self) -> Option<DateTime<Utc>>;
-    ///
     /// OPTIONAL.  Subject of the token, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     /// Usually a machine-readable identifier of the resource owner who
     /// authorized this token.
-    ///
     fn sub(&self) -> Option<&str>;
-    ///
     /// OPTIONAL.  Service-specific string identifier or list of string
     /// identifiers representing the intended audience for this token, as
     /// defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
-    ///
     fn aud(&self) -> Option<&Vec<String>>;
-    ///
     /// OPTIONAL.  String representing the issuer of this token, as
     /// defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
-    ///
     fn iss(&self) -> Option<&str>;
-    ///
     /// OPTIONAL.  String identifier for the token, as defined in JWT
     /// [RFC7519](https://tools.ietf.org/html/rfc7519).
-    ///
     fn jti(&self) -> Option<&str>;
 }
 
-///
 /// Standard OAuth2 token introspection response.
 ///
 /// This struct includes the fields defined in
 /// [Section 2.2 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-2.2), as well as
 /// extensions defined by the `EF` type parameter.
-///
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StandardTokenIntrospectionResponse<EF, TT>
 where
@@ -3195,9 +2937,7 @@ where
     EF: ExtraTokenFields,
     TT: TokenType,
 {
-    ///
     /// Instantiate a new OAuth2 token introspection response.
-    ///
     pub fn new(active: bool, extra_fields: EF) -> Self {
         Self {
             active,
@@ -3217,87 +2957,59 @@ where
         }
     }
 
-    ///
     /// Sets the `set_active` field.
-    ///
     pub fn set_active(&mut self, active: bool) {
         self.active = active;
     }
-    ///
     /// Sets the `set_scopes` field.
-    ///
     pub fn set_scopes(&mut self, scopes: Option<Vec<Scope>>) {
         self.scopes = scopes;
     }
-    ///
     /// Sets the `set_client_id` field.
-    ///
     pub fn set_client_id(&mut self, client_id: Option<ClientId>) {
         self.client_id = client_id;
     }
-    ///
     /// Sets the `set_username` field.
-    ///
     pub fn set_username(&mut self, username: Option<String>) {
         self.username = username;
     }
-    ///
     /// Sets the `set_token_type` field.
-    ///
     pub fn set_token_type(&mut self, token_type: Option<TT>) {
         self.token_type = token_type;
     }
-    ///
     /// Sets the `set_exp` field.
-    ///
     pub fn set_exp(&mut self, exp: Option<DateTime<Utc>>) {
         self.exp = exp;
     }
-    ///
     /// Sets the `set_iat` field.
-    ///
     pub fn set_iat(&mut self, iat: Option<DateTime<Utc>>) {
         self.iat = iat;
     }
-    ///
     /// Sets the `set_nbf` field.
-    ///
     pub fn set_nbf(&mut self, nbf: Option<DateTime<Utc>>) {
         self.nbf = nbf;
     }
-    ///
     /// Sets the `set_sub` field.
-    ///
     pub fn set_sub(&mut self, sub: Option<String>) {
         self.sub = sub;
     }
-    ///
     /// Sets the `set_aud` field.
-    ///
     pub fn set_aud(&mut self, aud: Option<Vec<String>>) {
         self.aud = aud;
     }
-    ///
     /// Sets the `set_iss` field.
-    ///
     pub fn set_iss(&mut self, iss: Option<String>) {
         self.iss = iss;
     }
-    ///
     /// Sets the `set_jti` field.
-    ///
     pub fn set_jti(&mut self, jti: Option<String>) {
         self.jti = jti;
     }
-    ///
     /// Extra fields defined by the client application.
-    ///
     pub fn extra_fields(&self) -> &EF {
         &self.extra_fields
     }
-    ///
     /// Sets the `set_extra_fields` field.
-    ///
     pub fn set_extra_fields(&mut self, extra_fields: EF) {
         self.extra_fields = extra_fields;
     }
@@ -3356,7 +3068,6 @@ where
     }
 }
 
-///
 /// Server Error Response
 ///
 /// See [Section 5.2](https://datatracker.ietf.org/doc/html/rfc6749#section-5.2) of RFC 6749.
@@ -3366,26 +3077,21 @@ where
 ///
 /// The [`Display`] trait implementation for types implementing [`ErrorResponse`] should be a
 /// human-readable string suitable for printing (e.g., within a [`RequestTokenError`]).
-///
 pub trait ErrorResponse: Debug + Display + DeserializeOwned + Serialize {}
 
-///
 /// Error types enum.
 ///
 /// NOTE: The serialization must return the `snake_case` representation of
 /// this error type. This value must match the error type from the relevant OAuth 2.0 standards
 /// (RFC 6749 or an extension).
-///
 pub trait ErrorResponseType: Debug + DeserializeOwned + Serialize {}
 
-///
 /// Error response returned by server after requesting an access token.
 ///
 /// The fields in this structure are defined in
 /// [Section 5.2 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.2). This
 /// trait is parameterized by a `ErrorResponseType` to support error types specific to future OAuth2
 /// authentication schemes and extensions.
-///
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct StandardErrorResponse<T: ErrorResponseType> {
     #[serde(bound = "T: ErrorResponseType")]
@@ -3399,7 +3105,6 @@ pub struct StandardErrorResponse<T: ErrorResponseType> {
 }
 
 impl<T: ErrorResponseType> StandardErrorResponse<T> {
-    ///
     /// Instantiate a new `ErrorResponse`.
     ///
     /// # Arguments
@@ -3414,7 +3119,6 @@ impl<T: ErrorResponseType> StandardErrorResponse<T> {
     ///   about the error used to provide the client developer with additional information about
     ///   the error. Values for the "error_uri" parameter MUST conform to the URI-reference
     ///   syntax and thus MUST NOT include characters outside the set `%x21 / %x23-5B / %x5D-7E`.
-    ///
     pub fn new(error: T, error_description: Option<String>, error_uri: Option<String>) -> Self {
         Self {
             error,
@@ -3423,27 +3127,21 @@ impl<T: ErrorResponseType> StandardErrorResponse<T> {
         }
     }
 
-    ///
     /// REQUIRED. A single ASCII error code deserialized to the generic parameter
     /// `ErrorResponseType`.
-    ///
     pub fn error(&self) -> &T {
         &self.error
     }
-    ///
     /// OPTIONAL. Human-readable ASCII text providing additional information, used to assist
     /// the client developer in understanding the error that occurred. Values for this
     /// parameter MUST NOT include characters outside the set `%x20-21 / %x23-5B / %x5D-7E`.
-    ///
     pub fn error_description(&self) -> Option<&String> {
         self.error_description.as_ref()
     }
-    ///
     /// OPTIONAL. URI identifying a human-readable web page with information about the error,
     /// used to provide the client developer with additional information about the error.
     /// Values for the "error_uri" parameter MUST conform to the URI-reference syntax and
     /// thus MUST NOT include characters outside the set `%x21 / %x23-5B / %x5D-7E`.
-    ///
     pub fn error_uri(&self) -> Option<&String> {
         self.error_uri.as_ref()
     }
@@ -3473,39 +3171,29 @@ where
     }
 }
 
-///
 /// Error encountered while requesting access token.
-///
 #[derive(Debug, thiserror::Error)]
 pub enum RequestTokenError<RE, T>
 where
     RE: Error + 'static,
     T: ErrorResponse + 'static,
 {
-    ///
     /// Error response returned by authorization server. Contains the parsed `ErrorResponse`
     /// returned by the server.
-    ///
     #[error("Server returned error response: {0}")]
     ServerResponse(T),
-    ///
     /// An error occurred while sending the request or receiving the response (e.g., network
     /// connectivity failed).
-    ///
     #[error("Request failed")]
     Request(#[from] RE),
-    ///
     /// Failed to parse server response. Parse errors may occur while parsing either successful
     /// or error responses.
-    ///
     #[error("Failed to parse server response")]
     Parse(
         #[source] serde_path_to_error::Error<serde_json::error::Error>,
         Vec<u8>,
     ),
-    ///
     /// Some other type of error occurred (e.g., an unexpected server response).
-    ///
     #[error("Other error: {}", _0)]
     Other(String),
 }

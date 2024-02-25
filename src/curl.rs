@@ -7,9 +7,7 @@ use http::status::StatusCode;
 
 use super::{HttpRequest, HttpResponse};
 
-///
 /// Error type returned by failed curl HTTP requests.
-///
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Error returned by curl crate.
@@ -23,9 +21,7 @@ pub enum Error {
     Other(String),
 }
 
-///
 /// Synchronous HTTP client.
-///
 pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
     let mut easy = Easy::new();
     easy.url(&request.url.to_string()[..])?;

@@ -5,28 +5,21 @@ use std::fmt::{Debug, Display, Formatter};
 use crate::{basic::BasicErrorResponseType, ErrorResponseType};
 use crate::{AccessToken, RefreshToken};
 
-///
 /// A revocable token.
 ///
 /// Implement this trait to indicate support for token revocation per [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009#section-2.2).
-///
 pub trait RevocableToken {
-    ///
     /// The actual token value to be revoked.
-    ///
     fn secret(&self) -> &str;
 
-    ///
     /// Indicates the type of the token being revoked, as defined by [RFC 7009, Section 2.1](https://tools.ietf.org/html/rfc7009#section-2.1).
     ///
     /// Implementations should return `Some(...)` values for token types that the target authorization servers are
     /// expected to know (e.g. because they are registered in the [OAuth Token Type Hints Registry](https://tools.ietf.org/html/rfc7009#section-4.1.2))
     /// so that they can potentially optimize their search for the token to be revoked.
-    ///
     fn type_hint(&self) -> Option<&str>;
 }
 
-///
 /// A token representation usable with authorization servers that support [RFC 7009](https://tools.ietf.org/html/rfc7009) token revocation.
 ///
 /// For use with [`revoke_token()`].
@@ -53,7 +46,6 @@ pub trait RevocableToken {
 /// ```
 ///
 /// [`revoke_token()`]: crate::Client::revoke_token()
-///
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[non_exhaustive]
 pub enum StandardRevocableToken {
@@ -70,7 +62,6 @@ impl RevocableToken for StandardRevocableToken {
         }
     }
 
-    ///
     /// Indicates the type of the token to be revoked, as defined by [RFC 7009, Section 2.1](https://tools.ietf.org/html/rfc7009#section-2.1), i.e.:
     ///
     /// * `access_token`: An access token as defined in [RFC 6749,
@@ -78,7 +69,6 @@ impl RevocableToken for StandardRevocableToken {
     ///
     /// * `refresh_token`: A refresh token as defined in [RFC 6749,
     ///   Section 1.5](https://tools.ietf.org/html/rfc6749#section-1.5)
-    ///
     fn type_hint(&self) -> Option<&str> {
         match self {
             StandardRevocableToken::AccessToken(_) => Some("access_token"),
@@ -111,22 +101,16 @@ impl From<&RefreshToken> for StandardRevocableToken {
     }
 }
 
-///
 /// OAuth 2.0 Token Revocation error response types.
 ///
 /// These error types are defined in
 /// [Section 2.2.1 of RFC 7009](https://tools.ietf.org/html/rfc7009#section-2.2.1) and
 /// [Section 5.2 of RFC 6749](https://tools.ietf.org/html/rfc8628#section-5.2)
-///
 #[derive(Clone, PartialEq, Eq)]
 pub enum RevocationErrorResponseType {
-    ///
     /// The authorization server does not support the revocation of the presented token type.
-    ///
     UnsupportedTokenType,
-    ///
     /// The authorization server responded with some other error as defined [RFC 6749](https://tools.ietf.org/html/rfc6749) error.
-    ///
     Basic(BasicErrorResponseType),
 }
 impl RevocationErrorResponseType {

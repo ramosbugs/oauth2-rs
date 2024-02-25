@@ -63,7 +63,6 @@ fn default_token_type() -> Option<BasicTokenType> {
     Some(BasicTokenType::Bearer)
 }
 
-///
 /// Non Standard OAuth2 token response.
 ///
 /// This struct includes the fields defined in
@@ -71,7 +70,6 @@ fn default_token_type() -> Option<BasicTokenType> {
 /// extensions defined by the `EF` type parameter.
 /// In this particular example token_type is optional to showcase how to deal with a non
 /// compliant provider.
-///
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct NonStandardTokenResponse<EF: ExtraTokenFields> {
     access_token: AccessToken,
@@ -100,48 +98,38 @@ where
     EF: ExtraTokenFields,
     BasicTokenType: TokenType,
 {
-    ///
     /// REQUIRED. The access token issued by the authorization server.
-    ///
     fn access_token(&self) -> &AccessToken {
         &self.access_token
     }
-    ///
     /// REQUIRED. The type of the token issued as described in
     /// [Section 7.1](https://tools.ietf.org/html/rfc6749#section-7.1).
     /// Value is case insensitive and deserialized to the generic `TokenType` parameter.
     /// But in this particular case as the service is non compliant, it has a default value
-    ///
     fn token_type(&self) -> &BasicTokenType {
         match &self.token_type {
             Some(t) => t,
             None => &BasicTokenType::Bearer,
         }
     }
-    ///
     /// RECOMMENDED. The lifetime in seconds of the access token. For example, the value 3600
     /// denotes that the access token will expire in one hour from the time the response was
     /// generated. If omitted, the authorization server SHOULD provide the expiration time via
     /// other means or document the default value.
-    ///
     fn expires_in(&self) -> Option<Duration> {
         self.expires_in.map(Duration::from_secs)
     }
-    ///
     /// OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
     /// authorization grant as described in
     /// [Section 6](https://tools.ietf.org/html/rfc6749#section-6).
-    ///
     fn refresh_token(&self) -> Option<&RefreshToken> {
         self.refresh_token.as_ref()
     }
-    ///
     /// OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The
-    /// scipe of the access token as described by
+    /// scope of the access token as described by
     /// [Section 3.3](https://tools.ietf.org/html/rfc6749#section-3.3). If included in the response,
     /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
     /// the response, this field is `None`.
-    ///
     fn scopes(&self) -> Option<&Vec<Scope>> {
         self.scopes.as_ref()
     }

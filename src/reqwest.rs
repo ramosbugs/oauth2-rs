@@ -1,8 +1,6 @@
 use thiserror::Error;
 
-///
 /// Error type returned by failed reqwest HTTP requests.
-///
 #[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum Error {
@@ -33,9 +31,7 @@ mod blocking {
 
     use std::io::Read;
 
-    ///
     /// Synchronous HTTP client.
-    ///
     pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
         let client = blocking::Client::builder()
             // Following redirects opens the client up to SSRF vulnerabilities.
@@ -68,9 +64,7 @@ mod async_client {
 
     pub use reqwest;
 
-    ///
     /// Asynchronous HTTP client.
-    ///
     pub async fn async_http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
         let client = {
             let builder = reqwest::Client::builder();

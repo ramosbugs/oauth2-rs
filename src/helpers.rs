@@ -4,7 +4,6 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::marker::PhantomData;
 
-///
 /// Serde case-insensitive deserializer for an untagged `enum`.
 ///
 /// This function converts values to lowercase before deserializing as the `enum`. Requires the
@@ -41,7 +40,6 @@ use std::marker::PhantomData;
 /// }
 /// # */
 /// ```
-///
 pub fn deserialize_untagged_enum_case_insensitive<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 where
     T: Deserialize<'de>,
@@ -55,7 +53,6 @@ where
     .map_err(Error::custom)
 }
 
-///
 /// Serde space-delimited string deserializer for a `Vec<String>`.
 ///
 /// This function splits a JSON string at each space character into a `Vec<String>` .
@@ -87,7 +84,6 @@ where
 /// }
 /// # */
 /// ```
-///
 pub fn deserialize_space_delimited_vec<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 where
     T: Default + Deserialize<'de>,
@@ -107,9 +103,7 @@ where
     }
 }
 
-///
 /// Deserializes a string or array of strings into an array of strings
-///
 pub fn deserialize_optional_string_or_vec_string<'de, D>(
     deserializer: D,
 ) -> Result<Option<Vec<String>>, D::Error>
@@ -157,13 +151,11 @@ where
     deserializer.deserialize_any(StringOrVec(PhantomData))
 }
 
-///
 /// Serde space-delimited string serializer for an `Option<Vec<String>>`.
 ///
 /// This function serializes a string vector into a single space-delimited string.
 /// If `string_vec_opt` is `None`, the function serializes it as `None` (e.g., `null`
 /// in the case of JSON serialization).
-///
 pub fn serialize_space_delimited_vec<T, S>(
     vec_opt: &Option<Vec<T>>,
     serializer: S,
@@ -181,12 +173,10 @@ where
     }
 }
 
-///
 /// Serde string serializer for an enum.
-///<
+///
 /// Source:
 /// [https://github.com/serde-rs/serde/issues/553](https://github.com/serde-rs/serde/issues/553)
-///
 pub fn variant_name<T: Serialize>(t: &T) -> &'static str {
     #[derive(Debug)]
     struct NotEnum;

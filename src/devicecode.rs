@@ -21,21 +21,15 @@ fn default_devicecode_interval() -> u64 {
     5
 }
 
-///
 /// Trait for adding extra fields to the `DeviceAuthorizationResponse`.
-///
 pub trait ExtraDeviceAuthorizationFields: DeserializeOwned + Debug + Serialize {}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-///
 /// Empty (default) extra token fields.
-///
 pub struct EmptyExtraDeviceAuthorizationFields {}
 impl ExtraDeviceAuthorizationFields for EmptyExtraDeviceAuthorizationFields {}
 
-///
 /// Standard OAuth2 device authorization response.
-///
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeviceAuthorizationResponse<EF>
 where
@@ -121,23 +115,18 @@ where
     }
 }
 
-///
 /// Standard implementation of DeviceAuthorizationResponse which throws away
 /// extra received response fields.
-///
 pub type StandardDeviceAuthorizationResponse =
     DeviceAuthorizationResponse<EmptyExtraDeviceAuthorizationFields>;
 
-///
 /// Basic access token error types.
 ///
 /// These error types are defined in
 /// [Section 5.2 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.2) and
 /// [Section 3.5 of RFC 6749](https://tools.ietf.org/html/rfc8628#section-3.5)
-///
 #[derive(Clone, PartialEq, Eq)]
 pub enum DeviceCodeErrorResponseType {
-    ///
     /// The authorization request is still pending as the end user hasn't
     /// yet completed the user-interaction steps.  The client SHOULD repeat the
     /// access token request to the token endpoint.  Before each new request,
@@ -145,26 +134,19 @@ pub enum DeviceCodeErrorResponseType {
     /// "interval" parameter of the device authorization response, or 5 seconds
     /// if none was provided, and respect any increase in the polling interval
     /// required by the "slow_down" error.
-    ///
     AuthorizationPending,
-    ///
     /// A variant of "authorization_pending", the authorization request is
     /// still pending and polling should continue, but the interval MUST be
     /// increased by 5 seconds for this and all subsequent requests.
     SlowDown,
-    ///
     /// The authorization request was denied.
-    ///
     AccessDenied,
-    ///
     /// The "device_code" has expired, and the device authorization session has
     /// concluded.  The client MAY commence a new device authorization request
     /// but SHOULD wait for user interaction before restarting to avoid
     /// unnecessary polling.
     ExpiredToken,
-    ///
     /// A Basic response type
-    ///
     Basic(BasicErrorResponseType),
 }
 impl DeviceCodeErrorResponseType {
@@ -222,9 +204,7 @@ impl Display for DeviceCodeErrorResponseType {
     }
 }
 
-///
 /// Error response specialization for device code OAuth2 implementation.
-///
 pub type DeviceCodeErrorResponse = StandardErrorResponse<DeviceCodeErrorResponseType>;
 
 pub(crate) enum DeviceAccessTokenPollResult<TR, RE, TE, TT>

@@ -19,14 +19,13 @@ use oauth2::basic::{
     BasicTokenType,
 };
 use oauth2::helpers;
-use oauth2::{StandardRevocableToken, TokenType};
-// Alternatively, this can be `oauth2::curl::http_client` or a custom client.
-use oauth2::reqwest::http_client;
+use oauth2::reqwest::reqwest;
 use oauth2::{
     AccessToken, AuthUrl, AuthorizationCode, Client, ClientId, ClientSecret, CsrfToken,
     EmptyExtraTokenFields, ExtraTokenFields, RedirectUrl, RefreshToken, Scope, TokenResponse,
     TokenUrl,
 };
+use oauth2::{StandardRevocableToken, TokenType};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -157,6 +156,12 @@ fn main() {
             RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
         );
 
+    let http_client = reqwest::blocking::ClientBuilder::new()
+        // Following redirects opens the client up to SSRF vulnerabilities.
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .expect("Client should build");
+
     // Generate the authorization URL to which we'll redirect the user.
     let (authorize_url, csrf_state) = client.authorize_url(CsrfToken::new_random).url();
 
@@ -217,7 +222,7 @@ fn main() {
         .exchange_code(code)
         .add_extra_param("client_id", client_id_str)
         .add_extra_param("client_secret", client_secret_str)
-        .request(http_client);
+        .request(&http_client);
 
     println!(
         "Wunderlist returned the following token:\n{:?}\n",

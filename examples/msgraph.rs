@@ -21,8 +21,7 @@
 //!
 
 use oauth2::basic::BasicClient;
-// Alternatively, this can be `oauth2::curl::http_client` or a custom client.
-use oauth2::reqwest::http_client;
+use oauth2::reqwest::reqwest;
 use oauth2::{
     AuthType, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
     RedirectUrl, Scope, TokenUrl,
@@ -62,6 +61,12 @@ fn main() {
             RedirectUrl::new("http://localhost:3003/redirect".to_string())
                 .expect("Invalid redirect URL"),
         );
+
+    let http_client = reqwest::blocking::ClientBuilder::new()
+        // Following redirects opens the client up to SSRF vulnerabilities.
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .expect("Client should build");
 
     // Microsoft Graph supports Proof Key for Code Exchange (PKCE - https://oauth.net/2/pkce/).
     // Create a PKCE code verifier and SHA-256 encode it as a code challenge.
@@ -131,7 +136,7 @@ fn main() {
         .exchange_code(code)
         // Send the PKCE code verifier in the token request
         .set_pkce_verifier(pkce_code_verifier)
-        .request(http_client);
+        .request(&http_client);
 
     println!("MS Graph returned the following token:\n{:?}\n", token);
 }

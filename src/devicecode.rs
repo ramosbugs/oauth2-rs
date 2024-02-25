@@ -2,9 +2,10 @@ use crate::basic::BasicErrorResponseType;
 use crate::endpoint::{endpoint_request, endpoint_response};
 use crate::types::VerificationUriComplete;
 use crate::{
-    AuthType, ClientId, ClientSecret, DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl,
-    ErrorResponse, ErrorResponseType, HttpRequest, HttpResponse, RequestTokenError, Scope,
-    StandardErrorResponse, TokenResponse, TokenType, TokenUrl, UserCode,
+    AsyncHttpClient, AuthType, ClientId, ClientSecret, DeviceAuthorizationUrl, DeviceCode,
+    EndUserVerificationUrl, ErrorResponse, ErrorResponseType, HttpRequest, HttpResponse,
+    RequestTokenError, Scope, StandardErrorResponse, SyncHttpClient, TokenRequestFuture,
+    TokenResponse, TokenType, TokenUrl, UserCode,
 };
 
 use chrono::{DateTime, Utc};
@@ -17,8 +18,13 @@ use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 use std::marker::PhantomData;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
+
+/// Future returned by [`DeviceAuthorizationRequest::request_async`].
+pub type DeviceAuthorizationRequestFuture<'c, C, EF, TE> =
+    TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, DeviceAuthorizationResponse<EF>>;
 
 /// The request for a set of verification codes from the authorization server.
 ///
@@ -78,7 +84,10 @@ where
         self
     }
 
-    fn prepare_request(self) -> HttpRequest {
+    fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Error + 'static,
+    {
         endpoint_request(
             self.auth_type,
             self.client_id,
@@ -89,34 +98,32 @@ where
             self.device_authorization_url.url(),
             vec![],
         )
+        .map_err(|err| RequestTokenError::Other(format!("failed to prepare request: {err}")))
     }
 
     /// Synchronously sends the request to the authorization server and awaits a response.
-    pub fn request<F, RE, EF>(
+    pub fn request<C, EF>(
         self,
-        http_client: F,
-    ) -> Result<DeviceAuthorizationResponse<EF>, RequestTokenError<RE, TE>>
+        http_client: &C,
+    ) -> Result<DeviceAuthorizationResponse<EF>, RequestTokenError<<C as SyncHttpClient>::Error, TE>>
     where
-        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Error + 'static,
+        C: SyncHttpClient,
         EF: ExtraDeviceAuthorizationFields,
     {
-        endpoint_response(http_client(self.prepare_request())?)
+        endpoint_response(http_client.call(self.prepare_request()?)?)
     }
 
     /// Asynchronously sends the request to the authorization server and returns a Future.
-    pub async fn request_async<C, F, RE, EF>(
+    pub fn request_async<'c, C, EF>(
         self,
-        http_client: C,
-    ) -> Result<DeviceAuthorizationResponse<EF>, RequestTokenError<RE, TE>>
+        http_client: &'c C,
+    ) -> Pin<Box<DeviceAuthorizationRequestFuture<'c, C, EF, TE>>>
     where
-        C: FnOnce(HttpRequest) -> F,
-        F: Future<Output = Result<HttpResponse, RE>>,
-        RE: Error + 'static,
+        Self: 'c,
+        C: AsyncHttpClient<'c>,
         EF: ExtraDeviceAuthorizationFields,
     {
-        let http_response = http_client(self.prepare_request()).await?;
-        endpoint_response(http_response)
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
     }
 }
 
@@ -189,16 +196,15 @@ where
 
     /// Synchronously polls the authorization server for a response, waiting
     /// using a user defined sleep function.
-    pub fn request<F, S, RE>(
+    pub fn request<C, S>(
         self,
-        http_client: F,
+        http_client: &C,
         sleep_fn: S,
         timeout: Option<Duration>,
-    ) -> Result<TR, RequestTokenError<RE, DeviceCodeErrorResponse>>
+    ) -> Result<TR, RequestTokenError<<C as SyncHttpClient>::Error, DeviceCodeErrorResponse>>
     where
-        F: Fn(HttpRequest) -> Result<HttpResponse, RE>,
+        C: SyncHttpClient,
         S: Fn(Duration),
-        RE: Error + 'static,
     {
         // Get the request timeout and starting interval
         let timeout_dt = self.compute_timeout(timeout)?;
@@ -217,7 +223,7 @@ where
                 ));
             }
 
-            match self.process_response(http_client(self.prepare_request()), interval) {
+            match self.process_response(http_client.call(self.prepare_request()?), interval) {
                 DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
                     interval = new_interval
                 }
@@ -230,49 +236,58 @@ where
     }
 
     /// Asynchronously sends the request to the authorization server and awaits a response.
-    pub async fn request_async<C, F, S, SF, RE>(
+    pub fn request_async<'c, C, S, SF>(
         self,
-        http_client: C,
+        http_client: &'c C,
         sleep_fn: S,
         timeout: Option<Duration>,
-    ) -> Result<TR, RequestTokenError<RE, DeviceCodeErrorResponse>>
+    ) -> Pin<
+        Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, DeviceCodeErrorResponse, TR>>,
+    >
     where
-        C: Fn(HttpRequest) -> F,
-        F: Future<Output = Result<HttpResponse, RE>>,
-        S: Fn(Duration) -> SF,
+        Self: 'c,
+        C: AsyncHttpClient<'c>,
+        S: Fn(Duration) -> SF + 'c,
         SF: Future<Output = ()>,
-        RE: Error + 'static,
     {
-        // Get the request timeout and starting interval
-        let timeout_dt = self.compute_timeout(timeout)?;
-        let mut interval = self.dev_auth_resp.interval();
+        Box::pin(async move {
+            // Get the request timeout and starting interval
+            let timeout_dt = self.compute_timeout(timeout)?;
+            let mut interval = self.dev_auth_resp.interval();
 
-        // Loop while requesting a token.
-        loop {
-            let now = (*self.time_fn)();
-            if now > timeout_dt {
-                break Err(RequestTokenError::ServerResponse(
-                    DeviceCodeErrorResponse::new(
-                        DeviceCodeErrorResponseType::ExpiredToken,
-                        Some(String::from("This device code has expired.")),
-                        None,
-                    ),
-                ));
-            }
-
-            match self.process_response(http_client(self.prepare_request()).await, interval) {
-                DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
-                    interval = new_interval
+            // Loop while requesting a token.
+            loop {
+                let now = (*self.time_fn)();
+                if now > timeout_dt {
+                    break Err(RequestTokenError::ServerResponse(
+                        DeviceCodeErrorResponse::new(
+                            DeviceCodeErrorResponseType::ExpiredToken,
+                            Some(String::from("This device code has expired.")),
+                            None,
+                        ),
+                    ));
                 }
-                DeviceAccessTokenPollResult::Done(res, _) => break res,
-            }
 
-            // Sleep here using the provided sleep function.
-            sleep_fn(interval).await;
-        }
+                match self
+                    .process_response(http_client.call(self.prepare_request()?).await, interval)
+                {
+                    DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
+                        interval = new_interval
+                    }
+                    DeviceAccessTokenPollResult::Done(res, _) => break res,
+                }
+
+                // Sleep here using the provided sleep function.
+                sleep_fn(interval).await;
+            }
+        })
     }
 
-    fn prepare_request(&self) -> HttpRequest {
+    fn prepare_request<RE, TE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Error + 'static,
+        TE: ErrorResponse + 'static,
+    {
         endpoint_request(
             self.auth_type,
             self.client_id,
@@ -286,6 +301,7 @@ where
                 ("device_code", self.dev_auth_resp.device_code().secret()),
             ],
         )
+        .map_err(|err| RequestTokenError::Other(format!("failed to prepare request: {err}")))
     }
 
     fn process_response<RE>(
@@ -357,7 +373,7 @@ where
         let timeout_dur = timeout.unwrap_or_else(|| self.dev_auth_resp.expires_in());
         let chrono_timeout = chrono::Duration::from_std(timeout_dur).map_err(|e| {
             RequestTokenError::Other(format!(
-                "Failed to convert `{:?}` to `chrono::Duration`: {}",
+                "failed to convert `{:?}` to `chrono::Duration`: {}",
                 timeout_dur, e
             ))
         })?;
@@ -365,7 +381,7 @@ where
         // Calculate the DateTime at which the request times out.
         let timeout_dt = (*self.time_fn)()
             .checked_add_signed(chrono_timeout)
-            .ok_or_else(|| RequestTokenError::Other("Failed to calculate timeout".to_string()))?;
+            .ok_or_else(|| RequestTokenError::Other("failed to calculate timeout".to_string()))?;
 
         Ok(timeout_dt)
     }
@@ -580,13 +596,13 @@ mod tests {
     use crate::basic::BasicTokenType;
     use crate::tests::{mock_http_client, mock_http_client_success_fail, new_client};
     use crate::{
-        DeviceAuthorizationUrl, DeviceCodeErrorResponse, DeviceCodeErrorResponseType, HttpResponse,
+        DeviceAuthorizationUrl, DeviceCodeErrorResponse, DeviceCodeErrorResponseType,
         RequestTokenError, Scope, StandardDeviceAuthorizationResponse, TokenResponse,
     };
 
     use chrono::{DateTime, Utc};
     use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
-    use http::{HeaderValue, StatusCode};
+    use http::{HeaderValue, Response, StatusCode};
 
     use std::time::Duration;
 
@@ -611,7 +627,7 @@ mod tests {
             .exchange_device_code()
             .add_extra_param("foo", "bar")
             .add_scope(Scope::new("openid".to_string()))
-            .request(mock_http_client(
+            .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
                     (CONTENT_TYPE, "application/x-www-form-urlencoded"),
@@ -619,16 +635,14 @@ mod tests {
                 ],
                 "scope=openid&foo=bar",
                 Some(device_auth_url.url().to_owned()),
-                HttpResponse {
-                    status_code: StatusCode::OK,
-                    headers: vec![(
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header(
                         CONTENT_TYPE,
                         HeaderValue::from_str("application/json").unwrap(),
-                    )]
-                    .into_iter()
-                    .collect(),
-                    body: body.into_bytes(),
-                },
+                    )
+                    .body(body.into_bytes())
+                    .unwrap(),
             ))
             .unwrap()
     }
@@ -653,49 +667,46 @@ mod tests {
         let token = new_client()
           .exchange_device_access_token(&details)
           .set_time_fn(mock_time_fn())
-          .request(mock_http_client_success_fail(
-              None,
-              vec![
-                  (ACCEPT, "application/json"),
-                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
-                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
-              ],
-              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
-              HttpResponse {
-                  status_code: StatusCode::from_u16(400).unwrap(),
-                  headers: vec![(
-                      CONTENT_TYPE,
-                      HeaderValue::from_str("application/json").unwrap(),
-                  )]
-                    .into_iter()
-                    .collect(),
-                  body: "{\
+          .request(
+              &mock_http_client_success_fail(
+                  None,
+                  vec![
+                      (ACCEPT, "application/json"),
+                      (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                      (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+                  ],
+                  "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+                  Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .header(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str("application/json").unwrap(),
+                    )
+                    .body("{\
                     \"error\": \"authorization_pending\", \
                     \"error_description\": \"Still waiting for user\"\
                     }"
-                    .to_string()
-                    .into_bytes(),
-              },
-              5,
-              HttpResponse {
-                  status_code: StatusCode::OK,
-                  headers: vec![(
-                      CONTENT_TYPE,
-                      HeaderValue::from_str("application/json").unwrap(),
-                  )]
-                    .into_iter()
-                    .collect(),
-                  body: "{\
+                      .to_string()
+                      .into_bytes())
+                    .unwrap(),
+                  5,
+                  Response::builder()
+                    .status(StatusCode::OK)
+                    .header(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str("application/json").unwrap(),
+                    )
+                    .body("{\
                     \"access_token\": \"12/34\", \
                     \"token_type\": \"bearer\", \
                     \"scope\": \"openid\"\
                     }"
-                    .to_string()
-                    .into_bytes(),
-              },
-          ),
-                   mock_sleep_fn,
-                   None)
+                      .to_string()
+                      .into_bytes())
+                    .unwrap(),
+              ),
+              mock_sleep_fn,
+              None)
           .unwrap();
 
         assert_eq!("12/34", token.access_token().secret());
@@ -728,49 +739,46 @@ mod tests {
         let token = new_client()
           .exchange_device_access_token(&details)
           .set_time_fn(mock_time_fn())
-          .request(mock_http_client_success_fail(
-              None,
-              vec![
-                  (ACCEPT, "application/json"),
-                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
-                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
-              ],
-              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
-              HttpResponse {
-                  status_code: StatusCode::from_u16(400).unwrap(),
-                  headers: vec![(
-                      CONTENT_TYPE,
-                      HeaderValue::from_str("application/json").unwrap(),
-                  )]
-                    .into_iter()
-                    .collect(),
-                  body: "{\
+          .request(
+              &mock_http_client_success_fail(
+                  None,
+                  vec![
+                      (ACCEPT, "application/json"),
+                      (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                      (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+                  ],
+                  "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+                  Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .header(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str("application/json").unwrap(),
+                    )
+                    .body("{\
                     \"error\": \"slow_down\", \
                     \"error_description\": \"Woah there partner\"\
                     }"
-                    .to_string()
-                    .into_bytes(),
-              },
-              5,
-              HttpResponse {
-                  status_code: StatusCode::OK,
-                  headers: vec![(
-                      CONTENT_TYPE,
-                      HeaderValue::from_str("application/json").unwrap(),
-                  )]
-                    .into_iter()
-                    .collect(),
-                  body: "{\
+                      .to_string()
+                      .into_bytes())
+                    .unwrap(),
+                  5,
+                  Response::builder()
+                    .status(StatusCode::OK)
+                    .header(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str("application/json").unwrap(),
+                    )
+                    .body("{\
                     \"access_token\": \"12/34\", \
                     \"token_type\": \"bearer\", \
                     \"scope\": \"openid\"\
                     }"
-                    .to_string()
-                    .into_bytes(),
-              },
-          ),
-                   mock_sleep_fn,
-                   None)
+                      .to_string()
+                      .into_bytes())
+                    .unwrap(),
+              ),
+              mock_sleep_fn,
+              None)
           .unwrap();
 
         assert_eq!("12/34", token.access_token().secret());
@@ -827,33 +835,32 @@ mod tests {
         let token = new_client()
           .exchange_device_access_token(&details)
           .set_time_fn(mock_time_fn())
-          .request(mock_http_client(
-              vec![
-                  (ACCEPT, "application/json"),
-                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
-                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
-              ],
-              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
-              None,
-              HttpResponse {
-                  status_code: StatusCode::OK,
-                  headers: vec![(
-                      CONTENT_TYPE,
-                      HeaderValue::from_str("application/json").unwrap(),
-                  )]
-                    .into_iter()
-                    .collect(),
-                  body: "{\
+          .request(
+              &mock_http_client(
+                  vec![
+                      (ACCEPT, "application/json"),
+                      (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                      (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+                  ],
+                  "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+                  None,
+                  Response::builder()
+                    .status(StatusCode::OK)
+                    .header(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str("application/json").unwrap(),
+                    )
+                    .body("{\
                     \"access_token\": \"12/34\", \
                     \"token_type\": \"bearer\", \
                     \"scope\": \"openid\"\
                     }"
-                    .to_string()
-                    .into_bytes(),
-              },
-          ),
-                   mock_sleep_fn,
-                   None)
+                      .to_string()
+                      .into_bytes())
+                    .unwrap(),
+              ),
+              mock_sleep_fn,
+              None)
           .unwrap();
 
         assert_eq!("12/34", token.access_token().secret());
@@ -886,32 +893,31 @@ mod tests {
         let token = new_client()
           .exchange_device_access_token(&details)
           .set_time_fn(mock_time_fn())
-          .request(mock_http_client(
-              vec![
-                  (ACCEPT, "application/json"),
-                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
-                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
-              ],
-              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
-              None,
-              HttpResponse {
-                  status_code: StatusCode::from_u16(400).unwrap(),
-                  headers: vec![(
-                      CONTENT_TYPE,
-                      HeaderValue::from_str("application/json").unwrap(),
-                  )]
-                    .into_iter()
-                    .collect(),
-                  body: "{\
+          .request(
+              &mock_http_client(
+                  vec![
+                      (ACCEPT, "application/json"),
+                      (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                      (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+                  ],
+                  "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+                  None,
+                  Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .header(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str("application/json").unwrap(),
+                    )
+                    .body("{\
                     \"error\": \"authorization_pending\", \
                     \"error_description\": \"Still waiting for user\"\
                     }"
-                    .to_string()
-                    .into_bytes(),
-              },
-          ),
-                   mock_sleep_fn,
-                   None)
+                      .to_string()
+                      .into_bytes())
+                    .unwrap(),
+              ),
+              mock_sleep_fn,
+              None)
           .err()
           .unwrap();
         match token {
@@ -947,32 +953,31 @@ mod tests {
         let token = new_client()
           .exchange_device_access_token(&details)
           .set_time_fn(mock_time_fn())
-          .request(mock_http_client(
-              vec![
-                  (ACCEPT, "application/json"),
-                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
-                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
-              ],
-              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
-              None,
-              HttpResponse {
-                  status_code: StatusCode::from_u16(400).unwrap(),
-                  headers: vec![(
-                      CONTENT_TYPE,
-                      HeaderValue::from_str("application/json").unwrap(),
-                  )]
-                    .into_iter()
-                    .collect(),
-                  body: "{\
+          .request(
+              &mock_http_client(
+                  vec![
+                      (ACCEPT, "application/json"),
+                      (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                      (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+                  ],
+                  "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+                  None,
+                  Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .header(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str("application/json").unwrap(),
+                    )
+                    .body("{\
                     \"error\": \"access_denied\", \
                     \"error_description\": \"Access Denied\"\
                     }"
-                    .to_string()
-                    .into_bytes(),
-              },
-          ),
-                   mock_sleep_fn,
-                   None)
+                      .to_string()
+                      .into_bytes())
+                    .unwrap(),
+              ),
+              mock_sleep_fn,
+              None)
           .err()
           .unwrap();
         match token {
@@ -1003,32 +1008,31 @@ mod tests {
         let token = new_client()
           .exchange_device_access_token(&details)
           .set_time_fn(mock_time_fn())
-          .request(mock_http_client(
-              vec![
-                  (ACCEPT, "application/json"),
-                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
-                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
-              ],
-              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
-              None,
-              HttpResponse {
-                  status_code: StatusCode::from_u16(400).unwrap(),
-                  headers: vec![(
-                      CONTENT_TYPE,
-                      HeaderValue::from_str("application/json").unwrap(),
-                  )]
-                    .into_iter()
-                    .collect(),
-                  body: "{\
+          .request(
+              &mock_http_client(
+                  vec![
+                      (ACCEPT, "application/json"),
+                      (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                      (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+                  ],
+                  "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+                  None,
+                  Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .header(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str("application/json").unwrap(),
+                    )
+                    .body("{\
                     \"error\": \"expired_token\", \
                     \"error_description\": \"Token has expired\"\
                     }"
-                    .to_string()
-                    .into_bytes(),
-              },
-          ),
-                   mock_sleep_fn,
-                   None)
+                      .to_string()
+                      .into_bytes())
+                    .unwrap(),
+              ),
+              mock_sleep_fn,
+              None)
           .err()
           .unwrap();
         match token {

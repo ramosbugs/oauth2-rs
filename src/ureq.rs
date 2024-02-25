@@ -1,10 +1,12 @@
 use crate::{HttpRequest, HttpResponse};
 
 use http::{
-    header::{HeaderMap, HeaderValue, CONTENT_TYPE},
+    header::{HeaderValue, CONTENT_TYPE},
     method::Method,
     status::StatusCode,
 };
+
+use std::io::Read;
 
 /// Error type returned by failed ureq HTTP requests.
 #[derive(Debug, thiserror::Error)]
@@ -24,16 +26,18 @@ pub enum Error {
     Ureq(#[from] Box<ureq::Error>),
 }
 
-/// Synchronous HTTP client for ureq.
-pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
-    let mut req = if request.method == Method::POST {
-        ureq::post(request.url.as_ref())
-    } else {
-        ureq::get(request.url.as_ref())
-    };
+impl crate::SyncHttpClient for ureq::Agent {
+    type Error = Error;
 
-    for (name, value) in request.headers {
-        if let Some(name) = name {
+    fn call(&self, request: HttpRequest) -> Result<HttpResponse, Self::Error> {
+        let mut req = if *request.method() == Method::POST {
+            self.post(&request.uri().to_string())
+        } else {
+            debug_assert_eq!(*request.method(), Method::GET);
+            self.get(&request.uri().to_string())
+        };
+
+        for (name, value) in request.headers() {
             req = req.set(
                 name.as_ref(),
                 // TODO: In newer `ureq` it should be easier to convert arbitrary byte sequences
@@ -47,23 +51,29 @@ pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
                 })?,
             );
         }
-    }
 
-    let response = if let Method::POST = request.method {
-        req.send_bytes(&request.body)
-    } else {
-        req.call()
-    }
-    .map_err(Box::new)?;
+        let response = if let Method::POST = *request.method() {
+            req.send_bytes(request.body())
+        } else {
+            req.call()
+        }
+        .map_err(Box::new)?;
 
-    Ok(HttpResponse {
-        status_code: StatusCode::from_u16(response.status()).map_err(http::Error::from)?,
-        headers: vec![(
-            CONTENT_TYPE,
-            HeaderValue::from_str(response.content_type()).map_err(http::Error::from)?,
-        )]
-        .into_iter()
-        .collect::<HeaderMap>(),
-        body: response.into_string()?.as_bytes().into(),
-    })
+        let mut builder = http::Response::builder()
+            .status(StatusCode::from_u16(response.status()).map_err(http::Error::from)?);
+
+        if let Some(content_type) = response
+            .header(CONTENT_TYPE.as_str())
+            .map(HeaderValue::from_str)
+            .transpose()
+            .map_err(http::Error::from)?
+        {
+            builder = builder.header(CONTENT_TYPE, content_type);
+        }
+
+        let mut body = Vec::new();
+        response.into_reader().read_to_end(&mut body)?;
+
+        builder.body(body).map_err(Error::Http)
+    }
 }

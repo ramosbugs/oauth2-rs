@@ -17,7 +17,7 @@ use hex::ToHex;
 use hmac::{Hmac, Mac};
 use oauth2::{
     basic::BasicClient, AuthType, AuthUrl, ClientId, ClientSecret, HttpRequest, HttpResponse,
-    ResourceOwnerPassword, ResourceOwnerUsername, TokenUrl,
+    ResourceOwnerPassword, ResourceOwnerUsername, SyncHttpClient, TokenUrl,
 };
 use sha2::Sha256;
 use url::Url;
@@ -63,7 +63,7 @@ fn main() -> Result<(), anyhow::Error> {
     let token_result = client
         .set_auth_type(AuthType::RequestBody)
         .exchange_password(&letterboxd_username, &letterboxd_password)
-        .request(|request| http_client.execute(request))?;
+        .request(&|request| http_client.execute(request))?;
 
     println!("{:?}", token_result);
 
@@ -77,6 +77,7 @@ fn main() -> Result<(), anyhow::Error> {
 struct SigningHttpClient {
     client_id: ClientId,
     client_secret: ClientSecret,
+    inner: reqwest::blocking::Client,
 }
 
 impl SigningHttpClient {
@@ -84,14 +85,26 @@ impl SigningHttpClient {
         Self {
             client_id,
             client_secret,
+            inner: reqwest::blocking::ClientBuilder::new()
+                // Following redirects opens the client up to SSRF vulnerabilities.
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .expect("Client should build"),
         }
     }
 
     /// Signs the request before calling `oauth2::reqwest::http_client`.
     fn execute(&self, mut request: HttpRequest) -> Result<HttpResponse, impl std::error::Error> {
-        let signed_url = self.sign_url(request.url, &request.method, &request.body);
-        request.url = signed_url;
-        oauth2::reqwest::http_client(request)
+        let signed_url = self.sign_url(
+            Url::parse(&request.uri().to_string()).expect("http::Uri should be a valid url::Url"),
+            request.method(),
+            request.body(),
+        );
+        *request.uri_mut() = signed_url
+            .as_str()
+            .try_into()
+            .expect("url::Url should be a valid http::Uri");
+        self.inner.call(request)
     }
 
     /// Signs the request based on a random and unique nonce, timestamp, and

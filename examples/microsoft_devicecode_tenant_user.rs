@@ -1,5 +1,5 @@
 use oauth2::basic::BasicClient;
-use oauth2::reqwest::async_http_client;
+use oauth2::reqwest::reqwest;
 use oauth2::StandardDeviceAuthorizationResponse;
 use oauth2::{AuthUrl, ClientId, DeviceAuthorizationUrl, Scope, TokenUrl};
 
@@ -25,10 +25,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
             TENANT_ID
         ))?);
 
+    let http_client = reqwest::ClientBuilder::new()
+        // Following redirects opens the client up to SSRF vulnerabilities.
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .expect("Client should build");
+
     let details: StandardDeviceAuthorizationResponse = client
         .exchange_device_code()
         .add_scope(Scope::new("read".to_string()))
-        .request_async(async_http_client)
+        .request_async(&http_client)
         .await?;
 
     eprintln!(
@@ -39,7 +45,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let token_result = client
         .exchange_device_access_token(&details)
-        .request_async(async_http_client, tokio::time::sleep, None)
+        .request_async(&http_client, tokio::time::sleep, None)
         .await;
 
     eprintln!("Token:{:?}", token_result);

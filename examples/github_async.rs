@@ -14,7 +14,7 @@
 //!
 
 use oauth2::basic::BasicClient;
-use oauth2::reqwest::async_http_client;
+use oauth2::reqwest::reqwest;
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope,
     TokenResponse, TokenUrl,
@@ -49,6 +49,12 @@ async fn main() {
         .set_redirect_uri(
             RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
         );
+
+    let http_client = reqwest::ClientBuilder::new()
+        // Following redirects opens the client up to SSRF vulnerabilities.
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .expect("Client should build");
 
     // Generate the authorization URL to which we'll redirect the user.
     let (authorize_url, csrf_state) = client
@@ -108,10 +114,7 @@ async fn main() {
     );
 
     // Exchange the code with a token.
-    let token_res = client
-        .exchange_code(code)
-        .request_async(async_http_client)
-        .await;
+    let token_res = client.exchange_code(code).request_async(&http_client).await;
 
     println!("Github returned the following token:\n{:?}\n", token_res);
 

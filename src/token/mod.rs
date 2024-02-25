@@ -1,8 +1,8 @@
 use crate::endpoint::{endpoint_request, endpoint_response};
 use crate::{
-    AccessToken, AuthType, AuthorizationCode, ClientId, ClientSecret, ErrorResponse, HttpRequest,
-    HttpResponse, PkceCodeVerifier, RedirectUrl, RefreshToken, RequestTokenError,
-    ResourceOwnerPassword, ResourceOwnerUsername, Scope, TokenUrl,
+    AccessToken, AsyncHttpClient, AuthType, AuthorizationCode, ClientId, ClientSecret,
+    ErrorResponse, HttpRequest, PkceCodeVerifier, RedirectUrl, RefreshToken, RequestTokenError,
+    ResourceOwnerPassword, ResourceOwnerUsername, Scope, SyncHttpClient, TokenUrl,
 };
 
 use serde::de::DeserializeOwned;
@@ -13,10 +13,15 @@ use std::error::Error;
 use std::fmt::Debug;
 use std::future::Future;
 use std::marker::PhantomData;
+use std::pin::Pin;
 use std::time::Duration;
 
 #[cfg(test)]
 mod tests;
+
+/// Future returned by `request_async` methods.
+pub type TokenRequestFuture<'c, RE, TE, TR> =
+    dyn Future<Output = Result<TR, RequestTokenError<RE, TE>>> + 'c;
 
 /// A request to exchange an authorization code for an access token.
 ///
@@ -82,7 +87,10 @@ where
         self
     }
 
-    fn prepare_request(self) -> HttpRequest {
+    fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
+    where
+        RE: Error + 'static,
+    {
         let mut params = vec![
             ("grant_type", "authorization_code"),
             ("code", self.code.secret()),
@@ -101,29 +109,30 @@ where
             self.token_url.url(),
             params,
         )
+        .map_err(|err| RequestTokenError::Other(format!("failed to prepare request: {err}")))
     }
 
     /// Synchronously sends the request to the authorization server and awaits a response.
-    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    pub fn request<C>(
+        self,
+        http_client: &C,
+    ) -> Result<TR, RequestTokenError<<C as SyncHttpClient>::Error, TE>>
     where
-        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Error + 'static,
+        C: SyncHttpClient,
     {
-        endpoint_response(http_client(self.prepare_request())?)
+        endpoint_response(http_client.call(self.prepare_request()?)?)
     }
 
     /// Asynchronously sends the request to the authorization server and returns a Future.
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<'c, C>(
         self,
-        http_client: C,
-    ) -> Result<TR, RequestTokenError<RE, TE>>
+        http_client: &'c C,
+    ) -> Pin<Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, TR>>>
     where
-        C: FnOnce(HttpRequest) -> F,
-        F: Future<Output = Result<HttpResponse, RE>>,
-        RE: Error + 'static,
+        Self: 'c,
+        C: AsyncHttpClient<'c>,
     {
-        let http_response = http_client(self.prepare_request()).await?;
-        endpoint_response(http_response)
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
     }
 }
 
@@ -190,33 +199,32 @@ where
     }
 
     /// Synchronously sends the request to the authorization server and awaits a response.
-    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    pub fn request<C>(
+        self,
+        http_client: &C,
+    ) -> Result<TR, RequestTokenError<<C as SyncHttpClient>::Error, TE>>
     where
-        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Error + 'static,
+        C: SyncHttpClient,
     {
-        endpoint_response(http_client(self.prepare_request()?)?)
+        endpoint_response(http_client.call(self.prepare_request()?)?)
     }
     /// Asynchronously sends the request to the authorization server and awaits a response.
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<'c, C>(
         self,
-        http_client: C,
-    ) -> Result<TR, RequestTokenError<RE, TE>>
+        http_client: &'c C,
+    ) -> Pin<Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, TR>>>
     where
-        C: FnOnce(HttpRequest) -> F,
-        F: Future<Output = Result<HttpResponse, RE>>,
-        RE: Error + 'static,
+        Self: 'c,
+        C: AsyncHttpClient<'c>,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request).await?;
-        endpoint_response(http_response)
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
         RE: Error + 'static,
     {
-        Ok(endpoint_request(
+        endpoint_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -228,7 +236,8 @@ where
                 ("grant_type", "refresh_token"),
                 ("refresh_token", self.refresh_token.secret()),
             ],
-        ))
+        )
+        .map_err(|err| RequestTokenError::Other(format!("failed to prepare request: {err}")))
     }
 }
 
@@ -296,34 +305,33 @@ where
     }
 
     /// Synchronously sends the request to the authorization server and awaits a response.
-    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    pub fn request<C>(
+        self,
+        http_client: &C,
+    ) -> Result<TR, RequestTokenError<<C as SyncHttpClient>::Error, TE>>
     where
-        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Error + 'static,
+        C: SyncHttpClient,
     {
-        endpoint_response(http_client(self.prepare_request()?)?)
+        endpoint_response(http_client.call(self.prepare_request()?)?)
     }
 
     /// Asynchronously sends the request to the authorization server and awaits a response.
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<'c, C>(
         self,
-        http_client: C,
-    ) -> Result<TR, RequestTokenError<RE, TE>>
+        http_client: &'c C,
+    ) -> Pin<Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, TR>>>
     where
-        C: FnOnce(HttpRequest) -> F,
-        F: Future<Output = Result<HttpResponse, RE>>,
-        RE: Error + 'static,
+        Self: 'c,
+        C: AsyncHttpClient<'c>,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request).await?;
-        endpoint_response(http_response)
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
         RE: Error + 'static,
     {
-        Ok(endpoint_request(
+        endpoint_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -336,7 +344,8 @@ where
                 ("username", self.username),
                 ("password", self.password.secret()),
             ],
-        ))
+        )
+        .map_err(|err| RequestTokenError::Other(format!("failed to prepare request: {err}")))
     }
 }
 
@@ -402,34 +411,33 @@ where
     }
 
     /// Synchronously sends the request to the authorization server and awaits a response.
-    pub fn request<F, RE>(self, http_client: F) -> Result<TR, RequestTokenError<RE, TE>>
+    pub fn request<C>(
+        self,
+        http_client: &C,
+    ) -> Result<TR, RequestTokenError<<C as SyncHttpClient>::Error, TE>>
     where
-        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
-        RE: Error + 'static,
+        C: SyncHttpClient,
     {
-        endpoint_response(http_client(self.prepare_request()?)?)
+        endpoint_response(http_client.call(self.prepare_request()?)?)
     }
 
     /// Asynchronously sends the request to the authorization server and awaits a response.
-    pub async fn request_async<C, F, RE>(
+    pub fn request_async<'c, C>(
         self,
-        http_client: C,
-    ) -> Result<TR, RequestTokenError<RE, TE>>
+        http_client: &'c C,
+    ) -> Pin<Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, TR>>>
     where
-        C: FnOnce(HttpRequest) -> F,
-        F: Future<Output = Result<HttpResponse, RE>>,
-        RE: Error + 'static,
+        Self: 'c,
+        C: AsyncHttpClient<'c>,
     {
-        let http_request = self.prepare_request()?;
-        let http_response = http_client(http_request).await?;
-        endpoint_response(http_response)
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
         RE: Error + 'static,
     {
-        Ok(endpoint_request(
+        endpoint_request(
             self.auth_type,
             self.client_id,
             self.client_secret,
@@ -438,7 +446,8 @@ where
             Some(&self.scopes),
             self.token_url.url(),
             vec![("grant_type", "client_credentials")],
-        ))
+        )
+        .map_err(|err| RequestTokenError::Other(format!("failed to prepare request: {err}")))
     }
 }
 

@@ -22,29 +22,44 @@
 //!  * **Synchronous (blocking)**
 //!  * **Asynchronous**
 //!
+//! ## Security Warning
+//!
+//! To prevent
+//! [SSRF](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html)
+//! vulnerabilities, be sure to configure the HTTP client **not to follow redirects**. For example,
+//! use [`redirect::Policy::none`](::reqwest::redirect::Policy::none) when using
+//! [`reqwest`](::reqwest), or [`redirects(0)`](::ureq::AgentBuilder::redirects) when using
+//! [`ureq`](::ureq).
+//!
+//! ## HTTP Clients
+//!
 //! For the HTTP client modes described above, the following HTTP client implementations can be
 //! used:
-//!  * **[`reqwest`]**
+//!  * **[`reqwest`](::reqwest)**
 //!
 //!    The `reqwest` HTTP client supports both the synchronous and asynchronous modes and is enabled
 //!    by default.
 //!
-//!    Synchronous client: [`reqwest::http_client`]
+//!    Synchronous client: [`reqwest::blocking::Client`](::reqwest::blocking::Client) (requires the
+//!    `reqwest-blocking` feature flag)
 //!
-//!    Asynchronous client: [`reqwest::async_http_client`]
+//!    Asynchronous client: [`reqwest::Client`](::reqwest::Client) (requires either the
+//!    `reqwest` or `reqwest-blocking` feature flags)
 //!
-//!  * **[`curl`]**
+//!  * **[`curl`](::curl)**
 //!
 //!    The `curl` HTTP client only supports the synchronous HTTP client mode and can be enabled in
 //!    `Cargo.toml` via the `curl` feature flag.
 //!
-//!    Synchronous client: [`curl::http_client`]
+//!    Synchronous client: [`oauth2::curl::CurlHttpClient`](crate::curl::CurlHttpClient)
 //!
-//! * **[`ureq`]**
+//! * **[`ureq`](::ureq)**
 //!
 //!    The `ureq` HTTP client is a simple HTTP client with minimal dependencies. It only supports
 //!    the synchronous HTTP client mode and can be enabled in `Cargo.toml` via the `ureq` feature
-//!     flag.
+//!    flag.
+//!
+//!    Synchronous client: [`ureq::Agent`](::ureq::Agent)
 //!
 //!  * **Custom**
 //!
@@ -57,18 +72,21 @@
 //!    oauth2 = { version = "...", default-features = false }
 //!    ```
 //!
-//!    Synchronous HTTP clients should implement the following trait:
+//!    Synchronous HTTP clients should implement the [`SyncHttpClient`] trait, which is
+//!    automatically implemented for any function/closure that implements:
 //!    ```rust,ignore
-//!    FnOnce(HttpRequest) -> Result<HttpResponse, RE>
-//!    where RE: std::error::Error + 'static
+//!    Fn(HttpRequest) -> Result<HttpResponse, E>
+//!    where
+//!      E: std::error::Error + 'static
 //!    ```
 //!
-//!    Asynchronous HTTP clients should implement the following trait:
+//!    Asynchronous HTTP clients should implement the [`AsyncHttpClient`] trait, which is
+//!    automatically implemented for any function/closure that implements:
 //!    ```rust,ignore
-//!    FnOnce(HttpRequest) -> F
+//!    Fn(HttpRequest) -> F
 //!    where
-//!      F: Future<Output = Result<HttpResponse, RE>>,
-//!      RE: std::error::Error + 'static
+//!      E: std::error::Error + 'static,
+//!      F: Future<Output = Result<HttpResponse, E>>,
 //!    ```
 //!
 //! # Comparing secrets securely
@@ -110,9 +128,10 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! use oauth2::reqwest::http_client;
+//! use oauth2::reqwest::reqwest;
 //! use url::Url;
 //!
+//! # #[cfg(feature = "reqwest-blocking")]
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
@@ -144,13 +163,19 @@
 //! // authorization code. For security reasons, your code should verify that the `state`
 //! // parameter returned by the server matches `csrf_token`.
 //!
+//! let http_client = reqwest::blocking::ClientBuilder::new()
+//!     // Following redirects opens the client up to SSRF vulnerabilities.
+//!     .redirect(reqwest::redirect::Policy::none())
+//!     .build()
+//!     .expect("Client should build");
+//!
 //! // Now you can trade it for an access token.
 //! let token_result =
 //!     client
 //!         .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
 //!         // Set the PKCE code verifier.
 //!         .set_pkce_verifier(pkce_verifier)
-//!         .request(http_client)?;
+//!         .request(&http_client)?;
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
 //! # Ok(())
@@ -175,11 +200,9 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! # #[cfg(feature = "reqwest")]
-//! use oauth2::reqwest::async_http_client;
+//! use oauth2::reqwest::reqwest;
 //! use url::Url;
 //!
-//! # #[cfg(feature = "reqwest")]
 //! # async fn err_wrapper() -> Result<(), anyhow::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
@@ -211,12 +234,18 @@
 //! // authorization code. For security reasons, your code should verify that the `state`
 //! // parameter returned by the server matches `csrf_token`.
 //!
+//! let http_client = reqwest::ClientBuilder::new()
+//!     // Following redirects opens the client up to SSRF vulnerabilities.
+//!     .redirect(reqwest::redirect::Policy::none())
+//!     .build()
+//!     .expect("Client should build");
+//!
 //! // Now you can trade it for an access token.
 //! let token_result = client
 //!     .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
 //!     // Set the PKCE code verifier.
 //!     .set_pkce_verifier(pkce_verifier)
-//!     .request_async(async_http_client)
+//!     .request_async(&http_client)
 //!     .await?;
 //!
 //! // Unwrapping token_result will either produce a Token or a RequestTokenError.
@@ -286,14 +315,21 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! use oauth2::reqwest::http_client;
+//! use oauth2::reqwest::reqwest;
 //! use url::Url;
 //!
+//! # #[cfg(feature = "reqwest-blocking")]
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id".to_string()))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
 //!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
 //!     .set_token_uri(TokenUrl::new("http://token".to_string())?);
+//!
+//! let http_client = reqwest::blocking::ClientBuilder::new()
+//!     // Following redirects opens the client up to SSRF vulnerabilities.
+//!     .redirect(reqwest::redirect::Policy::none())
+//!     .build()
+//!     .expect("Client should build");
 //!
 //! let token_result =
 //!     client
@@ -302,7 +338,7 @@
 //!             &ResourceOwnerPassword::new("pass".to_string())
 //!         )
 //!         .add_scope(Scope::new("read".to_string()))
-//!         .request(http_client)?;
+//!         .request(&http_client)?;
 //! # Ok(())
 //! # }
 //! ```
@@ -324,19 +360,26 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! use oauth2::reqwest::http_client;
+//! use oauth2::reqwest::reqwest;
 //! use url::Url;
 //!
+//! # #[cfg(feature = "reqwest-blocking")]
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id".to_string()))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
 //!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
 //!     .set_token_uri(TokenUrl::new("http://token".to_string())?);
 //!
+//! let http_client = reqwest::blocking::ClientBuilder::new()
+//!     // Following redirects opens the client up to SSRF vulnerabilities.
+//!     .redirect(reqwest::redirect::Policy::none())
+//!     .build()
+//!     .expect("Client should build");
+//!
 //! let token_result = client
 //!     .exchange_client_credentials()
 //!     .add_scope(Scope::new("read".to_string()))
-//!     .request(http_client)?;
+//!     .request(&http_client)?;
 //! # Ok(())
 //! # }
 //! ```
@@ -363,9 +406,10 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
-//! use oauth2::reqwest::http_client;
+//! use oauth2::reqwest::reqwest;
 //! use url::Url;
 //!
+//! # #[cfg(feature = "reqwest-blocking")]
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let device_auth_url = DeviceAuthorizationUrl::new("http://deviceauth".to_string())?;
 //! let client = BasicClient::new(ClientId::new("client_id".to_string()))
@@ -374,10 +418,16 @@
 //!     .set_token_uri(TokenUrl::new("http://token".to_string())?)
 //!     .set_device_authorization_url(device_auth_url);
 //!
+//! let http_client = reqwest::blocking::ClientBuilder::new()
+//!     // Following redirects opens the client up to SSRF vulnerabilities.
+//!     .redirect(reqwest::redirect::Policy::none())
+//!     .build()
+//!     .expect("Client should build");
+//!
 //! let details: StandardDeviceAuthorizationResponse = client
 //!     .exchange_device_code()
 //!     .add_scope(Scope::new("read".to_string()))
-//!     .request(http_client)?;
+//!     .request(&http_client)?;
 //!
 //! println!(
 //!     "Open this URL in your browser:\n{}\nand enter the code: {}",
@@ -388,7 +438,7 @@
 //! let token_result =
 //!     client
 //!     .exchange_device_access_token(&details)
-//!     .request(http_client, std::thread::sleep, None)?;
+//!     .request(&http_client, std::thread::sleep, None)?;
 //!
 //! # Ok(())
 //! # }
@@ -462,11 +512,12 @@ pub mod ureq;
 pub use crate::client::Client;
 pub use crate::code::AuthorizationRequest;
 pub use crate::devicecode::{
-    DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationResponse,
-    DeviceCodeErrorResponse, DeviceCodeErrorResponseType, EmptyExtraDeviceAuthorizationFields,
-    ExtraDeviceAuthorizationFields, StandardDeviceAuthorizationResponse,
+    DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationRequestFuture,
+    DeviceAuthorizationResponse, DeviceCodeErrorResponse, DeviceCodeErrorResponseType,
+    EmptyExtraDeviceAuthorizationFields, ExtraDeviceAuthorizationFields,
+    StandardDeviceAuthorizationResponse,
 };
-pub use crate::endpoint::{HttpRequest, HttpResponse};
+pub use crate::endpoint::{AsyncHttpClient, HttpRequest, HttpResponse, SyncHttpClient};
 pub use crate::error::{
     ErrorResponse, ErrorResponseType, RequestTokenError, StandardErrorResponse,
 };
@@ -478,7 +529,8 @@ pub use crate::revocation::{
 };
 pub use crate::token::{
     ClientCredentialsTokenRequest, CodeTokenRequest, EmptyExtraTokenFields, ExtraTokenFields,
-    PasswordTokenRequest, RefreshTokenRequest, StandardTokenResponse, TokenResponse, TokenType,
+    PasswordTokenRequest, RefreshTokenRequest, StandardTokenResponse, TokenRequestFuture,
+    TokenResponse, TokenType,
 };
 pub use crate::types::{
     AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,

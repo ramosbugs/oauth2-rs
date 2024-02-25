@@ -602,3 +602,49 @@ new_secret_type![
     #[derive(Clone, Deserialize, Serialize)]
     UserCode(String)
 ];
+
+#[cfg(test)]
+mod tests {
+    use crate::{ClientSecret, PkceCodeChallenge, PkceCodeVerifier};
+
+    #[test]
+    fn test_secret_redaction() {
+        let secret = ClientSecret::new("top_secret".to_string());
+        assert_eq!("ClientSecret([redacted])", format!("{:?}", secret));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_code_verifier_too_short() {
+        PkceCodeChallenge::new_random_sha256_len(31);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_code_verifier_too_long() {
+        PkceCodeChallenge::new_random_sha256_len(97);
+    }
+
+    #[test]
+    fn test_code_verifier_min() {
+        let code = PkceCodeChallenge::new_random_sha256_len(32);
+        assert_eq!(code.1.secret().len(), 43);
+    }
+
+    #[test]
+    fn test_code_verifier_max() {
+        let code = PkceCodeChallenge::new_random_sha256_len(96);
+        assert_eq!(code.1.secret().len(), 128);
+    }
+
+    #[test]
+    fn test_code_verifier_challenge() {
+        // Example from https://tools.ietf.org/html/rfc7636#appendix-B
+        let code_verifier =
+            PkceCodeVerifier::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string());
+        assert_eq!(
+            PkceCodeChallenge::from_code_verifier_sha256(&code_verifier).as_str(),
+            "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        );
+    }
+}

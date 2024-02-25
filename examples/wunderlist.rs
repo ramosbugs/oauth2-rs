@@ -14,16 +14,13 @@
 //! ...and follow the instructions.
 //!
 
-use oauth2::TokenType;
-use oauth2::{
-    basic::{
-        BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse,
-        BasicTokenType,
-    },
-    revocation::StandardRevocableToken,
+use oauth2::basic::{
+    BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse,
+    BasicTokenType,
 };
-// Alternatively, this can be `oauth2::curl::http_client` or a custom client.
 use oauth2::helpers;
+use oauth2::{StandardRevocableToken, TokenType};
+// Alternatively, this can be `oauth2::curl::http_client` or a custom client.
 use oauth2::reqwest::http_client;
 use oauth2::{
     AccessToken, AuthUrl, AuthorizationCode, Client, ClientId, ClientSecret, CsrfToken,

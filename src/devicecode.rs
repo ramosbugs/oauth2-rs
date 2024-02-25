@@ -1,18 +1,375 @@
 use crate::basic::BasicErrorResponseType;
+use crate::endpoint::{endpoint_request, endpoint_response};
 use crate::types::VerificationUriComplete;
 use crate::{
-    DeviceCode, EndUserVerificationUrl, ErrorResponse, ErrorResponseType, RequestTokenError,
-    StandardErrorResponse, TokenResponse, TokenType, UserCode,
+    AuthType, ClientId, ClientSecret, DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl,
+    ErrorResponse, ErrorResponseType, HttpRequest, HttpResponse, RequestTokenError, Scope,
+    StandardErrorResponse, TokenResponse, TokenType, TokenUrl, UserCode,
 };
 
+use chrono::{DateTime, Utc};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
+use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
+use std::future::Future;
 use std::marker::PhantomData;
+use std::sync::Arc;
 use std::time::Duration;
+
+/// The request for a set of verification codes from the authorization server.
+///
+/// See <https://tools.ietf.org/html/rfc8628#section-3.1>.
+#[derive(Debug)]
+pub struct DeviceAuthorizationRequest<'a, TE>
+where
+    TE: ErrorResponse,
+{
+    pub(crate) auth_type: &'a AuthType,
+    pub(crate) client_id: &'a ClientId,
+    pub(crate) client_secret: Option<&'a ClientSecret>,
+    pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    pub(crate) scopes: Vec<Cow<'a, Scope>>,
+    pub(crate) device_authorization_url: &'a DeviceAuthorizationUrl,
+    pub(crate) _phantom: PhantomData<TE>,
+}
+
+impl<'a, TE> DeviceAuthorizationRequest<'a, TE>
+where
+    TE: ErrorResponse + 'static,
+{
+    /// Appends an extra param to the token request.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should follow the security recommendations for any OAuth2 extensions used with
+    /// this function, which are beyond the scope of
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
+    {
+        self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    /// Appends a new scope to the token request.
+    pub fn add_scope(mut self, scope: Scope) -> Self {
+        self.scopes.push(Cow::Owned(scope));
+        self
+    }
+
+    /// Appends a collection of scopes to the token request.
+    pub fn add_scopes<I>(mut self, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = Scope>,
+    {
+        self.scopes.extend(scopes.into_iter().map(Cow::Owned));
+        self
+    }
+
+    fn prepare_request(self) -> HttpRequest {
+        endpoint_request(
+            self.auth_type,
+            self.client_id,
+            self.client_secret,
+            &self.extra_params,
+            None,
+            Some(&self.scopes),
+            self.device_authorization_url.url(),
+            vec![],
+        )
+    }
+
+    /// Synchronously sends the request to the authorization server and awaits a response.
+    pub fn request<F, RE, EF>(
+        self,
+        http_client: F,
+    ) -> Result<DeviceAuthorizationResponse<EF>, RequestTokenError<RE, TE>>
+    where
+        F: FnOnce(HttpRequest) -> Result<HttpResponse, RE>,
+        RE: Error + 'static,
+        EF: ExtraDeviceAuthorizationFields,
+    {
+        endpoint_response(http_client(self.prepare_request())?)
+    }
+
+    /// Asynchronously sends the request to the authorization server and returns a Future.
+    pub async fn request_async<C, F, RE, EF>(
+        self,
+        http_client: C,
+    ) -> Result<DeviceAuthorizationResponse<EF>, RequestTokenError<RE, TE>>
+    where
+        C: FnOnce(HttpRequest) -> F,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        RE: Error + 'static,
+        EF: ExtraDeviceAuthorizationFields,
+    {
+        let http_response = http_client(self.prepare_request()).await?;
+        endpoint_response(http_response)
+    }
+}
+
+/// The request for a device access token from the authorization server.
+///
+/// See <https://tools.ietf.org/html/rfc8628#section-3.4>.
+#[derive(Clone)]
+pub struct DeviceAccessTokenRequest<'a, 'b, TR, TT, EF>
+where
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    EF: ExtraDeviceAuthorizationFields,
+{
+    pub(crate) auth_type: &'a AuthType,
+    pub(crate) client_id: &'a ClientId,
+    pub(crate) client_secret: Option<&'a ClientSecret>,
+    pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    pub(crate) token_url: &'a TokenUrl,
+    pub(crate) dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
+    pub(crate) time_fn: Arc<dyn Fn() -> DateTime<Utc> + 'b + Send + Sync>,
+    pub(crate) max_backoff_interval: Option<Duration>,
+    pub(crate) _phantom: PhantomData<(TR, TT, EF)>,
+}
+
+impl<'a, 'b, TR, TT, EF> DeviceAccessTokenRequest<'a, 'b, TR, TT, EF>
+where
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    EF: ExtraDeviceAuthorizationFields,
+{
+    /// Appends an extra param to the token request.
+    ///
+    /// This method allows extensions to be used without direct support from
+    /// this crate. If `name` conflicts with a parameter managed by this crate, the
+    /// behavior is undefined. In particular, do not set parameters defined by
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749) or
+    /// [RFC 7636](https://tools.ietf.org/html/rfc7636).
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should follow the security recommendations for any OAuth2 extensions used with
+    /// this function, which are beyond the scope of
+    /// [RFC 6749](https://tools.ietf.org/html/rfc6749).
+    pub fn add_extra_param<N, V>(mut self, name: N, value: V) -> Self
+    where
+        N: Into<Cow<'a, str>>,
+        V: Into<Cow<'a, str>>,
+    {
+        self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    /// Specifies a function for returning the current time.
+    ///
+    /// This function is used while polling the authorization server.
+    pub fn set_time_fn<T>(mut self, time_fn: T) -> Self
+    where
+        T: Fn() -> DateTime<Utc> + 'b + Send + Sync,
+    {
+        self.time_fn = Arc::new(time_fn);
+        self
+    }
+
+    /// Sets the upper limit of the sleep interval to use for polling the token endpoint when the
+    /// HTTP client returns an error (e.g., in case of connection timeout).
+    pub fn set_max_backoff_interval(mut self, interval: Duration) -> Self {
+        self.max_backoff_interval = Some(interval);
+        self
+    }
+
+    /// Synchronously polls the authorization server for a response, waiting
+    /// using a user defined sleep function.
+    pub fn request<F, S, RE>(
+        self,
+        http_client: F,
+        sleep_fn: S,
+        timeout: Option<Duration>,
+    ) -> Result<TR, RequestTokenError<RE, DeviceCodeErrorResponse>>
+    where
+        F: Fn(HttpRequest) -> Result<HttpResponse, RE>,
+        S: Fn(Duration),
+        RE: Error + 'static,
+    {
+        // Get the request timeout and starting interval
+        let timeout_dt = self.compute_timeout(timeout)?;
+        let mut interval = self.dev_auth_resp.interval();
+
+        // Loop while requesting a token.
+        loop {
+            let now = (*self.time_fn)();
+            if now > timeout_dt {
+                break Err(RequestTokenError::ServerResponse(
+                    DeviceCodeErrorResponse::new(
+                        DeviceCodeErrorResponseType::ExpiredToken,
+                        Some(String::from("This device code has expired.")),
+                        None,
+                    ),
+                ));
+            }
+
+            match self.process_response(http_client(self.prepare_request()), interval) {
+                DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
+                    interval = new_interval
+                }
+                DeviceAccessTokenPollResult::Done(res, _) => break res,
+            }
+
+            // Sleep here using the provided sleep function.
+            sleep_fn(interval);
+        }
+    }
+
+    /// Asynchronously sends the request to the authorization server and awaits a response.
+    pub async fn request_async<C, F, S, SF, RE>(
+        self,
+        http_client: C,
+        sleep_fn: S,
+        timeout: Option<Duration>,
+    ) -> Result<TR, RequestTokenError<RE, DeviceCodeErrorResponse>>
+    where
+        C: Fn(HttpRequest) -> F,
+        F: Future<Output = Result<HttpResponse, RE>>,
+        S: Fn(Duration) -> SF,
+        SF: Future<Output = ()>,
+        RE: Error + 'static,
+    {
+        // Get the request timeout and starting interval
+        let timeout_dt = self.compute_timeout(timeout)?;
+        let mut interval = self.dev_auth_resp.interval();
+
+        // Loop while requesting a token.
+        loop {
+            let now = (*self.time_fn)();
+            if now > timeout_dt {
+                break Err(RequestTokenError::ServerResponse(
+                    DeviceCodeErrorResponse::new(
+                        DeviceCodeErrorResponseType::ExpiredToken,
+                        Some(String::from("This device code has expired.")),
+                        None,
+                    ),
+                ));
+            }
+
+            match self.process_response(http_client(self.prepare_request()).await, interval) {
+                DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
+                    interval = new_interval
+                }
+                DeviceAccessTokenPollResult::Done(res, _) => break res,
+            }
+
+            // Sleep here using the provided sleep function.
+            sleep_fn(interval).await;
+        }
+    }
+
+    fn prepare_request(&self) -> HttpRequest {
+        endpoint_request(
+            self.auth_type,
+            self.client_id,
+            self.client_secret,
+            &self.extra_params,
+            None,
+            None,
+            self.token_url.url(),
+            vec![
+                ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+                ("device_code", self.dev_auth_resp.device_code().secret()),
+            ],
+        )
+    }
+
+    fn process_response<RE>(
+        &self,
+        res: Result<HttpResponse, RE>,
+        current_interval: Duration,
+    ) -> DeviceAccessTokenPollResult<TR, RE, DeviceCodeErrorResponse, TT>
+    where
+        RE: Error + 'static,
+    {
+        let http_response = match res {
+            Ok(inner) => inner,
+            Err(_) => {
+                // RFC 8628 requires a backoff in cases of connection timeout, but we can't
+                // distinguish between connection timeouts and other HTTP client request errors
+                // here. Set a maximum backoff so that the client doesn't effectively backoff
+                // infinitely when there are network issues unrelated to server load.
+                const DEFAULT_MAX_BACKOFF_INTERVAL: Duration = Duration::from_secs(10);
+                let new_interval = std::cmp::min(
+                    current_interval.checked_mul(2).unwrap_or(current_interval),
+                    self.max_backoff_interval
+                        .unwrap_or(DEFAULT_MAX_BACKOFF_INTERVAL),
+                );
+                return DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval);
+            }
+        };
+
+        // Explicitly process the response with a DeviceCodeErrorResponse
+        let res = endpoint_response::<RE, DeviceCodeErrorResponse, TR>(http_response);
+        match res {
+            // On a ServerResponse error, the error needs inspecting as a DeviceCodeErrorResponse
+            // to work out whether a retry needs to happen.
+            Err(RequestTokenError::ServerResponse(dcer)) => {
+                match dcer.error() {
+                    // On AuthorizationPending, a retry needs to happen with the same poll interval.
+                    DeviceCodeErrorResponseType::AuthorizationPending => {
+                        DeviceAccessTokenPollResult::ContinueWithNewPollInterval(current_interval)
+                    }
+                    // On SlowDown, a retry needs to happen with a larger poll interval.
+                    DeviceCodeErrorResponseType::SlowDown => {
+                        DeviceAccessTokenPollResult::ContinueWithNewPollInterval(
+                            current_interval + Duration::from_secs(5),
+                        )
+                    }
+
+                    // On any other error, just return the error.
+                    _ => DeviceAccessTokenPollResult::Done(
+                        Err(RequestTokenError::ServerResponse(dcer)),
+                        PhantomData,
+                    ),
+                }
+            }
+
+            // On any other success or failure, return the failure.
+            res => DeviceAccessTokenPollResult::Done(res, PhantomData),
+        }
+    }
+
+    fn compute_timeout<RE>(
+        &self,
+        timeout: Option<Duration>,
+    ) -> Result<DateTime<Utc>, RequestTokenError<RE, DeviceCodeErrorResponse>>
+    where
+        RE: Error + 'static,
+    {
+        // Calculate the request timeout - if the user specified a timeout,
+        // use that, otherwise use the value given by the device authorization
+        // response.
+        let timeout_dur = timeout.unwrap_or_else(|| self.dev_auth_resp.expires_in());
+        let chrono_timeout = chrono::Duration::from_std(timeout_dur).map_err(|e| {
+            RequestTokenError::Other(format!(
+                "Failed to convert `{:?}` to `chrono::Duration`: {}",
+                timeout_dur, e
+            ))
+        })?;
+
+        // Calculate the DateTime at which the request times out.
+        let timeout_dt = (*self.time_fn)()
+            .checked_add_signed(chrono_timeout)
+            .ok_or_else(|| RequestTokenError::Other("Failed to calculate timeout".to_string()))?;
+
+        Ok(timeout_dt)
+    }
+}
 
 /// The minimum amount of time in seconds that the client SHOULD wait
 /// between polling requests to the token endpoint.  If no value is
@@ -216,4 +573,469 @@ where
 {
     ContinueWithNewPollInterval(Duration),
     Done(Result<TR, RequestTokenError<RE, TE>>, PhantomData<TT>),
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::basic::BasicTokenType;
+    use crate::tests::{mock_http_client, mock_http_client_success_fail, new_client};
+    use crate::{
+        DeviceAuthorizationUrl, DeviceCodeErrorResponse, DeviceCodeErrorResponseType, HttpResponse,
+        RequestTokenError, Scope, StandardDeviceAuthorizationResponse, TokenResponse,
+    };
+
+    use chrono::{DateTime, Utc};
+    use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+    use http::{HeaderValue, StatusCode};
+
+    use std::time::Duration;
+
+    fn new_device_auth_details(expires_in: u32) -> StandardDeviceAuthorizationResponse {
+        let body = format!(
+            "{{\
+        \"device_code\": \"12345\", \
+        \"verification_uri\": \"https://verify/here\", \
+        \"user_code\": \"abcde\", \
+        \"verification_uri_complete\": \"https://verify/here?abcde\", \
+        \"expires_in\": {}, \
+        \"interval\": 1 \
+        }}",
+            expires_in
+        );
+
+        let device_auth_url =
+            DeviceAuthorizationUrl::new("https://deviceauth/here".to_string()).unwrap();
+
+        let client = new_client().set_device_authorization_url(device_auth_url.clone());
+        client
+            .exchange_device_code()
+            .add_extra_param("foo", "bar")
+            .add_scope(Scope::new("openid".to_string()))
+            .request(mock_http_client(
+                vec![
+                    (ACCEPT, "application/json"),
+                    (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                    (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+                ],
+                "scope=openid&foo=bar",
+                Some(device_auth_url.url().to_owned()),
+                HttpResponse {
+                    status_code: StatusCode::OK,
+                    headers: vec![(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str("application/json").unwrap(),
+                    )]
+                    .into_iter()
+                    .collect(),
+                    body: body.into_bytes(),
+                },
+            ))
+            .unwrap()
+    }
+
+    #[test]
+    fn test_device_token_pending_then_success() {
+        let details = new_device_auth_details(20);
+        assert_eq!("12345", details.device_code().secret());
+        assert_eq!("https://verify/here", details.verification_uri().as_str());
+        assert_eq!("abcde", details.user_code().secret().as_str());
+        assert_eq!(
+            "https://verify/here?abcde",
+            details
+                .verification_uri_complete()
+                .unwrap()
+                .secret()
+                .as_str()
+        );
+        assert_eq!(Duration::from_secs(20), details.expires_in());
+        assert_eq!(Duration::from_secs(1), details.interval());
+
+        let token = new_client()
+          .exchange_device_access_token(&details)
+          .set_time_fn(mock_time_fn())
+          .request(mock_http_client_success_fail(
+              None,
+              vec![
+                  (ACCEPT, "application/json"),
+                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+              ],
+              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+              HttpResponse {
+                  status_code: StatusCode::from_u16(400).unwrap(),
+                  headers: vec![(
+                      CONTENT_TYPE,
+                      HeaderValue::from_str("application/json").unwrap(),
+                  )]
+                    .into_iter()
+                    .collect(),
+                  body: "{\
+                    \"error\": \"authorization_pending\", \
+                    \"error_description\": \"Still waiting for user\"\
+                    }"
+                    .to_string()
+                    .into_bytes(),
+              },
+              5,
+              HttpResponse {
+                  status_code: StatusCode::OK,
+                  headers: vec![(
+                      CONTENT_TYPE,
+                      HeaderValue::from_str("application/json").unwrap(),
+                  )]
+                    .into_iter()
+                    .collect(),
+                  body: "{\
+                    \"access_token\": \"12/34\", \
+                    \"token_type\": \"bearer\", \
+                    \"scope\": \"openid\"\
+                    }"
+                    .to_string()
+                    .into_bytes(),
+              },
+          ),
+                   mock_sleep_fn,
+                   None)
+          .unwrap();
+
+        assert_eq!("12/34", token.access_token().secret());
+        assert_eq!(BasicTokenType::Bearer, *token.token_type());
+        assert_eq!(
+            Some(&vec![Scope::new("openid".to_string()),]),
+            token.scopes()
+        );
+        assert_eq!(None, token.expires_in());
+        assert!(token.refresh_token().is_none());
+    }
+
+    #[test]
+    fn test_device_token_slowdown_then_success() {
+        let details = new_device_auth_details(3600);
+        assert_eq!("12345", details.device_code().secret());
+        assert_eq!("https://verify/here", details.verification_uri().as_str());
+        assert_eq!("abcde", details.user_code().secret().as_str());
+        assert_eq!(
+            "https://verify/here?abcde",
+            details
+                .verification_uri_complete()
+                .unwrap()
+                .secret()
+                .as_str()
+        );
+        assert_eq!(Duration::from_secs(3600), details.expires_in());
+        assert_eq!(Duration::from_secs(1), details.interval());
+
+        let token = new_client()
+          .exchange_device_access_token(&details)
+          .set_time_fn(mock_time_fn())
+          .request(mock_http_client_success_fail(
+              None,
+              vec![
+                  (ACCEPT, "application/json"),
+                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+              ],
+              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+              HttpResponse {
+                  status_code: StatusCode::from_u16(400).unwrap(),
+                  headers: vec![(
+                      CONTENT_TYPE,
+                      HeaderValue::from_str("application/json").unwrap(),
+                  )]
+                    .into_iter()
+                    .collect(),
+                  body: "{\
+                    \"error\": \"slow_down\", \
+                    \"error_description\": \"Woah there partner\"\
+                    }"
+                    .to_string()
+                    .into_bytes(),
+              },
+              5,
+              HttpResponse {
+                  status_code: StatusCode::OK,
+                  headers: vec![(
+                      CONTENT_TYPE,
+                      HeaderValue::from_str("application/json").unwrap(),
+                  )]
+                    .into_iter()
+                    .collect(),
+                  body: "{\
+                    \"access_token\": \"12/34\", \
+                    \"token_type\": \"bearer\", \
+                    \"scope\": \"openid\"\
+                    }"
+                    .to_string()
+                    .into_bytes(),
+              },
+          ),
+                   mock_sleep_fn,
+                   None)
+          .unwrap();
+
+        assert_eq!("12/34", token.access_token().secret());
+        assert_eq!(BasicTokenType::Bearer, *token.token_type());
+        assert_eq!(
+            Some(&vec![Scope::new("openid".to_string()),]),
+            token.scopes()
+        );
+        assert_eq!(None, token.expires_in());
+        assert!(token.refresh_token().is_none());
+    }
+
+    struct IncreasingTime {
+        times: std::ops::RangeFrom<i64>,
+    }
+
+    impl IncreasingTime {
+        fn new() -> Self {
+            Self { times: (0..) }
+        }
+        fn next(&mut self) -> DateTime<Utc> {
+            let next_value = self.times.next().unwrap();
+            let naive = chrono::NaiveDateTime::from_timestamp(next_value, 0);
+            DateTime::<Utc>::from_utc(naive, chrono::Utc)
+        }
+    }
+
+    /// Creates a time function that increments by one second each time.
+    fn mock_time_fn() -> impl Fn() -> DateTime<Utc> + Send + Sync {
+        let timer = std::sync::Mutex::new(IncreasingTime::new());
+        move || timer.lock().unwrap().next()
+    }
+
+    /// Mock sleep function that doesn't actually sleep.
+    fn mock_sleep_fn(_: Duration) {}
+
+    #[test]
+    fn test_exchange_device_code_and_token() {
+        let details = new_device_auth_details(3600);
+        assert_eq!("12345", details.device_code().secret());
+        assert_eq!("https://verify/here", details.verification_uri().as_str());
+        assert_eq!("abcde", details.user_code().secret().as_str());
+        assert_eq!(
+            "https://verify/here?abcde",
+            details
+                .verification_uri_complete()
+                .unwrap()
+                .secret()
+                .as_str()
+        );
+        assert_eq!(Duration::from_secs(3600), details.expires_in());
+        assert_eq!(Duration::from_secs(1), details.interval());
+
+        let token = new_client()
+          .exchange_device_access_token(&details)
+          .set_time_fn(mock_time_fn())
+          .request(mock_http_client(
+              vec![
+                  (ACCEPT, "application/json"),
+                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+              ],
+              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+              None,
+              HttpResponse {
+                  status_code: StatusCode::OK,
+                  headers: vec![(
+                      CONTENT_TYPE,
+                      HeaderValue::from_str("application/json").unwrap(),
+                  )]
+                    .into_iter()
+                    .collect(),
+                  body: "{\
+                    \"access_token\": \"12/34\", \
+                    \"token_type\": \"bearer\", \
+                    \"scope\": \"openid\"\
+                    }"
+                    .to_string()
+                    .into_bytes(),
+              },
+          ),
+                   mock_sleep_fn,
+                   None)
+          .unwrap();
+
+        assert_eq!("12/34", token.access_token().secret());
+        assert_eq!(BasicTokenType::Bearer, *token.token_type());
+        assert_eq!(
+            Some(&vec![Scope::new("openid".to_string()),]),
+            token.scopes()
+        );
+        assert_eq!(None, token.expires_in());
+        assert!(token.refresh_token().is_none());
+    }
+
+    #[test]
+    fn test_device_token_authorization_timeout() {
+        let details = new_device_auth_details(2);
+        assert_eq!("12345", details.device_code().secret());
+        assert_eq!("https://verify/here", details.verification_uri().as_str());
+        assert_eq!("abcde", details.user_code().secret().as_str());
+        assert_eq!(
+            "https://verify/here?abcde",
+            details
+                .verification_uri_complete()
+                .unwrap()
+                .secret()
+                .as_str()
+        );
+        assert_eq!(Duration::from_secs(2), details.expires_in());
+        assert_eq!(Duration::from_secs(1), details.interval());
+
+        let token = new_client()
+          .exchange_device_access_token(&details)
+          .set_time_fn(mock_time_fn())
+          .request(mock_http_client(
+              vec![
+                  (ACCEPT, "application/json"),
+                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+              ],
+              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+              None,
+              HttpResponse {
+                  status_code: StatusCode::from_u16(400).unwrap(),
+                  headers: vec![(
+                      CONTENT_TYPE,
+                      HeaderValue::from_str("application/json").unwrap(),
+                  )]
+                    .into_iter()
+                    .collect(),
+                  body: "{\
+                    \"error\": \"authorization_pending\", \
+                    \"error_description\": \"Still waiting for user\"\
+                    }"
+                    .to_string()
+                    .into_bytes(),
+              },
+          ),
+                   mock_sleep_fn,
+                   None)
+          .err()
+          .unwrap();
+        match token {
+            RequestTokenError::ServerResponse(msg) => assert_eq!(
+                msg,
+                DeviceCodeErrorResponse::new(
+                    DeviceCodeErrorResponseType::ExpiredToken,
+                    Some(String::from("This device code has expired.")),
+                    None,
+                )
+            ),
+            _ => unreachable!("Error should be an expiry"),
+        }
+    }
+
+    #[test]
+    fn test_device_token_access_denied() {
+        let details = new_device_auth_details(2);
+        assert_eq!("12345", details.device_code().secret());
+        assert_eq!("https://verify/here", details.verification_uri().as_str());
+        assert_eq!("abcde", details.user_code().secret().as_str());
+        assert_eq!(
+            "https://verify/here?abcde",
+            details
+                .verification_uri_complete()
+                .unwrap()
+                .secret()
+                .as_str()
+        );
+        assert_eq!(Duration::from_secs(2), details.expires_in());
+        assert_eq!(Duration::from_secs(1), details.interval());
+
+        let token = new_client()
+          .exchange_device_access_token(&details)
+          .set_time_fn(mock_time_fn())
+          .request(mock_http_client(
+              vec![
+                  (ACCEPT, "application/json"),
+                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+              ],
+              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+              None,
+              HttpResponse {
+                  status_code: StatusCode::from_u16(400).unwrap(),
+                  headers: vec![(
+                      CONTENT_TYPE,
+                      HeaderValue::from_str("application/json").unwrap(),
+                  )]
+                    .into_iter()
+                    .collect(),
+                  body: "{\
+                    \"error\": \"access_denied\", \
+                    \"error_description\": \"Access Denied\"\
+                    }"
+                    .to_string()
+                    .into_bytes(),
+              },
+          ),
+                   mock_sleep_fn,
+                   None)
+          .err()
+          .unwrap();
+        match token {
+            RequestTokenError::ServerResponse(msg) => {
+                assert_eq!(msg.error(), &DeviceCodeErrorResponseType::AccessDenied)
+            }
+            _ => unreachable!("Error should be Access Denied"),
+        }
+    }
+
+    #[test]
+    fn test_device_token_expired() {
+        let details = new_device_auth_details(2);
+        assert_eq!("12345", details.device_code().secret());
+        assert_eq!("https://verify/here", details.verification_uri().as_str());
+        assert_eq!("abcde", details.user_code().secret().as_str());
+        assert_eq!(
+            "https://verify/here?abcde",
+            details
+                .verification_uri_complete()
+                .unwrap()
+                .secret()
+                .as_str()
+        );
+        assert_eq!(Duration::from_secs(2), details.expires_in());
+        assert_eq!(Duration::from_secs(1), details.interval());
+
+        let token = new_client()
+          .exchange_device_access_token(&details)
+          .set_time_fn(mock_time_fn())
+          .request(mock_http_client(
+              vec![
+                  (ACCEPT, "application/json"),
+                  (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                  (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+              ],
+              "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=12345",
+              None,
+              HttpResponse {
+                  status_code: StatusCode::from_u16(400).unwrap(),
+                  headers: vec![(
+                      CONTENT_TYPE,
+                      HeaderValue::from_str("application/json").unwrap(),
+                  )]
+                    .into_iter()
+                    .collect(),
+                  body: "{\
+                    \"error\": \"expired_token\", \
+                    \"error_description\": \"Token has expired\"\
+                    }"
+                    .to_string()
+                    .into_bytes(),
+              },
+          ),
+                   mock_sleep_fn,
+                   None)
+          .err()
+          .unwrap();
+        match token {
+            RequestTokenError::ServerResponse(msg) => {
+                assert_eq!(msg.error(), &DeviceCodeErrorResponseType::ExpiredToken)
+            }
+            _ => unreachable!("Error should be ExpiredToken"),
+        }
+    }
 }

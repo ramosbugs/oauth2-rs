@@ -1,7 +1,8 @@
 use oauth2::basic::BasicClient;
-use oauth2::devicecode::StandardDeviceAuthorizationResponse;
 use oauth2::reqwest::async_http_client;
-use oauth2::{AuthUrl, ClientId, DeviceAuthorizationUrl, Scope, TokenUrl};
+use oauth2::{
+    AuthUrl, ClientId, DeviceAuthorizationUrl, Scope, StandardDeviceAuthorizationResponse, TokenUrl,
+};
 
 use std::error::Error;
 

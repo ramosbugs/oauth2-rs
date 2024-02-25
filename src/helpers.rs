@@ -356,3 +356,38 @@ pub fn variant_name<T: Serialize>(t: &T) -> &'static str {
 
     t.serialize(VariantName).unwrap()
 }
+
+#[cfg(test)]
+mod tests {
+    use serde::Deserialize;
+
+    #[derive(Deserialize, Debug, Clone)]
+    pub struct ObjectWithOptionalStringOrVecString {
+        #[serde(deserialize_with = "crate::helpers::deserialize_optional_string_or_vec_string")]
+        pub strings: Option<Vec<String>>,
+    }
+
+    #[test]
+    fn test_deserialize_optional_string_or_vec_string_none() {
+        let list_of_strings: ObjectWithOptionalStringOrVecString =
+            serde_json::from_str(r#"{ "strings": null }"#).unwrap();
+        assert_eq!(None, list_of_strings.strings);
+    }
+
+    #[test]
+    fn test_deserialize_optional_string_or_vec_string_single_value() {
+        let list_of_strings: ObjectWithOptionalStringOrVecString =
+            serde_json::from_str(r#"{ "strings": "v1" }"#).unwrap();
+        assert_eq!(Some(vec!["v1".to_string()]), list_of_strings.strings);
+    }
+
+    #[test]
+    fn test_deserialize_optional_string_or_vec_string_vec() {
+        let list_of_strings: ObjectWithOptionalStringOrVecString =
+            serde_json::from_str(r#"{ "strings": ["v1", "v2"] }"#).unwrap();
+        assert_eq!(
+            Some(vec!["v1".to_string(), "v2".to_string()]),
+            list_of_strings.strings
+        );
+    }
+}

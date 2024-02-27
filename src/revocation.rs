@@ -284,7 +284,7 @@ mod tests {
         let client = new_client();
 
         let result = client
-            .set_revocation_uri(RevocationUrl::new("http://revocation/url".to_string()).unwrap())
+            .set_revocation_url(RevocationUrl::new("http://revocation/url".to_string()).unwrap())
             .revoke_token(AccessToken::new("access_token_123".to_string()).into())
             .unwrap_err();
 
@@ -297,7 +297,7 @@ mod tests {
     #[test]
     fn test_token_revocation_with_unsupported_token_type() {
         let client = new_client()
-            .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+            .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
         let revocation_response = client
           .revoke_token(AccessToken::new("access_token_123".to_string()).into()).unwrap()
@@ -338,7 +338,7 @@ mod tests {
     #[test]
     fn test_token_revocation_with_access_token_and_empty_json_response() {
         let client = new_client()
-            .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+            .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
         client
             .revoke_token(AccessToken::new("access_token_123".to_string()).into())
@@ -368,7 +368,7 @@ mod tests {
     #[test]
     fn test_token_revocation_with_access_token_and_empty_response() {
         let client = new_client()
-            .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+            .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
         client
             .revoke_token(AccessToken::new("access_token_123".to_string()).into())
@@ -393,7 +393,7 @@ mod tests {
     #[test]
     fn test_token_revocation_with_access_token_and_non_json_response() {
         let client = new_client()
-            .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+            .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
         client
             .revoke_token(AccessToken::new("access_token_123".to_string()).into())
@@ -423,7 +423,7 @@ mod tests {
     #[test]
     fn test_token_revocation_with_refresh_token() {
         let client = new_client()
-            .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+            .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
         client
             .revoke_token(RefreshToken::new("refresh_token_123".to_string()).into())
@@ -454,9 +454,9 @@ mod tests {
     fn test_extension_token_revocation_successful() {
         let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
             .set_client_secret(ClientSecret::new("bbb".to_string()))
-            .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
-            .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap())
-            .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+            .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+            .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap())
+            .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 
         client
             .revoke_token(ColorfulRevocableToken::Red(

@@ -20,7 +20,7 @@ use std::sync::Arc;
 /// [Builder Pattern](https://doc.rust-lang.org/1.0.0/style/ownership/builders.html) together with
 /// [typestates](https://cliffle.com/blog/rust-typestate/#what-are-typestates) to encode whether
 /// certain fields have been set that are prerequisites to certain authentication flows. For
-/// example, the authorization endpoint must be set via [`Client::set_auth_url`] before
+/// example, the authorization endpoint must be set via [`Client::set_auth_uri`] before
 /// [`Client::authorize_url`] can be called. Each endpoint has a corresponding const generic
 /// parameter (e.g., `HAS_AUTH_URL`) used to statically enforce these dependencies. These generics
 /// are set automatically by the corresponding setter functions, and in most cases user code should
@@ -44,9 +44,9 @@ use std::sync::Arc;
 /// # use oauth2::{*, basic::*};
 /// # let client = BasicClient::new(ClientId::new("aaa".to_string()))
 /// #     .set_client_secret(ClientSecret::new("bbb".to_string()))
-/// #     .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
-/// #     .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap())
-/// #     .set_revocation_uri(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
+/// #     .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+/// #     .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap())
+/// #     .set_revocation_url(RevocationUrl::new("https://revocation/url".to_string()).unwrap());
 /// #
 /// # #[derive(Debug, Error)]
 /// # enum FakeError {
@@ -194,7 +194,7 @@ where
     /// via user-agent redirection. This URL is used in all standard OAuth2 flows except the
     /// [Resource Owner Password Credentials Grant](https://tools.ietf.org/html/rfc6749#section-4.3)
     /// and the [Client Credentials Grant](https://tools.ietf.org/html/rfc6749#section-4.4).
-    pub fn set_auth_url(
+    pub fn set_auth_uri(
         self,
         auth_url: AuthUrl,
     ) -> Client<
@@ -269,7 +269,7 @@ where
 
     /// Sets the introspection URL for contacting the ([RFC 7662](https://tools.ietf.org/html/rfc7662))
     /// introspection endpoint.
-    pub fn set_introspection_uri(
+    pub fn set_introspection_url(
         self,
         introspection_url: IntrospectionUrl,
     ) -> Client<
@@ -309,7 +309,7 @@ where
     /// Sets the revocation URL for contacting the revocation endpoint ([RFC 7009](https://tools.ietf.org/html/rfc7009)).
     ///
     /// See: [`revoke_token()`](Self::revoke_token())
-    pub fn set_revocation_uri(
+    pub fn set_revocation_url(
         self,
         revocation_url: RevocationUrl,
     ) -> Client<
@@ -345,7 +345,7 @@ where
     /// typically with client authentication. This URL is used in
     /// all standard OAuth2 flows except the
     /// [Implicit Grant](https://tools.ietf.org/html/rfc6749#section-4.2).
-    pub fn set_token_url(
+    pub fn set_token_uri(
         self,
         token_url: TokenUrl,
     ) -> Client<
@@ -387,7 +387,7 @@ where
     }
 
     /// Returns the redirect URL used by the authorization endpoint.
-    pub fn redirect_url(&self) -> Option<&RedirectUrl> {
+    pub fn redirect_uri(&self) -> Option<&RedirectUrl> {
         self.redirect_url.as_ref()
     }
 }
@@ -427,7 +427,7 @@ where
     TRE: ErrorResponse + 'static,
 {
     /// Returns the authorization endpoint.
-    pub fn auth_url(&self) -> &AuthUrl {
+    pub fn auth_uri(&self) -> &AuthUrl {
         // This is enforced statically via the HAS_AUTH_URL const generic.
         self.auth_url.as_ref().expect("should have auth_url")
     }
@@ -454,7 +454,7 @@ where
     {
         AuthorizationRequest {
             // This is enforced statically via the HAS_AUTH_URL const generic.
-            auth_url: self.auth_url(),
+            auth_url: self.auth_uri(),
             client_id: &self.client_id,
             extra_params: Vec::new(),
             pkce_challenge: None,
@@ -610,7 +610,7 @@ where
     }
 
     /// Returns the token endpoint.
-    pub fn token_url(&self) -> &TokenUrl {
+    pub fn token_uri(&self) -> &TokenUrl {
         // This is enforced statically via the HAS_TOKEN_URL const generic.
         self.token_url.as_ref().expect("should have token_url")
     }
@@ -714,7 +714,7 @@ where
     /// Query the authorization server [`RFC 7662 compatible`](https://tools.ietf.org/html/rfc7662) introspection
     /// endpoint to determine the set of metadata for a previously received token.
     ///
-    /// Requires [`set_introspection_uri()`](Self::set_introspection_uri) to have been previously
+    /// Requires [`set_introspection_url()`](Self::set_introspection_url) to have been previously
     /// called to set the introspection endpoint URL.
     pub fn introspect<'a>(
         &'a self,
@@ -784,7 +784,7 @@ where
     /// [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009) compatible
     /// endpoint.
     ///
-    /// Requires [`set_revocation_uri()`](Self::set_revocation_uri) to have been previously
+    /// Requires [`set_revocation_url()`](Self::set_revocation_url) to have been previously
     /// called to set the revocation endpoint URL.
     pub fn revoke_token(
         &self,

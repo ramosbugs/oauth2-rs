@@ -12,11 +12,11 @@ const TENANT_ID: &str = "{tenant}";
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let client = BasicClient::new(ClientId::new("client_id".to_string()))
-        .set_auth_url(AuthUrl::new(format!(
+        .set_auth_uri(AuthUrl::new(format!(
             "https://login.microsoftonline.com/{}/oauth2/v2.0/authorize",
             TENANT_ID
         ))?)
-        .set_token_url(TokenUrl::new(format!(
+        .set_token_uri(TokenUrl::new(format!(
             "https://login.microsoftonline.com/{}/oauth2/v2.0/token",
             TENANT_ID
         ))?)

@@ -21,8 +21,8 @@ use url::Url;
 
 pub(crate) fn new_client() -> BasicClient<true, false, false, false, true> {
     BasicClient::new(ClientId::new("aaa".to_string()))
-        .set_auth_url(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
-        .set_token_url(TokenUrl::new("https://example.com/token".to_string()).unwrap())
+        .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap())
         .set_client_secret(ClientSecret::new("bbb".to_string()))
 }
 

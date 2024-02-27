@@ -9,10 +9,10 @@ use std::error::Error;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let client = BasicClient::new(ClientId::new("client_id".to_string()))
-        .set_auth_url(AuthUrl::new(
+        .set_auth_uri(AuthUrl::new(
             "https://login.microsoftonline.com/common/oauth2/v2.0/authorize".to_string(),
         )?)
-        .set_token_url(TokenUrl::new(
+        .set_token_uri(TokenUrl::new(
             "https://login.microsoftonline.com/common/oauth2/v2.0/token".to_string(),
         )?)
         .set_device_authorization_url(DeviceAuthorizationUrl::new(

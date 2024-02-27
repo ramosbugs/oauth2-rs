@@ -53,8 +53,8 @@ fn main() {
     // so ensure that option is set.
     let device_client = BasicClient::new(google_client_id)
         .set_client_secret(google_client_secret)
-        .set_auth_url(auth_url)
-        .set_token_url(token_url)
+        .set_auth_uri(auth_url)
+        .set_token_uri(token_url)
         .set_device_authorization_url(device_auth_url)
         .set_auth_type(AuthType::RequestBody);
 

@@ -51,8 +51,8 @@ fn main() {
     // Set up the config for the Microsoft Graph OAuth2 process.
     let client = BasicClient::new(graph_client_id)
         .set_client_secret(graph_client_secret)
-        .set_auth_url(auth_url)
-        .set_token_url(token_url)
+        .set_auth_uri(auth_url)
+        .set_token_uri(token_url)
         // Microsoft Graph requires client_id and client_secret in URL rather than
         // using Basic authentication.
         .set_auth_type(AuthType::RequestBody)

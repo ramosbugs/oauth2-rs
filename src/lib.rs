@@ -118,8 +118,8 @@
 //! // token URL.
 //! let client = BasicClient::new(ClientId::new("client_id".to_string()))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_url(AuthUrl::new("http://authorize".to_string())?)
-//!     .set_token_url(TokenUrl::new("http://token".to_string())?)
+//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
+//!     .set_token_uri(TokenUrl::new("http://token".to_string())?)
 //!     // Set the URL the user will be redirected to after the authorization process.
 //!     .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
 //!
@@ -185,8 +185,8 @@
 //! // token URL.
 //! let client = BasicClient::new(ClientId::new("client_id".to_string()))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_url(AuthUrl::new("http://authorize".to_string())?)
-//!     .set_token_url(TokenUrl::new("http://token".to_string())?)
+//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
+//!     .set_token_uri(TokenUrl::new("http://token".to_string())?)
 //!     // Set the URL the user will be redirected to after the authorization process.
 //!     .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
 //!
@@ -247,7 +247,7 @@
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id".to_string()))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_url(AuthUrl::new("http://authorize".to_string())?);
+//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?);
 //!
 //! // Generate the full authorization URL.
 //! let (auth_url, csrf_token) = client
@@ -292,8 +292,8 @@
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id".to_string()))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_url(AuthUrl::new("http://authorize".to_string())?)
-//!     .set_token_url(TokenUrl::new("http://token".to_string())?);
+//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
+//!     .set_token_uri(TokenUrl::new("http://token".to_string())?);
 //!
 //! let token_result =
 //!     client
@@ -330,8 +330,8 @@
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id".to_string()))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_url(AuthUrl::new("http://authorize".to_string())?)
-//!     .set_token_url(TokenUrl::new("http://token".to_string())?);
+//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
+//!     .set_token_uri(TokenUrl::new("http://token".to_string())?);
 //!
 //! let token_result = client
 //!     .exchange_client_credentials()
@@ -370,8 +370,8 @@
 //! let device_auth_url = DeviceAuthorizationUrl::new("http://deviceauth".to_string())?;
 //! let client = BasicClient::new(ClientId::new("client_id".to_string()))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_url(AuthUrl::new("http://authorize".to_string())?)
-//!     .set_token_url(TokenUrl::new("http://token".to_string())?)
+//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
+//!     .set_token_uri(TokenUrl::new("http://token".to_string())?)
 //!     .set_device_authorization_url(device_auth_url);
 //!
 //! let details: StandardDeviceAuthorizationResponse = client

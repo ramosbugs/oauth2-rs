@@ -406,7 +406,7 @@ mod tests {
         let client = new_client()
             .set_auth_type(AuthType::BasicAuth)
             .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-            .set_introspection_uri(
+            .set_introspection_url(
                 IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
             );
 
@@ -457,7 +457,7 @@ mod tests {
         let client = new_client()
             .set_auth_type(AuthType::BasicAuth)
             .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-            .set_introspection_uri(
+            .set_introspection_url(
                 IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
             );
 

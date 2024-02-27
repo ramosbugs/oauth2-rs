@@ -42,8 +42,8 @@ async fn main() {
     // Set up the config for the Github OAuth2 process.
     let client = BasicClient::new(github_client_id)
         .set_client_secret(github_client_secret)
-        .set_auth_url(auth_url)
-        .set_token_url(token_url)
+        .set_auth_uri(auth_url)
+        .set_token_uri(token_url)
         // This example will be running its own server at localhost:8080.
         // See below for the server implementation.
         .set_redirect_uri(

@@ -96,7 +96,6 @@
 //! This example works with `oauth2`'s default feature flags, which include `reqwest`.
 //!
 //! ```rust,no_run
-//! use anyhow;
 //! use oauth2::{
 //!     AuthorizationCode,
 //!     AuthUrl,
@@ -162,7 +161,6 @@
 //! The example below uses async/await:
 //!
 //! ```rust,no_run
-//! use anyhow;
 //! use oauth2::{
 //!     AuthorizationCode,
 //!     AuthUrl,
@@ -234,7 +232,6 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use anyhow;
 //! use oauth2::{
 //!     AuthUrl,
 //!     ClientId,
@@ -277,7 +274,6 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use anyhow;
 //! use oauth2::{
 //!     AuthUrl,
 //!     ClientId,
@@ -318,7 +314,6 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use anyhow;
 //! use oauth2::{
 //!     AuthUrl,
 //!     ClientId,
@@ -356,7 +351,6 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use anyhow;
 //! use oauth2::{
 //!     AuthUrl,
 //!     ClientId,

@@ -20,6 +20,11 @@
 //!
 //! This library offers a flexible HTTP client interface with two modes:
 //!  * **Synchronous (blocking)**
+//!
+//!    NOTE: Be careful not to use a blocking HTTP client within `async` Rust code, which may panic
+//!    or cause other issues. The
+//!    [`tokio::task::spawn_blocking`](https://docs.rs/tokio/latest/tokio/task/fn.spawn_blocking.html)
+//!    function may be useful in this situation.
 //!  * **Asynchronous**
 //!
 //! ## Security Warning

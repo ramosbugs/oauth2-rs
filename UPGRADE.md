@@ -6,6 +6,14 @@ The 5.0 release includes breaking changes to address several long-standing API i
 a few minor improvements. Consider following the tips below to help ensure a smooth upgrade
 process.
 
+### Upgrade Rust to 1.65 or newer
+
+The minimum supported Rust version (MSRV) is now 1.65. Going forward, this crate will maintain a
+policy of supporting Rust releases going back at least 6 months. Changes that break compatibility
+with Rust releases older than 6 months will no longer be considered SemVer breaking changes and will
+not result in a new major version number for this crate. MSRV changes will coincide with minor
+version updates and will not happen in patch releases.
+
 ### Add typestate const generics to `Client`
 
 Each auth flow depends on one or more server endpoints. For example, the

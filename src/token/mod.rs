@@ -1,8 +1,9 @@
 use crate::endpoint::{endpoint_request, endpoint_response};
 use crate::{
-    AccessToken, AsyncHttpClient, AuthType, AuthorizationCode, ClientId, ClientSecret,
-    ErrorResponse, HttpRequest, PkceCodeVerifier, RedirectUrl, RefreshToken, RequestTokenError,
-    ResourceOwnerPassword, ResourceOwnerUsername, Scope, SyncHttpClient, TokenUrl,
+    AccessToken, AsyncHttpClient, AuthType, AuthorizationCode, Client, ClientId, ClientSecret,
+    EndpointState, ErrorResponse, HttpRequest, PkceCodeVerifier, RedirectUrl, RefreshToken,
+    RequestTokenError, ResourceOwnerPassword, ResourceOwnerUsername, RevocableToken, Scope,
+    SyncHttpClient, TokenIntrospectionResponse, TokenUrl,
 };
 
 use serde::de::DeserializeOwned;
@@ -18,6 +19,115 @@ use std::time::Duration;
 
 #[cfg(test)]
 mod tests;
+
+impl<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+    Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    TIR: TokenIntrospectionResponse<TT>,
+    RT: RevocableToken,
+    TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
+{
+    pub(crate) fn exchange_client_credentials_impl<'a>(
+        &'a self,
+        token_url: &'a TokenUrl,
+    ) -> ClientCredentialsTokenRequest<'a, TE, TR, TT> {
+        ClientCredentialsTokenRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            scopes: Vec::new(),
+            token_url,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub(crate) fn exchange_code_impl<'a>(
+        &'a self,
+        token_url: &'a TokenUrl,
+        code: AuthorizationCode,
+    ) -> CodeTokenRequest<'a, TE, TR, TT> {
+        CodeTokenRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            code,
+            extra_params: Vec::new(),
+            pkce_verifier: None,
+            token_url,
+            redirect_url: self.redirect_url.as_ref().map(Cow::Borrowed),
+            _phantom: PhantomData,
+        }
+    }
+
+    pub(crate) fn exchange_password_impl<'a>(
+        &'a self,
+        token_url: &'a TokenUrl,
+        username: &'a ResourceOwnerUsername,
+        password: &'a ResourceOwnerPassword,
+    ) -> PasswordTokenRequest<'a, TE, TR, TT> {
+        PasswordTokenRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            username,
+            password,
+            extra_params: Vec::new(),
+            scopes: Vec::new(),
+            token_url,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub(crate) fn exchange_refresh_token_impl<'a>(
+        &'a self,
+        token_url: &'a TokenUrl,
+        refresh_token: &'a RefreshToken,
+    ) -> RefreshTokenRequest<'a, TE, TR, TT> {
+        RefreshTokenRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            refresh_token,
+            scopes: Vec::new(),
+            token_url,
+            _phantom: PhantomData,
+        }
+    }
+}
 
 /// Future returned by `request_async` methods.
 pub type TokenRequestFuture<'c, RE, TE, TR> =

@@ -34,8 +34,8 @@ impl<'c, E, F, T> AsyncHttpClient<'c> for T
 where
     E: Error + 'static,
     F: Future<Output = Result<HttpResponse, E>> + 'c,
-    // We can't implement this for FnOnce because the device code flow requires clients to support
-    // multiple calls.
+    // We can't implement this for FnOnce because the device authorization flow requires clients to
+    // supportmultiple calls.
     T: Fn(HttpRequest) -> F,
 {
     type Error = E;
@@ -59,8 +59,8 @@ pub trait SyncHttpClient {
 impl<E, T> SyncHttpClient for T
 where
     E: Error + 'static,
-    // We can't implement this for FnOnce because the device code flow requires clients to support
-    // multiple calls.
+    // We can't implement this for FnOnce because the device authorization flow requires clients to
+    // support multiple calls.
     T: Fn(HttpRequest) -> Result<HttpResponse, E>,
 {
     type Error = E;

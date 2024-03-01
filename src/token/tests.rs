@@ -1154,11 +1154,11 @@ mod custom_errors {
     impl ErrorResponse for CustomErrorResponse {}
 
     pub type CustomErrorClient<
-        const HAS_AUTH_URL: bool,
-        const HAS_DEVICE_AUTH_URL: bool,
-        const HAS_INTROSPECTION_URL: bool,
-        const HAS_REVOCATION_URL: bool,
-        const HAS_TOKEN_URL: bool,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     > = Client<
         CustomErrorResponse,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
@@ -1166,11 +1166,11 @@ mod custom_errors {
         StandardTokenIntrospectionResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulRevocableToken,
         CustomErrorResponse,
-        HAS_AUTH_URL,
-        HAS_DEVICE_AUTH_URL,
-        HAS_INTROSPECTION_URL,
-        HAS_REVOCATION_URL,
-        HAS_TOKEN_URL,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     >;
 }
 

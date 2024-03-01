@@ -1,9 +1,10 @@
 use crate::basic::BasicErrorResponseType;
 use crate::endpoint::{endpoint_request, endpoint_response, endpoint_response_status_only};
 use crate::{
-    AccessToken, AsyncHttpClient, AuthType, ClientId, ClientSecret, ErrorResponse,
-    ErrorResponseType, HttpRequest, RefreshToken, RequestTokenError, RevocationUrl, SyncHttpClient,
-    TokenRequestFuture,
+    AccessToken, AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, ConfigurationError,
+    EndpointState, ErrorResponse, ErrorResponseType, HttpRequest, RefreshToken, RequestTokenError,
+    RevocationUrl, SyncHttpClient, TokenIntrospectionResponse, TokenRequestFuture, TokenResponse,
+    TokenType,
 };
 
 use serde::{Deserialize, Serialize};
@@ -14,6 +15,71 @@ use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::pin::Pin;
+
+impl<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+    Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    TIR: TokenIntrospectionResponse<TT>,
+    RT: RevocableToken,
+    TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
+{
+    pub(crate) fn revoke_token_impl<'a>(
+        &'a self,
+        revocation_url: &'a RevocationUrl,
+        token: RT,
+    ) -> Result<RevocationRequest<'a, RT, TRE>, ConfigurationError> {
+        // https://tools.ietf.org/html/rfc7009#section-2 states:
+        //   "The client requests the revocation of a particular token by making an
+        //    HTTP POST request to the token revocation endpoint URL.  This URL
+        //    MUST conform to the rules given in [RFC6749], Section 3.1.  Clients
+        //    MUST verify that the URL is an HTTPS URL."
+        if revocation_url.url().scheme() != "https" {
+            return Err(ConfigurationError::InsecureUrl("revocation"));
+        }
+
+        Ok(RevocationRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            revocation_url,
+            token,
+            _phantom: PhantomData,
+        })
+    }
+}
 
 /// A revocable token.
 ///
@@ -317,6 +383,17 @@ mod tests {
     use http::{HeaderValue, Response, StatusCode};
 
     #[test]
+    fn test_token_revocation_with_missing_url() {
+        let client = new_client().set_revocation_url_option(None);
+
+        let result = client
+            .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+            .unwrap_err();
+
+        assert_eq!(result.to_string(), "No revocation endpoint URL specified");
+    }
+
+    #[test]
     fn test_token_revocation_with_non_https_url() {
         let client = new_client();
 
@@ -326,7 +403,7 @@ mod tests {
             .unwrap_err();
 
         assert_eq!(
-            format!("{}", result),
+            result.to_string(),
             "Scheme for revocation endpoint URL must be HTTPS"
         );
     }

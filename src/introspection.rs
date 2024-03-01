@@ -1,8 +1,8 @@
 use crate::endpoint::{endpoint_request, endpoint_response};
 use crate::{
-    AccessToken, AsyncHttpClient, AuthType, ClientId, ClientSecret, ErrorResponse,
-    ExtraTokenFields, HttpRequest, IntrospectionUrl, RequestTokenError, Scope, SyncHttpClient,
-    TokenRequestFuture, TokenType,
+    AccessToken, AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, EndpointState,
+    ErrorResponse, ExtraTokenFields, HttpRequest, IntrospectionUrl, RequestTokenError,
+    RevocableToken, Scope, SyncHttpClient, TokenRequestFuture, TokenResponse, TokenType,
 };
 
 use chrono::serde::ts_seconds_option;
@@ -15,6 +15,63 @@ use std::error::Error;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::pin::Pin;
+
+impl<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+    Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    TIR: TokenIntrospectionResponse<TT>,
+    RT: RevocableToken,
+    TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
+{
+    pub(crate) fn introspect_impl<'a>(
+        &'a self,
+        introspection_url: &'a IntrospectionUrl,
+        token: &'a AccessToken,
+    ) -> IntrospectionRequest<'a, TE, TIR, TT> {
+        IntrospectionRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            introspection_url,
+            token,
+            token_type_hint: None,
+            _phantom: PhantomData,
+        }
+    }
+}
 
 /// A request to introspect an access token.
 ///
@@ -415,7 +472,6 @@ mod tests {
 
         let introspection_response = client
             .introspect(&AccessToken::new("access_token_123".to_string()))
-            .unwrap()
             .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
@@ -466,7 +522,6 @@ mod tests {
 
         let introspection_response = client
             .introspect(&AccessToken::new("access_token_123".to_string()))
-            .unwrap()
             .set_token_type_hint("access_token")
             .request(&mock_http_client(
                 vec![

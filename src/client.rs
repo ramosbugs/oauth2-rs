@@ -8,11 +8,34 @@ use crate::{
     TokenIntrospectionResponse, TokenResponse, TokenType, TokenUrl,
 };
 
-use chrono::Utc;
-
-use std::borrow::Cow;
 use std::marker::PhantomData;
-use std::sync::Arc;
+
+mod private {
+    /// Private trait to make `EndpointState` a sealed trait.
+    pub trait EndpointStateSealed {}
+}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) base trait indicating whether an endpoint
+/// has been configured via its corresponding setter.
+pub trait EndpointState: private::EndpointStateSealed {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an endpoint has not been
+/// set and cannot be used.
+pub struct EndpointNotSet;
+impl EndpointState for EndpointNotSet {}
+impl private::EndpointStateSealed for EndpointNotSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an endpoint has been set
+/// and is ready to be used.
+pub struct EndpointSet;
+impl EndpointState for EndpointSet {}
+impl private::EndpointStateSealed for EndpointSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an endpoint may have been
+/// set and can be used via fallible methods.
+pub struct EndpointMaybeSet;
+impl EndpointState for EndpointMaybeSet {}
+impl private::EndpointStateSealed for EndpointMaybeSet {}
 
 /// Stores the configuration for an OAuth2 client.
 ///
@@ -20,11 +43,21 @@ use std::sync::Arc;
 /// [Builder Pattern](https://doc.rust-lang.org/1.0.0/style/ownership/builders.html) together with
 /// [typestates](https://cliffle.com/blog/rust-typestate/#what-are-typestates) to encode whether
 /// certain fields have been set that are prerequisites to certain authentication flows. For
-/// example, the authorization endpoint must be set via [`Client::set_auth_uri`] before
-/// [`Client::authorize_url`] can be called. Each endpoint has a corresponding const generic
-/// parameter (e.g., `HAS_AUTH_URL`) used to statically enforce these dependencies. These generics
+/// example, the authorization endpoint must be set via [`set_auth_uri()`](Client::set_auth_uri)
+/// before [`authorize_url()`](Client::authorize_url) can be called. Each endpoint has a
+/// corresponding generic type
+/// parameter (e.g., `HasAuthUrl`) used to statically enforce these dependencies. These generics
 /// are set automatically by the corresponding setter functions, and in most cases user code should
 /// not need to deal with them directly.
+///
+/// In addition to unconditional setters (e.g., [`set_auth_uri()`](Client::set_auth_uri)), each
+/// endpoint has a corresponding conditional setter (e.g.,
+/// [`set_auth_uri_option()`](Client::set_auth_uri_option)) that sets a
+/// conditional typestate ([`EndpointMaybeSet`]). When the conditional typestate is set, endpoints
+/// can be used via fallible methods that return [`ConfigurationError::MissingUrl`] if an
+/// endpoint has not been set. This is useful in dynamic scenarios such as
+/// [OpenID Connect Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html), in which
+/// it cannot be determined until runtime whether an endpoint is configured.
 ///
 /// # Error Types
 ///
@@ -91,11 +124,11 @@ pub struct Client<
     TIR,
     RT,
     TRE,
-    const HAS_AUTH_URL: bool = false,
-    const HAS_DEVICE_AUTH_URL: bool = false,
-    const HAS_INTROSPECTION_URL: bool = false,
-    const HAS_REVOCATION_URL: bool = false,
-    const HAS_TOKEN_URL: bool = false,
+    HasAuthUrl = EndpointNotSet,
+    HasDeviceAuthUrl = EndpointNotSet,
+    HasIntrospectionUrl = EndpointNotSet,
+    HasRevocationUrl = EndpointNotSet,
+    HasTokenUrl = EndpointNotSet,
 > where
     TE: ErrorResponse,
     TR: TokenResponse<TT>,
@@ -103,6 +136,11 @@ pub struct Client<
     TIR: TokenIntrospectionResponse<TT>,
     RT: RevocableToken,
     TRE: ErrorResponse,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
 {
     pub(crate) client_id: ClientId,
     pub(crate) client_secret: Option<ClientSecret>,
@@ -113,9 +151,35 @@ pub struct Client<
     pub(crate) introspection_url: Option<IntrospectionUrl>,
     pub(crate) revocation_url: Option<RevocationUrl>,
     pub(crate) device_authorization_url: Option<DeviceAuthorizationUrl>,
-    pub(crate) phantom: PhantomData<(TE, TR, TT, TIR, RT, TRE)>,
+    #[allow(clippy::type_complexity)]
+    pub(crate) phantom: PhantomData<(
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    )>,
 }
-impl<TE, TR, TT, TIR, RT, TRE> Client<TE, TR, TT, TIR, RT, TRE, false, false, false, false, false>
+impl<TE, TR, TT, TIR, RT, TRE>
+    Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        EndpointNotSet,
+        EndpointNotSet,
+        EndpointNotSet,
+        EndpointNotSet,
+        EndpointNotSet,
+    >
 where
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
@@ -147,11 +211,11 @@ impl<
         TIR,
         RT,
         TRE,
-        const HAS_AUTH_URL: bool,
-        const HAS_DEVICE_AUTH_URL: bool,
-        const HAS_INTROSPECTION_URL: bool,
-        const HAS_REVOCATION_URL: bool,
-        const HAS_TOKEN_URL: bool,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     >
     Client<
         TE,
@@ -160,11 +224,11 @@ impl<
         TIR,
         RT,
         TRE,
-        HAS_AUTH_URL,
-        HAS_DEVICE_AUTH_URL,
-        HAS_INTROSPECTION_URL,
-        HAS_REVOCATION_URL,
-        HAS_TOKEN_URL,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     >
 where
     TE: ErrorResponse + 'static,
@@ -173,14 +237,19 @@ where
     TIR: TokenIntrospectionResponse<TT>,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
 {
-    /// Configures the type of client authentication used for communicating with the authorization
+    /// Set the type of client authentication used for communicating with the authorization
     /// server.
     ///
     /// The default is to use HTTP Basic authentication, as recommended in
     /// [Section 2.3.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-2.3.1). Note that
-    /// if a client secret is omitted (i.e., `client_secret` is set to `None` when calling
-    /// [`Client::new`]), [`AuthType::RequestBody`] is used regardless of the `auth_type` passed to
+    /// if a client secret is omitted (i.e., [`set_client_secret()`](Self::set_client_secret) is not
+    /// called), [`AuthType::RequestBody`] is used regardless of the `auth_type` passed to
     /// this function.
     pub fn set_auth_type(mut self, auth_type: AuthType) -> Self {
         self.auth_type = auth_type;
@@ -188,7 +257,7 @@ where
         self
     }
 
-    /// Sets the authorization endpoint.
+    /// Set the authorization endpoint.
     ///
     /// The client uses the authorization endpoint to obtain authorization from the resource owner
     /// via user-agent redirection. This URL is used in all standard OAuth2 flows except the
@@ -204,11 +273,11 @@ where
         TIR,
         RT,
         TRE,
-        true,
-        HAS_DEVICE_AUTH_URL,
-        HAS_INTROSPECTION_URL,
-        HAS_REVOCATION_URL,
-        HAS_TOKEN_URL,
+        EndpointSet,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     > {
         Client {
             client_id: self.client_id,
@@ -220,11 +289,47 @@ where
             introspection_url: self.introspection_url,
             revocation_url: self.revocation_url,
             device_authorization_url: self.device_authorization_url,
-            phantom: self.phantom,
+            phantom: PhantomData,
         }
     }
 
-    /// Sets the client secret.
+    /// Conditionally set the authorization endpoint.
+    ///
+    /// The client uses the authorization endpoint to obtain authorization from the resource owner
+    /// via user-agent redirection. This URL is used in all standard OAuth2 flows except the
+    /// [Resource Owner Password Credentials Grant](https://tools.ietf.org/html/rfc6749#section-4.3)
+    /// and the [Client Credentials Grant](https://tools.ietf.org/html/rfc6749#section-4.4).
+    pub fn set_auth_uri_option(
+        self,
+        auth_url: Option<AuthUrl>,
+    ) -> Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        EndpointMaybeSet,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    > {
+        Client {
+            client_id: self.client_id,
+            client_secret: self.client_secret,
+            auth_url,
+            auth_type: self.auth_type,
+            token_url: self.token_url,
+            redirect_url: self.redirect_url,
+            introspection_url: self.introspection_url,
+            revocation_url: self.revocation_url,
+            device_authorization_url: self.device_authorization_url,
+            phantom: PhantomData,
+        }
+    }
+
+    /// Set the client secret.
     ///
     /// A client secret is generally used for confidential (i.e., server-side) OAuth2 clients and
     /// omitted from public (browser or native app) OAuth2 clients (see
@@ -235,8 +340,10 @@ where
         self
     }
 
-    /// Sets the device authorization URL used by the device authorization endpoint.
-    /// Used for Device Code Flow, as per [RFC 8628](https://tools.ietf.org/html/rfc8628).
+    /// Set the [RFC 8628](https://tools.ietf.org/html/rfc8628) device authorization endpoint used
+    /// for the Device Authorization Flow.
+    ///
+    /// See [`exchange_device_code()`](Self::exchange_device_code).
     pub fn set_device_authorization_url(
         self,
         device_authorization_url: DeviceAuthorizationUrl,
@@ -247,11 +354,11 @@ where
         TIR,
         RT,
         TRE,
-        HAS_AUTH_URL,
-        true,
-        HAS_INTROSPECTION_URL,
-        HAS_REVOCATION_URL,
-        HAS_TOKEN_URL,
+        HasAuthUrl,
+        EndpointSet,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     > {
         Client {
             client_id: self.client_id,
@@ -263,12 +370,47 @@ where
             introspection_url: self.introspection_url,
             revocation_url: self.revocation_url,
             device_authorization_url: Some(device_authorization_url),
-            phantom: self.phantom,
+            phantom: PhantomData,
         }
     }
 
-    /// Sets the introspection URL for contacting the ([RFC 7662](https://tools.ietf.org/html/rfc7662))
-    /// introspection endpoint.
+    /// Conditionally set the [RFC 8628](https://tools.ietf.org/html/rfc8628) device authorization
+    /// endpoint used for the Device Authorization Flow.
+    ///
+    /// See [`exchange_device_code()`](Self::exchange_device_code).
+    pub fn set_device_authorization_url_option(
+        self,
+        device_authorization_url: Option<DeviceAuthorizationUrl>,
+    ) -> Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        EndpointMaybeSet,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    > {
+        Client {
+            client_id: self.client_id,
+            client_secret: self.client_secret,
+            auth_url: self.auth_url,
+            auth_type: self.auth_type,
+            token_url: self.token_url,
+            redirect_url: self.redirect_url,
+            introspection_url: self.introspection_url,
+            revocation_url: self.revocation_url,
+            device_authorization_url,
+            phantom: PhantomData,
+        }
+    }
+
+    /// Set the [RFC 7662](https://tools.ietf.org/html/rfc7662) introspection endpoint.
+    ///
+    /// See [`introspect()`](Self::introspect).
     pub fn set_introspection_url(
         self,
         introspection_url: IntrospectionUrl,
@@ -279,11 +421,11 @@ where
         TIR,
         RT,
         TRE,
-        HAS_TOKEN_URL,
-        HAS_DEVICE_AUTH_URL,
-        true,
-        HAS_REVOCATION_URL,
-        HAS_TOKEN_URL,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        EndpointSet,
+        HasRevocationUrl,
+        HasTokenUrl,
     > {
         Client {
             client_id: self.client_id,
@@ -295,20 +437,54 @@ where
             introspection_url: Some(introspection_url),
             revocation_url: self.revocation_url,
             device_authorization_url: self.device_authorization_url,
-            phantom: self.phantom,
+            phantom: PhantomData,
         }
     }
 
-    /// Sets the redirect URL used by the authorization endpoint.
+    /// Conditionally set the [RFC 7662](https://tools.ietf.org/html/rfc7662) introspection
+    /// endpoint.
+    ///
+    /// See [`introspect()`](Self::introspect).
+    pub fn set_introspection_url_option(
+        self,
+        introspection_url: Option<IntrospectionUrl>,
+    ) -> Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        EndpointMaybeSet,
+        HasRevocationUrl,
+        HasTokenUrl,
+    > {
+        Client {
+            client_id: self.client_id,
+            client_secret: self.client_secret,
+            auth_url: self.auth_url,
+            auth_type: self.auth_type,
+            token_url: self.token_url,
+            redirect_url: self.redirect_url,
+            introspection_url,
+            revocation_url: self.revocation_url,
+            device_authorization_url: self.device_authorization_url,
+            phantom: PhantomData,
+        }
+    }
+
+    /// Set the redirect URL used by the authorization endpoint.
     pub fn set_redirect_uri(mut self, redirect_url: RedirectUrl) -> Self {
         self.redirect_url = Some(redirect_url);
 
         self
     }
 
-    /// Sets the revocation URL for contacting the revocation endpoint ([RFC 7009](https://tools.ietf.org/html/rfc7009)).
+    /// Set the [RFC 7009](https://tools.ietf.org/html/rfc7009) revocation endpoint.
     ///
-    /// See: [`revoke_token()`](Self::revoke_token())
+    /// See [`revoke_token()`](Self::revoke_token()).
     pub fn set_revocation_url(
         self,
         revocation_url: RevocationUrl,
@@ -319,11 +495,11 @@ where
         TIR,
         RT,
         TRE,
-        HAS_TOKEN_URL,
-        HAS_DEVICE_AUTH_URL,
-        HAS_INTROSPECTION_URL,
-        true,
-        HAS_TOKEN_URL,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        EndpointSet,
+        HasTokenUrl,
     > {
         Client {
             client_id: self.client_id,
@@ -335,11 +511,45 @@ where
             introspection_url: self.introspection_url,
             revocation_url: Some(revocation_url),
             device_authorization_url: self.device_authorization_url,
-            phantom: self.phantom,
+            phantom: PhantomData,
         }
     }
 
-    /// Sets the token endpoint.
+    /// Conditionally set the [RFC 7009](https://tools.ietf.org/html/rfc7009) revocation
+    /// endpoint.
+    ///
+    /// See [`revoke_token()`](Self::revoke_token()).
+    pub fn set_revocation_url_option(
+        self,
+        revocation_url: Option<RevocationUrl>,
+    ) -> Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        EndpointMaybeSet,
+        HasTokenUrl,
+    > {
+        Client {
+            client_id: self.client_id,
+            client_secret: self.client_secret,
+            auth_url: self.auth_url,
+            auth_type: self.auth_type,
+            token_url: self.token_url,
+            redirect_url: self.redirect_url,
+            introspection_url: self.introspection_url,
+            revocation_url,
+            device_authorization_url: self.device_authorization_url,
+            phantom: PhantomData,
+        }
+    }
+
+    /// Set the token endpoint.
     ///
     /// The client uses the token endpoint to exchange an authorization code for an access token,
     /// typically with client authentication. This URL is used in
@@ -355,11 +565,11 @@ where
         TIR,
         RT,
         TRE,
-        HAS_AUTH_URL,
-        HAS_DEVICE_AUTH_URL,
-        HAS_INTROSPECTION_URL,
-        HAS_REVOCATION_URL,
-        true,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        EndpointSet,
     > {
         Client {
             client_id: self.client_id,
@@ -371,28 +581,64 @@ where
             introspection_url: self.introspection_url,
             revocation_url: self.revocation_url,
             device_authorization_url: self.device_authorization_url,
-            phantom: self.phantom,
+            phantom: PhantomData,
         }
     }
 
-    /// Returns the Client ID.
+    /// Conditionally set the token endpoint.
+    ///
+    /// The client uses the token endpoint to exchange an authorization code for an access token,
+    /// typically with client authentication. This URL is used in
+    /// all standard OAuth2 flows except the
+    /// [Implicit Grant](https://tools.ietf.org/html/rfc6749#section-4.2).
+    pub fn set_token_uri_option(
+        self,
+        token_url: Option<TokenUrl>,
+    ) -> Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        EndpointMaybeSet,
+    > {
+        Client {
+            client_id: self.client_id,
+            client_secret: self.client_secret,
+            auth_url: self.auth_url,
+            auth_type: self.auth_type,
+            token_url,
+            redirect_url: self.redirect_url,
+            introspection_url: self.introspection_url,
+            revocation_url: self.revocation_url,
+            device_authorization_url: self.device_authorization_url,
+            phantom: PhantomData,
+        }
+    }
+
+    /// Return the Client ID.
     pub fn client_id(&self) -> &ClientId {
         &self.client_id
     }
 
-    /// Returns the type of client authentication used for communicating with the authorization
+    /// Return the type of client authentication used for communicating with the authorization
     /// server.
     pub fn auth_type(&self) -> &AuthType {
         &self.auth_type
     }
 
-    /// Returns the redirect URL used by the authorization endpoint.
+    /// Return the redirect URL used by the authorization endpoint.
     pub fn redirect_uri(&self) -> Option<&RedirectUrl> {
         self.redirect_url.as_ref()
     }
 }
 
-// Methods requiring an authorization endpoint.
+/// Methods requiring an authorization endpoint.
 impl<
         TE,
         TR,
@@ -400,10 +646,10 @@ impl<
         TIR,
         RT,
         TRE,
-        const HAS_DEVICE_AUTH_URL: bool,
-        const HAS_INTROSPECTION_URL: bool,
-        const HAS_REVOCATION_URL: bool,
-        const HAS_TOKEN_URL: bool,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     >
     Client<
         TE,
@@ -412,11 +658,11 @@ impl<
         TIR,
         RT,
         TRE,
-        true,
-        HAS_DEVICE_AUTH_URL,
-        HAS_INTROSPECTION_URL,
-        HAS_REVOCATION_URL,
-        HAS_TOKEN_URL,
+        EndpointSet,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     >
 where
     TE: ErrorResponse + 'static,
@@ -425,14 +671,21 @@ where
     TIR: TokenIntrospectionResponse<TT>,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
 {
-    /// Returns the authorization endpoint.
+    /// Return the authorization endpoint.
     pub fn auth_uri(&self) -> &AuthUrl {
-        // This is enforced statically via the HAS_AUTH_URL const generic.
+        // This is enforced statically via the HasAuthUrl generic type.
         self.auth_url.as_ref().expect("should have auth_url")
     }
 
-    /// Generates an authorization URL for a new authorization request.
+    /// Generate an authorization URL for a new authorization request.
+    ///
+    /// Requires [`set_auth_uri()`](Self::set_auth_uri) to have been previously
+    /// called to set the authorization endpoint.
     ///
     /// # Arguments
     ///
@@ -452,21 +705,11 @@ where
     where
         S: FnOnce() -> CsrfToken,
     {
-        AuthorizationRequest {
-            // This is enforced statically via the HAS_AUTH_URL const generic.
-            auth_url: self.auth_uri(),
-            client_id: &self.client_id,
-            extra_params: Vec::new(),
-            pkce_challenge: None,
-            redirect_url: self.redirect_url.as_ref().map(Cow::Borrowed),
-            response_type: "code".into(),
-            scopes: Vec::new(),
-            state: state_fn(),
-        }
+        self.authorize_url_impl(self.auth_uri(), state_fn)
     }
 }
 
-// Methods requiring a token endpoint.
+/// Methods with a possibly-set authorization endpoint.
 impl<
         TE,
         TR,
@@ -474,10 +717,10 @@ impl<
         TIR,
         RT,
         TRE,
-        const HAS_AUTH_URL: bool,
-        const HAS_DEVICE_AUTH_URL: bool,
-        const HAS_INTROSPECTION_URL: bool,
-        const HAS_REVOCATION_URL: bool,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     >
     Client<
         TE,
@@ -486,11 +729,11 @@ impl<
         TIR,
         RT,
         TRE,
-        HAS_AUTH_URL,
-        HAS_DEVICE_AUTH_URL,
-        HAS_INTROSPECTION_URL,
-        HAS_REVOCATION_URL,
-        true,
+        EndpointMaybeSet,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     >
 where
     TE: ErrorResponse + 'static,
@@ -499,124 +742,159 @@ where
     TIR: TokenIntrospectionResponse<TT>,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
 {
-    /// Requests an access token for the *client credentials* grant type.
-    ///
-    /// See <https://tools.ietf.org/html/rfc6749#section-4.4.2>.
-    pub fn exchange_client_credentials(&self) -> ClientCredentialsTokenRequest<TE, TR, TT> {
-        ClientCredentialsTokenRequest {
-            auth_type: &self.auth_type,
-            client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
-            extra_params: Vec::new(),
-            scopes: Vec::new(),
-            // This is enforced statically via the HAS_TOKEN_URL const generic.
-            token_url: self.token_url.as_ref().expect("should have token_url"),
-            _phantom: PhantomData,
-        }
+    /// Return the authorization endpoint.
+    pub fn auth_uri(&self) -> Option<&AuthUrl> {
+        self.auth_url.as_ref()
     }
 
-    /// Exchanges a code produced by a successful authorization process with an access token.
+    /// Generate an authorization URL for a new authorization request.
+    ///
+    /// Requires [`set_auth_uri_option()`](Self::set_auth_uri_option) to have been previously
+    /// called to set the authorization endpoint.
+    ///
+    /// # Arguments
+    ///
+    /// * `state_fn` - A function that returns an opaque value used by the client to maintain state
+    ///   between the request and callback. The authorization server includes this value when
+    ///   redirecting the user-agent back to the client.
+    ///
+    /// # Security Warning
+    ///
+    /// Callers should use a fresh, unpredictable `state` for each authorization request and verify
+    /// that this value matches the `state` parameter passed by the authorization server to the
+    /// redirect URI. Doing so mitigates
+    /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12)
+    ///  attacks. To disable CSRF protections (NOT recommended), use `insecure::authorize_url`
+    ///  instead.
+    pub fn authorize_url<S>(&self, state_fn: S) -> Result<AuthorizationRequest, ConfigurationError>
+    where
+        S: FnOnce() -> CsrfToken,
+    {
+        Ok(self.authorize_url_impl(
+            self.auth_uri()
+                .ok_or(ConfigurationError::MissingUrl("authorization"))?,
+            state_fn,
+        ))
+    }
+}
+
+/// Methods requiring a token endpoint.
+impl<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+    >
+    Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        EndpointSet,
+    >
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    TIR: TokenIntrospectionResponse<TT>,
+    RT: RevocableToken,
+    TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+{
+    /// Request an access token using the
+    /// [Client Credentials Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4).
+    ///
+    /// Requires [`set_token_uri()`](Self::set_token_uri) to have been previously
+    /// called to set the token endpoint.
+    pub fn exchange_client_credentials(&self) -> ClientCredentialsTokenRequest<TE, TR, TT> {
+        self.exchange_client_credentials_impl(self.token_uri())
+    }
+
+    /// Exchange a code returned during the
+    /// [Authorization Code Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.1)
+    /// for an access token.
     ///
     /// Acquires ownership of the `code` because authorization codes may only be used once to
     /// retrieve an access token from the authorization server.
     ///
-    /// See <https://tools.ietf.org/html/rfc6749#section-4.1.3>.
+    /// Requires [`set_token_uri()`](Self::set_token_uri) to have been previously
+    /// called to set the token endpoint.
     pub fn exchange_code(&self, code: AuthorizationCode) -> CodeTokenRequest<TE, TR, TT> {
-        CodeTokenRequest {
-            auth_type: &self.auth_type,
-            client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
-            code,
-            extra_params: Vec::new(),
-            pkce_verifier: None,
-            // This is enforced statically via the HAS_TOKEN_URL const generic.
-            token_url: self.token_url.as_ref().expect("should have token_url"),
-            redirect_url: self.redirect_url.as_ref().map(Cow::Borrowed),
-            _phantom: PhantomData,
-        }
+        self.exchange_code_impl(self.token_uri(), code)
     }
 
-    /// Perform a device access token request as per
-    /// <https://tools.ietf.org/html/rfc8628#section-3.4>.
-    pub fn exchange_device_access_token<'a, 'b, 'c, EF>(
+    /// Exchange an [RFC 8628](https://tools.ietf.org/html/rfc8628#section-3.2) Device Authorization
+    /// Response returned by [`exchange_device_code()`](Self::exchange_device_code) for an access
+    /// token.
+    ///
+    /// Requires [`set_token_uri()`](Self::set_token_uri) to have been previously
+    /// called to set the token endpoint.
+    pub fn exchange_device_access_token<'a, EF>(
         &'a self,
-        auth_response: &'b DeviceAuthorizationResponse<EF>,
-    ) -> DeviceAccessTokenRequest<'b, 'c, TR, TT, EF>
+        auth_response: &'a DeviceAuthorizationResponse<EF>,
+    ) -> DeviceAccessTokenRequest<'a, 'static, TR, TT, EF>
     where
-        'a: 'b,
         EF: ExtraDeviceAuthorizationFields,
     {
-        DeviceAccessTokenRequest {
-            auth_type: &self.auth_type,
-            client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
-            extra_params: Vec::new(),
-            // This is enforced statically via the HAS_TOKEN_URL const generic.
-            token_url: self.token_url.as_ref().expect("should have token_url"),
-            dev_auth_resp: auth_response,
-            time_fn: Arc::new(Utc::now),
-            max_backoff_interval: None,
-            _phantom: PhantomData,
-        }
+        self.exchange_device_access_token_impl(self.token_uri(), auth_response)
     }
 
-    /// Requests an access token for the *password* grant type.
+    /// Request an access token using the
+    /// [Resource Owner Password Credentials Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.3).
     ///
-    /// See <https://tools.ietf.org/html/rfc6749#section-4.3.2>.
-    pub fn exchange_password<'a, 'b>(
+    /// Requires
+    /// [`set_token_uri()`](Self::set_token_uri) to have
+    /// been previously called to set the token endpoint.
+    pub fn exchange_password<'a>(
         &'a self,
-        username: &'b ResourceOwnerUsername,
-        password: &'b ResourceOwnerPassword,
-    ) -> PasswordTokenRequest<'b, TE, TR, TT>
-    where
-        'a: 'b,
-    {
-        PasswordTokenRequest::<'b> {
-            auth_type: &self.auth_type,
-            client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
-            username,
-            password,
-            extra_params: Vec::new(),
-            scopes: Vec::new(),
-            // This is enforced statically via the HAS_TOKEN_URL const generic.
-            token_url: self.token_url.as_ref().expect("should have token_url"),
-            _phantom: PhantomData,
-        }
+        username: &'a ResourceOwnerUsername,
+        password: &'a ResourceOwnerPassword,
+    ) -> PasswordTokenRequest<'a, TE, TR, TT> {
+        self.exchange_password_impl(self.token_uri(), username, password)
     }
 
-    /// Exchanges a refresh token for an access token
+    /// Exchange a refresh token for an access token.
     ///
     /// See <https://tools.ietf.org/html/rfc6749#section-6>.
-    pub fn exchange_refresh_token<'a, 'b>(
+    ///
+    /// Requires
+    /// [`set_token_uri()`](Self::set_token_uri) to have
+    /// been previously called to set the token endpoint.
+    pub fn exchange_refresh_token<'a>(
         &'a self,
-        refresh_token: &'b RefreshToken,
-    ) -> RefreshTokenRequest<'b, TE, TR, TT>
-    where
-        'a: 'b,
-    {
-        RefreshTokenRequest {
-            auth_type: &self.auth_type,
-            client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
-            extra_params: Vec::new(),
-            refresh_token,
-            scopes: Vec::new(),
-            // This is enforced statically via the HAS_TOKEN_URL const generic.
-            token_url: self.token_url.as_ref().expect("should have token_url"),
-            _phantom: PhantomData,
-        }
+        refresh_token: &'a RefreshToken,
+    ) -> RefreshTokenRequest<'a, TE, TR, TT> {
+        self.exchange_refresh_token_impl(self.token_uri(), refresh_token)
     }
 
-    /// Returns the token endpoint.
+    /// Return the token endpoint.
     pub fn token_uri(&self) -> &TokenUrl {
-        // This is enforced statically via the HAS_TOKEN_URL const generic.
+        // This is enforced statically via the HasTokenUrl generic type.
         self.token_url.as_ref().expect("should have token_url")
     }
 }
 
-// Methods requiring a device authorization endpoint.
+/// Methods with a possibly-set token endpoint.
 impl<
         TE,
         TR,
@@ -624,10 +902,10 @@ impl<
         TIR,
         RT,
         TRE,
-        const HAS_AUTH_URL: bool,
-        const HAS_INTROSPECTION_URL: bool,
-        const HAS_REVOCATION_URL: bool,
-        const HAS_TOKEN_URL: bool,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
     >
     Client<
         TE,
@@ -636,11 +914,11 @@ impl<
         TIR,
         RT,
         TRE,
-        HAS_AUTH_URL,
-        true,
-        HAS_INTROSPECTION_URL,
-        HAS_REVOCATION_URL,
-        HAS_TOKEN_URL,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        EndpointMaybeSet,
     >
 where
     TE: ErrorResponse + 'static,
@@ -649,47 +927,166 @@ where
     TIR: TokenIntrospectionResponse<TT>,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
 {
-    /// Perform a device authorization request as per
-    /// <https://tools.ietf.org/html/rfc8628#section-3.1>.
-    pub fn exchange_device_code(&self) -> DeviceAuthorizationRequest<TE> {
-        DeviceAuthorizationRequest {
-            auth_type: &self.auth_type,
-            client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
-            extra_params: Vec::new(),
-            scopes: Vec::new(),
-            // This is enforced statically via the HAS_DEVICE_AUTH_URL const generic.
-            device_authorization_url: self
-                .device_authorization_url
+    /// Request an access token using the
+    /// [Client Credentials Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4).
+    ///
+    /// Requires [`set_token_uri_option()`](Self::set_token_uri_option) to have been previously
+    /// called to set the token endpoint.
+    pub fn exchange_client_credentials(
+        &self,
+    ) -> Result<ClientCredentialsTokenRequest<TE, TR, TT>, ConfigurationError> {
+        Ok(self.exchange_client_credentials_impl(
+            self.token_url
                 .as_ref()
-                .expect("should have device_authorization_url"),
-            _phantom: PhantomData,
-        }
+                .ok_or(ConfigurationError::MissingUrl("token"))?,
+        ))
     }
 
-    /// Returns the device authorization URL used by the device authorization endpoint.
+    /// Exchange a code returned during the
+    /// [Authorization Code Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.1)
+    /// for an access token.
+    ///
+    /// Acquires ownership of the `code` because authorization codes may only be used once to
+    /// retrieve an access token from the authorization server.
+    ///
+    /// Requires [`set_token_uri_option()`](Self::set_token_uri_option) to have been previously
+    /// called to set the token endpoint.
+    pub fn exchange_code(
+        &self,
+        code: AuthorizationCode,
+    ) -> Result<CodeTokenRequest<TE, TR, TT>, ConfigurationError> {
+        Ok(self.exchange_code_impl(
+            self.token_url
+                .as_ref()
+                .ok_or(ConfigurationError::MissingUrl("token"))?,
+            code,
+        ))
+    }
+
+    /// Exchange an [RFC 8628](https://tools.ietf.org/html/rfc8628#section-3.2) Device Authorization
+    /// Response returned by [`exchange_device_code()`](Self::exchange_device_code) for an access
+    /// token.
+    ///
+    /// Requires [`set_token_uri_option()`](Self::set_token_uri_option) to have been previously
+    /// called to set the token endpoint.
+    pub fn exchange_device_access_token<'a, EF>(
+        &'a self,
+        auth_response: &'a DeviceAuthorizationResponse<EF>,
+    ) -> Result<DeviceAccessTokenRequest<'a, 'static, TR, TT, EF>, ConfigurationError>
+    where
+        EF: ExtraDeviceAuthorizationFields,
+    {
+        Ok(self.exchange_device_access_token_impl(
+            self.token_url
+                .as_ref()
+                .ok_or(ConfigurationError::MissingUrl("token"))?,
+            auth_response,
+        ))
+    }
+
+    /// Request an access token using the
+    /// [Resource Owner Password Credentials Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.3).
+    ///
+    /// Requires
+    /// [`set_token_uri_option()`](Self::set_token_uri_option) to have
+    /// been previously called to set the token endpoint.
+    pub fn exchange_password<'a>(
+        &'a self,
+        username: &'a ResourceOwnerUsername,
+        password: &'a ResourceOwnerPassword,
+    ) -> Result<PasswordTokenRequest<'a, TE, TR, TT>, ConfigurationError> {
+        Ok(self.exchange_password_impl(
+            self.token_url
+                .as_ref()
+                .ok_or(ConfigurationError::MissingUrl("token"))?,
+            username,
+            password,
+        ))
+    }
+
+    /// Exchange a refresh token for an access token.
+    ///
+    /// See <https://tools.ietf.org/html/rfc6749#section-6>.
+    ///
+    /// Requires
+    /// [`set_token_uri_option()`](Self::set_token_uri_option) to have
+    /// been previously called to set the token endpoint.
+    pub fn exchange_refresh_token<'a>(
+        &'a self,
+        refresh_token: &'a RefreshToken,
+    ) -> Result<RefreshTokenRequest<'a, TE, TR, TT>, ConfigurationError> {
+        Ok(self.exchange_refresh_token_impl(
+            self.token_url
+                .as_ref()
+                .ok_or(ConfigurationError::MissingUrl("token"))?,
+            refresh_token,
+        ))
+    }
+
+    /// Return the token endpoint.
+    pub fn token_uri(&self) -> Option<&TokenUrl> {
+        self.token_url.as_ref()
+    }
+}
+
+/// Methods requiring a device authorization endpoint.
+impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasIntrospectionUrl, HasRevocationUrl, HasTokenUrl>
+    Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        EndpointSet,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    TIR: TokenIntrospectionResponse<TT>,
+    RT: RevocableToken,
+    TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
+{
+    /// Begin the [RFC 8628](https://tools.ietf.org/html/rfc8628) Device Authorization Flow and
+    /// retrieve a Device Authorization Response.
+    ///
+    /// Requires
+    /// [`set_device_authorization_url()`](Self::set_device_authorization_url) to have
+    /// been previously called to set the device authorization endpoint.
+    ///
+    /// See [`exchange_device_access_token()`](Self::exchange_device_access_token).
+    pub fn exchange_device_code(&self) -> DeviceAuthorizationRequest<TE> {
+        self.exchange_device_code_impl(self.device_authorization_url())
+    }
+
+    /// Return the [RFC 8628](https://tools.ietf.org/html/rfc8628) device authorization endpoint
+    /// used for the Device Authorization Flow.
+    ///
+    /// See [`exchange_device_code()`](Self::exchange_device_code).
     pub fn device_authorization_url(&self) -> &DeviceAuthorizationUrl {
-        // This is enforced statically via the HAS_DEVICE_AUTH_URL const generic.
+        // This is enforced statically via the HasDeviceAuthUrl generic type.
         self.device_authorization_url
             .as_ref()
             .expect("should have device_authorization_url")
     }
 }
 
-// Methods requiring an introspection endpoint.
-impl<
-        TE,
-        TR,
-        TT,
-        TIR,
-        RT,
-        TRE,
-        const HAS_AUTH_URL: bool,
-        const HAS_DEVICE_AUTH_URL: bool,
-        const HAS_REVOCATION_URL: bool,
-        const HAS_TOKEN_URL: bool,
-    >
+/// Methods with a possibly-set device authorization endpoint.
+impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasIntrospectionUrl, HasRevocationUrl, HasTokenUrl>
     Client<
         TE,
         TR,
@@ -697,11 +1094,11 @@ impl<
         TIR,
         RT,
         TRE,
-        HAS_AUTH_URL,
-        HAS_DEVICE_AUTH_URL,
-        true,
-        HAS_REVOCATION_URL,
-        HAS_TOKEN_URL,
+        HasAuthUrl,
+        EndpointMaybeSet,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     >
 where
     TE: ErrorResponse + 'static,
@@ -710,55 +1107,87 @@ where
     TIR: TokenIntrospectionResponse<TT>,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
 {
-    /// Query the authorization server [`RFC 7662 compatible`](https://tools.ietf.org/html/rfc7662) introspection
-    /// endpoint to determine the set of metadata for a previously received token.
+    /// Begin the [RFC 8628](https://tools.ietf.org/html/rfc8628) Device Authorization Flow.
+    ///
+    /// Requires
+    /// [`set_device_authorization_url_option()`](Self::set_device_authorization_url_option) to have
+    /// been previously called to set the device authorization endpoint.
+    ///
+    /// See [`exchange_device_access_token()`](Self::exchange_device_access_token).
+    pub fn exchange_device_code(
+        &self,
+    ) -> Result<DeviceAuthorizationRequest<TE>, ConfigurationError> {
+        Ok(self.exchange_device_code_impl(
+            self.device_authorization_url
+                .as_ref()
+                .ok_or(ConfigurationError::MissingUrl("device authorization"))?,
+        ))
+    }
+
+    /// Return the [RFC 8628](https://tools.ietf.org/html/rfc8628) device authorization endpoint
+    /// used for the Device Authorization Flow.
+    ///
+    /// See [`exchange_device_code()`](Self::exchange_device_code).
+    pub fn device_authorization_url(&self) -> Option<&DeviceAuthorizationUrl> {
+        self.device_authorization_url.as_ref()
+    }
+}
+
+/// Methods requiring an introspection endpoint.
+impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasRevocationUrl, HasTokenUrl>
+    Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        EndpointSet,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    TIR: TokenIntrospectionResponse<TT>,
+    RT: RevocableToken,
+    TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
+{
+    /// Retrieve metadata for an access token using the
+    /// [`RFC 7662`](https://tools.ietf.org/html/rfc7662) introspection endpoint.
     ///
     /// Requires [`set_introspection_url()`](Self::set_introspection_url) to have been previously
-    /// called to set the introspection endpoint URL.
+    /// called to set the introspection endpoint.
     pub fn introspect<'a>(
         &'a self,
         token: &'a AccessToken,
-    ) -> Result<IntrospectionRequest<'a, TE, TIR, TT>, ConfigurationError> {
-        Ok(IntrospectionRequest {
-            auth_type: &self.auth_type,
-            client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
-            extra_params: Vec::new(),
-            // This is enforced statically via the HAS_INTROSPECTION_URL const generic.
-            introspection_url: self
-                .introspection_url
-                .as_ref()
-                .expect("should have introspection_url"),
-            token,
-            token_type_hint: None,
-            _phantom: PhantomData,
-        })
+    ) -> IntrospectionRequest<'a, TE, TIR, TT> {
+        self.introspect_impl(self.introspection_url(), token)
     }
 
-    /// Returns the introspection URL for contacting the ([RFC 7662](https://tools.ietf.org/html/rfc7662))
-    /// introspection endpoint.
+    /// Return the [RFC 7662](https://tools.ietf.org/html/rfc7662) introspection endpoint.
     pub fn introspection_url(&self) -> &IntrospectionUrl {
-        // This is enforced statically via the HAS_INTROSPECTION_URL const generic.
+        // This is enforced statically via the HasIntrospectionUrl generic type.
         self.introspection_url
             .as_ref()
             .expect("should have introspection_url")
     }
 }
 
-// Methods requiring a revocation endpoint.
-impl<
-        TE,
-        TR,
-        TT,
-        TIR,
-        RT,
-        TRE,
-        const HAS_AUTH_URL: bool,
-        const HAS_DEVICE_AUTH_URL: bool,
-        const HAS_INTROSPECTION_URL: bool,
-        const HAS_TOKEN_URL: bool,
-    >
+/// Methods with a possibly-set introspection endpoint.
+impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasRevocationUrl, HasTokenUrl>
     Client<
         TE,
         TR,
@@ -766,11 +1195,11 @@ impl<
         TIR,
         RT,
         TRE,
-        HAS_AUTH_URL,
-        HAS_DEVICE_AUTH_URL,
-        HAS_INTROSPECTION_URL,
-        true,
-        HAS_TOKEN_URL,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        EndpointMaybeSet,
+        HasRevocationUrl,
+        HasTokenUrl,
     >
 where
     TE: ErrorResponse + 'static,
@@ -779,52 +1208,132 @@ where
     TIR: TokenIntrospectionResponse<TT>,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
 {
-    /// Attempts to revoke the given previously received token using an
-    /// [RFC 7009 OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009) compatible
-    /// endpoint.
+    /// Retrieve metadata for an access token using the
+    /// [`RFC 7662`](https://tools.ietf.org/html/rfc7662) introspection endpoint.
+    ///
+    /// Requires [`set_introspection_url_option()`](Self::set_introspection_url_option) to have been
+    /// previously called to set the introspection endpoint.
+    pub fn introspect<'a>(
+        &'a self,
+        token: &'a AccessToken,
+    ) -> Result<IntrospectionRequest<'a, TE, TIR, TT>, ConfigurationError> {
+        Ok(self.introspect_impl(
+            self.introspection_url
+                .as_ref()
+                .ok_or(ConfigurationError::MissingUrl("introspection"))?,
+            token,
+        ))
+    }
+
+    /// Return the [RFC 7662](https://tools.ietf.org/html/rfc7662) introspection endpoint.
+    pub fn introspection_url(&self) -> Option<&IntrospectionUrl> {
+        self.introspection_url.as_ref()
+    }
+}
+
+/// Methods requiring a revocation endpoint.
+impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, HasTokenUrl>
+    Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        EndpointSet,
+        HasTokenUrl,
+    >
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    TIR: TokenIntrospectionResponse<TT>,
+    RT: RevocableToken,
+    TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasTokenUrl: EndpointState,
+{
+    /// Revoke an access or refresh token using the [RFC 7009](https://tools.ietf.org/html/rfc7009)
+    /// revocation endpoint.
     ///
     /// Requires [`set_revocation_url()`](Self::set_revocation_url) to have been previously
-    /// called to set the revocation endpoint URL.
+    /// called to set the revocation endpoint.
     pub fn revoke_token(
         &self,
         token: RT,
     ) -> Result<RevocationRequest<RT, TRE>, ConfigurationError> {
-        // https://tools.ietf.org/html/rfc7009#section-2 states:
-        //   "The client requests the revocation of a particular token by making an
-        //    HTTP POST request to the token revocation endpoint URL.  This URL
-        //    MUST conform to the rules given in [RFC6749], Section 3.1.  Clients
-        //    MUST verify that the URL is an HTTPS URL."
-
-        // This is enforced statically via the HAS_REVOCATION_URL const generic.
-        let revocation_url = self
-            .revocation_url
-            .as_ref()
-            .expect("should have revocation_url");
-
-        if revocation_url.url().scheme() != "https" {
-            return Err(ConfigurationError::InsecureUrl("revocation"));
-        }
-
-        Ok(RevocationRequest {
-            auth_type: &self.auth_type,
-            client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
-            extra_params: Vec::new(),
-            revocation_url,
-            token,
-            _phantom: PhantomData,
-        })
+        self.revoke_token_impl(self.revocation_url(), token)
     }
 
-    /// Returns the revocation URL for contacting the revocation endpoint
-    /// ([RFC 7009](https://tools.ietf.org/html/rfc7009)).
+    /// Return the [RFC 7009](https://tools.ietf.org/html/rfc7009) revocation endpoint.
     ///
-    /// See: [`revoke_token()`](Self::revoke_token())
+    /// See [`revoke_token()`](Self::revoke_token()).
     pub fn revocation_url(&self) -> &RevocationUrl {
-        // This is enforced statically via the HAS_REVOCATION_URL const generic.
+        // This is enforced statically via the HasRevocationUrl generic type.
         self.revocation_url
             .as_ref()
             .expect("should have revocation_url")
+    }
+}
+
+/// Methods with a possible-set revocation endpoint.
+impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, HasTokenUrl>
+    Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        EndpointMaybeSet,
+        HasTokenUrl,
+    >
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    TIR: TokenIntrospectionResponse<TT>,
+    RT: RevocableToken,
+    TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasTokenUrl: EndpointState,
+{
+    /// Revoke an access or refresh token using the [RFC 7009](https://tools.ietf.org/html/rfc7009)
+    /// revocation endpoint.
+    ///
+    /// Requires [`set_revocation_url_option()`](Self::set_revocation_url_option) to have been
+    /// previously called to set the revocation endpoint.
+    pub fn revoke_token(
+        &self,
+        token: RT,
+    ) -> Result<RevocationRequest<RT, TRE>, ConfigurationError> {
+        self.revoke_token_impl(
+            self.revocation_url
+                .as_ref()
+                .ok_or(ConfigurationError::MissingUrl("revocation"))?,
+            token,
+        )
+    }
+
+    /// Return the [RFC 7009](https://tools.ietf.org/html/rfc7009) revocation endpoint.
+    ///
+    /// See [`revoke_token()`](Self::revoke_token()).
+    pub fn revocation_url(&self) -> Option<&RevocationUrl> {
+        self.revocation_url.as_ref()
     }
 }

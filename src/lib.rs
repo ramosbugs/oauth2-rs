@@ -12,7 +12,7 @@
 //! * [Implicit Grant](#implicit-grant)
 //! * [Resource Owner Password Credentials Grant](#resource-owner-password-credentials-grant)
 //! * [Client Credentials Grant](#client-credentials-grant)
-//! * [Device Code Flow](#device-code-flow)
+//! * [Device Authorization Flow](#device-authorization-flow)
 //! * [Other examples](#other-examples)
 //!   * [Contributed Examples](#contributed-examples)
 //!
@@ -389,9 +389,9 @@
 //! # }
 //! ```
 //!
-//! # Device Code Flow
+//! # Device Authorization Flow
 //!
-//! Device Code Flow allows users to sign in on browserless or input-constrained
+//! Device Authorization Flow allows users to sign in on browserless or input-constrained
 //! devices.  This is a two-stage process; first a user-code and verification
 //! URL are obtained by using the `Client::exchange_client_credentials`
 //! method. Those are displayed to the user, then are used in a second client
@@ -455,7 +455,7 @@
 //!
 //! - [Google](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/google.rs) (includes token revocation)
 //! - [Github](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/github.rs)
-//! - [Microsoft Device Code Flow (async)](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/microsoft_devicecode.rs)
+//! - [Microsoft Device Authorization Flow (async)](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/microsoft_devicecode.rs)
 //! - [Microsoft Graph](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/msgraph.rs)
 //! - [Wunderlist](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/wunderlist.rs)
 //!
@@ -480,7 +480,7 @@ pub mod curl;
 #[cfg(all(feature = "curl", target_arch = "wasm32"))]
 compile_error!("wasm32 is not supported with the `curl` feature. Use the `reqwest` backend or a custom backend for wasm32 support");
 
-/// Device Code Flow OAuth2 implementation
+/// Device Authorization Flow OAuth2 implementation
 /// ([RFC 8628](https://tools.ietf.org/html/rfc8628)).
 mod devicecode;
 
@@ -514,7 +514,7 @@ mod types;
 #[cfg(feature = "ureq")]
 pub mod ureq;
 
-pub use crate::client::Client;
+pub use crate::client::{Client, EndpointMaybeSet, EndpointNotSet, EndpointSet, EndpointState};
 pub use crate::code::AuthorizationRequest;
 pub use crate::devicecode::{
     DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationRequestFuture,
@@ -556,6 +556,9 @@ const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigurationError {
+    /// The endpoint URL is not set.
+    #[error("No {0} endpoint URL specified")]
+    MissingUrl(&'static str),
     /// The endpoint URL to be contacted MUST be HTTPS.
     #[error("Scheme for {0} endpoint URL must be HTTPS")]
     InsecureUrl(&'static str),

@@ -2,10 +2,10 @@ use crate::basic::BasicErrorResponseType;
 use crate::endpoint::{endpoint_request, endpoint_response};
 use crate::types::VerificationUriComplete;
 use crate::{
-    AsyncHttpClient, AuthType, ClientId, ClientSecret, DeviceAuthorizationUrl, DeviceCode,
-    EndUserVerificationUrl, ErrorResponse, ErrorResponseType, HttpRequest, HttpResponse,
-    RequestTokenError, Scope, StandardErrorResponse, SyncHttpClient, TokenRequestFuture,
-    TokenResponse, TokenType, TokenUrl, UserCode,
+    AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, DeviceAuthorizationUrl, DeviceCode,
+    EndUserVerificationUrl, EndpointState, ErrorResponse, ErrorResponseType, HttpRequest,
+    HttpResponse, RequestTokenError, RevocableToken, Scope, StandardErrorResponse, SyncHttpClient,
+    TokenIntrospectionResponse, TokenRequestFuture, TokenResponse, TokenType, TokenUrl, UserCode,
 };
 
 use chrono::{DateTime, Utc};
@@ -21,6 +21,82 @@ use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
+
+impl<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+    Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    TIR: TokenIntrospectionResponse<TT>,
+    RT: RevocableToken,
+    TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
+{
+    pub(crate) fn exchange_device_code_impl<'a>(
+        &'a self,
+        device_authorization_url: &'a DeviceAuthorizationUrl,
+    ) -> DeviceAuthorizationRequest<'a, TE> {
+        DeviceAuthorizationRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            scopes: Vec::new(),
+            device_authorization_url,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub(crate) fn exchange_device_access_token_impl<'a, EF>(
+        &'a self,
+        token_url: &'a TokenUrl,
+        auth_response: &'a DeviceAuthorizationResponse<EF>,
+    ) -> DeviceAccessTokenRequest<'a, 'static, TR, TT, EF>
+    where
+        EF: ExtraDeviceAuthorizationFields,
+    {
+        DeviceAccessTokenRequest {
+            auth_type: &self.auth_type,
+            client_id: &self.client_id,
+            client_secret: self.client_secret.as_ref(),
+            extra_params: Vec::new(),
+            token_url,
+            dev_auth_resp: auth_response,
+            time_fn: Arc::new(Utc::now),
+            max_backoff_interval: None,
+            _phantom: PhantomData,
+        }
+    }
+}
 
 /// Future returned by [`DeviceAuthorizationRequest::request_async`].
 pub type DeviceAuthorizationRequestFuture<'c, C, EF, TE> =
@@ -143,7 +219,7 @@ where
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) token_url: &'a TokenUrl,
     pub(crate) dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
-    pub(crate) time_fn: Arc<dyn Fn() -> DateTime<Utc> + 'b + Send + Sync>,
+    pub(crate) time_fn: Arc<dyn Fn() -> DateTime<Utc> + Send + Sync + 'b>,
     pub(crate) max_backoff_interval: Option<Duration>,
     pub(crate) _phantom: PhantomData<(TR, TT, EF)>,
 }
@@ -179,12 +255,21 @@ where
     /// Specifies a function for returning the current time.
     ///
     /// This function is used while polling the authorization server.
-    pub fn set_time_fn<T>(mut self, time_fn: T) -> Self
+    pub fn set_time_fn<'t, T>(self, time_fn: T) -> DeviceAccessTokenRequest<'a, 't, TR, TT, EF>
     where
-        T: Fn() -> DateTime<Utc> + 'b + Send + Sync,
+        T: Fn() -> DateTime<Utc> + Send + Sync + 't,
     {
-        self.time_fn = Arc::new(time_fn);
-        self
+        DeviceAccessTokenRequest {
+            auth_type: self.auth_type,
+            client_id: self.client_id,
+            client_secret: self.client_secret,
+            extra_params: self.extra_params,
+            token_url: self.token_url,
+            dev_auth_resp: self.dev_auth_resp,
+            time_fn: Arc::new(time_fn),
+            max_backoff_interval: self.max_backoff_interval,
+            _phantom: PhantomData,
+        }
     }
 
     /// Sets the upper limit of the sleep interval to use for polling the token endpoint when the
@@ -419,7 +504,7 @@ where
     /// it into their user agent.
     ///
     /// The `verification_url` alias here is a deviation from the RFC, as
-    /// implementations of device code flow predate RFC 8628.
+    /// implementations of device authorization flow predate RFC 8628.
     #[serde(alias = "verification_url")]
     verification_uri: EndUserVerificationUrl,
 

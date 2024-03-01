@@ -1,7 +1,7 @@
 use crate::{
     revocation::{RevocationErrorResponseType, StandardRevocableToken},
-    Client, EmptyExtraTokenFields, ErrorResponseType, RequestTokenError, StandardErrorResponse,
-    StandardTokenIntrospectionResponse, StandardTokenResponse, TokenType,
+    Client, EmptyExtraTokenFields, EndpointNotSet, ErrorResponseType, RequestTokenError,
+    StandardErrorResponse, StandardTokenIntrospectionResponse, StandardTokenResponse, TokenType,
 };
 
 use std::fmt::Error as FormatterError;
@@ -9,11 +9,11 @@ use std::fmt::{Debug, Display, Formatter};
 
 /// Basic OAuth2 client specialization, suitable for most applications.
 pub type BasicClient<
-    const HAS_AUTH_URL: bool = false,
-    const HAS_DEVICE_AUTH_URL: bool = false,
-    const HAS_INTROSPECTION_URL: bool = false,
-    const HAS_REVOCATION_URL: bool = false,
-    const HAS_TOKEN_URL: bool = false,
+    HasAuthUrl = EndpointNotSet,
+    HasDeviceAuthUrl = EndpointNotSet,
+    HasIntrospectionUrl = EndpointNotSet,
+    HasRevocationUrl = EndpointNotSet,
+    HasTokenUrl = EndpointNotSet,
 > = Client<
     BasicErrorResponse,
     BasicTokenResponse,
@@ -21,11 +21,11 @@ pub type BasicClient<
     BasicTokenIntrospectionResponse,
     StandardRevocableToken,
     BasicRevocationErrorResponse,
-    HAS_AUTH_URL,
-    HAS_DEVICE_AUTH_URL,
-    HAS_INTROSPECTION_URL,
-    HAS_REVOCATION_URL,
-    HAS_TOKEN_URL,
+    HasAuthUrl,
+    HasDeviceAuthUrl,
+    HasIntrospectionUrl,
+    HasRevocationUrl,
+    HasTokenUrl,
 >;
 
 /// Basic OAuth2 authorization token types.

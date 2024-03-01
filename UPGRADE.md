@@ -14,7 +14,7 @@ with Rust releases older than 6 months will no longer be considered SemVer break
 not result in a new major version number for this crate. MSRV changes will coincide with minor
 version updates and will not happen in patch releases.
 
-### Add typestate const generics to `Client`
+### Add typestate generic types to `Client`
 
 Each auth flow depends on one or more server endpoints. For example, the
 authorization code flow depends on both an authorization endpoint and a token endpoint, while the
@@ -29,28 +29,43 @@ time, which endpoints' setters (e.g., `set_auth_uri()`) have been called. Auth f
 an endpoint cannot be used without first calling the corresponding setter, which is enforced by the
 compiler's type checker. This guarantees that certain errors will not arise at runtime.
 
+In addition to unconditional setters (e.g., `set_auth_uri()`), each
+endpoint has a corresponding conditional setter (e.g., `set_auth_uri_option()`) that sets a
+conditional typestate (`EndpointMaybeSet`). When the conditional typestate is set, endpoints can
+be used via fallible methods that return `Err(ConfigurationError::MissingUrl(_))` if an endpoint
+has not been set. This is useful in dynamic scenarios such as
+[OpenID Connect Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html), in which
+it cannot be determined until runtime whether an endpoint is configured.
+
+There are three possible typestates, each implementing the `EndpointState` trait:
+* `EndpointNotSet`: the corresponding endpoint has **not** been set and cannot be used.
+* `EndpointSet`: the corresponding endpoint **has** been set and is ready to be used.
+* `EndpointMaybeSet`: the corresponding endpoint **may have** been set and can be used via fallible
+   methods that return `Result<_, ConfigurationError>`.
+
 The following code changes are required to support the new interface:
 1. Update calls to
    [`Client::new()`](https://docs.rs/oauth2/latest/oauth2/struct.Client.html#method.new) to use the
    single-argument constructor (which accepts only a `ClientId`). Use the `set_auth_uri()`,
-   `set_token_uri()`, and `set_client_secret()` methods to set the optional authorization endpoint,
+   `set_token_uri()`, and `set_client_secret()` methods to set the authorization endpoint,
    token endpoint, and client secret, respectively, if applicable to your application's auth flows.
 2. If required by your usage of the `Client` or `BasicClient` types (i.e., if you see related
    compiler errors), add the following generic parameters:
    ```rust
-   const HAS_AUTH_URL: bool,
-   const HAS_DEVICE_AUTH_URL: bool,
-   const HAS_INTROSPECTION_URL: bool,
-   const HAS_REVOCATION_URL: bool,
-   const HAS_TOKEN_URL: bool,
+   HasAuthUrl: EndpointState,
+   HasDeviceAuthUrl: EndpointState,
+   HasIntrospectionUrl: EndpointState,
+   HasRevocationUrl: EndpointState,
+   HasTokenUrl: EndpointState,
    ```
    For example, if you store a `BasicClient` within another data type, you may need to annotate it
-   as `BasicClient<true, false, false, false, true>` if it has both an authorization endpoint and a
+   as `BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>` if it
+   has both an authorization endpoint and a
    token endpoint set. Compiler error messages will likely guide you to the appropriate combination
-   of Boolean values.
+   of typestates.
    
    If, instead of using `BasicClient`, you are directly using `Client` with a different set of type
-   parameters, you will need to append the five Boolean typestate parameters. For example, replace:
+   parameters, you will need to append the five generic typestate parameters. For example, replace:
    ```rust
    type SpecialClient = Client<
        BasicErrorResponse,
@@ -64,11 +79,11 @@ The following code changes are required to support the new interface:
    with:
    ```rust
    type SpecialClient<
-       const HAS_AUTH_URL: bool = false,
-       const HAS_DEVICE_AUTH_URL: bool = false,
-       const HAS_INTROSPECTION_URL: bool = false,
-       const HAS_REVOCATION_URL: bool = false,
-       const HAS_TOKEN_URL: bool = false,
+       HasAuthUrl = EndpointNotSet,
+       HasDeviceAuthUrl = EndpointNotSet,
+       HasIntrospectionUrl = EndpointNotSet,
+       HasRevocationUrl = EndpointNotSet,
+       HasTokenUrl = EndpointNotSet,
    > = Client<
        BasicErrorResponse,
        SpecialTokenResponse,
@@ -76,16 +91,16 @@ The following code changes are required to support the new interface:
        BasicTokenIntrospectionResponse,
        StandardRevocableToken,
        BasicRevocationErrorResponse,
-       HAS_AUTH_URL,
-       HAS_DEVICE_AUTH_URL,
-       HAS_INTROSPECTION_URL,
-       HAS_REVOCATION_URL,
-       HAS_TOKEN_URL,
+       HasAuthUrl,
+       HasDeviceAuthUrl,
+       HasIntrospectionUrl,
+       HasRevocationUrl,
+       HasTokenUrl,
    >;
    ```
-   The default values (`= false`) are optional but often helpful since they will allow you to
-   instantiate a client using `SpecialClient::new()` instead of having to specify
-   `SpecialClient::<false, false, false, false, false>::new()`.
+   The default values (`= EndpointNotSet`) are optional but often helpful since they will allow you
+   to instantiate a client using `SpecialClient::new()` instead of having to specify
+   `SpecialClient::<EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointNotSet>::new()`.
 
 ### Rename endpoint getters and setters for consistency
 

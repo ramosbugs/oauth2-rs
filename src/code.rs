@@ -1,8 +1,72 @@
-use crate::{AuthUrl, ClientId, CsrfToken, PkceCodeChallenge, RedirectUrl, ResponseType, Scope};
+use crate::{
+    AuthUrl, Client, ClientId, CsrfToken, EndpointState, ErrorResponse, PkceCodeChallenge,
+    RedirectUrl, ResponseType, RevocableToken, Scope, TokenIntrospectionResponse, TokenResponse,
+    TokenType,
+};
 
 use url::Url;
 
 use std::borrow::Cow;
+
+impl<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+    Client<
+        TE,
+        TR,
+        TT,
+        TIR,
+        RT,
+        TRE,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
+    >
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    TIR: TokenIntrospectionResponse<TT>,
+    RT: RevocableToken,
+    TRE: ErrorResponse + 'static,
+    HasAuthUrl: EndpointState,
+    HasDeviceAuthUrl: EndpointState,
+    HasIntrospectionUrl: EndpointState,
+    HasRevocationUrl: EndpointState,
+    HasTokenUrl: EndpointState,
+{
+    pub(crate) fn authorize_url_impl<'a, S>(
+        &'a self,
+        auth_url: &'a AuthUrl,
+        state_fn: S,
+    ) -> AuthorizationRequest<'a>
+    where
+        S: FnOnce() -> CsrfToken,
+    {
+        AuthorizationRequest {
+            auth_url,
+            client_id: &self.client_id,
+            extra_params: Vec::new(),
+            pkce_challenge: None,
+            redirect_url: self.redirect_url.as_ref().map(Cow::Borrowed),
+            response_type: "code".into(),
+            scopes: Vec::new(),
+            state: state_fn(),
+        }
+    }
+}
 
 /// A request to the authorization endpoint
 #[derive(Debug)]

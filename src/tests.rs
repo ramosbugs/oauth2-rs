@@ -6,12 +6,12 @@ use crate::{
     ClientCredentialsTokenRequest, ClientId, ClientSecret, CodeTokenRequest, CsrfToken,
     DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationUrl, DeviceCode,
     DeviceCodeErrorResponse, DeviceCodeErrorResponseType, EmptyExtraDeviceAuthorizationFields,
-    EmptyExtraTokenFields, EndUserVerificationUrl, HttpRequest, HttpResponse, PasswordTokenRequest,
-    PkceCodeChallenge, PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken,
-    RefreshTokenRequest, RequestTokenError, ResourceOwnerPassword, ResourceOwnerUsername,
-    ResponseType, Scope, StandardDeviceAuthorizationResponse, StandardErrorResponse,
-    StandardRevocableToken, StandardTokenIntrospectionResponse, StandardTokenResponse, TokenUrl,
-    UserCode,
+    EmptyExtraTokenFields, EndUserVerificationUrl, EndpointNotSet, EndpointSet, HttpRequest,
+    HttpResponse, PasswordTokenRequest, PkceCodeChallenge, PkceCodeChallengeMethod,
+    PkceCodeVerifier, RedirectUrl, RefreshToken, RefreshTokenRequest, RequestTokenError,
+    ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, Scope,
+    StandardDeviceAuthorizationResponse, StandardErrorResponse, StandardRevocableToken,
+    StandardTokenIntrospectionResponse, StandardTokenResponse, TokenUrl, UserCode,
 };
 
 use http::header::HeaderName;
@@ -19,7 +19,8 @@ use http::HeaderValue;
 use thiserror::Error;
 use url::Url;
 
-pub(crate) fn new_client() -> BasicClient<true, false, false, false, true> {
+pub(crate) fn new_client(
+) -> BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet> {
     BasicClient::new(ClientId::new("aaa".to_string()))
         .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
         .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap())
@@ -86,11 +87,11 @@ pub(crate) mod colorful_extension {
     use std::fmt::{Debug, Display, Formatter};
 
     pub type ColorfulClient<
-        const HAS_AUTH_URL: bool,
-        const HAS_DEVICE_AUTH_URL: bool,
-        const HAS_INTROSPECTION_URL: bool,
-        const HAS_REVOCATION_URL: bool,
-        const HAS_TOKEN_URL: bool,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     > = Client<
         StandardErrorResponse<ColorfulErrorResponseType>,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
@@ -98,11 +99,11 @@ pub(crate) mod colorful_extension {
         StandardTokenIntrospectionResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulRevocableToken,
         StandardErrorResponse<ColorfulErrorResponseType>,
-        HAS_AUTH_URL,
-        HAS_DEVICE_AUTH_URL,
-        HAS_INTROSPECTION_URL,
-        HAS_REVOCATION_URL,
-        HAS_TOKEN_URL,
+        HasAuthUrl,
+        HasDeviceAuthUrl,
+        HasIntrospectionUrl,
+        HasRevocationUrl,
+        HasTokenUrl,
     >;
 
     #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -254,11 +255,11 @@ fn test_send_sync_impl() {
             StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
             StandardRevocableToken,
             BasicRevocationErrorResponse,
-            false,
-            false,
-            false,
-            false,
-            false,
+            EndpointNotSet,
+            EndpointNotSet,
+            EndpointNotSet,
+            EndpointNotSet,
+            EndpointNotSet,
         >,
     >();
     is_sync_and_send::<

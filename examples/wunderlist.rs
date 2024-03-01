@@ -18,12 +18,11 @@ use oauth2::basic::{
     BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse,
     BasicTokenType,
 };
-use oauth2::helpers;
 use oauth2::reqwest::reqwest;
 use oauth2::{
     AccessToken, AuthUrl, AuthorizationCode, Client, ClientId, ClientSecret, CsrfToken,
-    EmptyExtraTokenFields, ExtraTokenFields, RedirectUrl, RefreshToken, Scope, TokenResponse,
-    TokenUrl,
+    EmptyExtraTokenFields, EndpointNotSet, ExtraTokenFields, RedirectUrl, RefreshToken, Scope,
+    TokenResponse, TokenUrl,
 };
 use oauth2::{StandardRevocableToken, TokenType};
 use serde::{Deserialize, Serialize};
@@ -36,11 +35,11 @@ use std::time::Duration;
 
 type SpecialTokenResponse = NonStandardTokenResponse<EmptyExtraTokenFields>;
 type SpecialClient<
-    const HAS_AUTH_URL: bool,
-    const HAS_DEVICE_AUTH_URL: bool,
-    const HAS_INTROSPECTION_URL: bool,
-    const HAS_REVOCATION_URL: bool,
-    const HAS_TOKEN_URL: bool,
+    HasAuthUrl = EndpointNotSet,
+    HasDeviceAuthUrl = EndpointNotSet,
+    HasIntrospectionUrl = EndpointNotSet,
+    HasRevocationUrl = EndpointNotSet,
+    HasTokenUrl = EndpointNotSet,
 > = Client<
     BasicErrorResponse,
     SpecialTokenResponse,
@@ -48,11 +47,11 @@ type SpecialClient<
     BasicTokenIntrospectionResponse,
     StandardRevocableToken,
     BasicRevocationErrorResponse,
-    HAS_AUTH_URL,
-    HAS_DEVICE_AUTH_URL,
-    HAS_INTROSPECTION_URL,
-    HAS_REVOCATION_URL,
-    HAS_TOKEN_URL,
+    HasAuthUrl,
+    HasDeviceAuthUrl,
+    HasIntrospectionUrl,
+    HasRevocationUrl,
+    HasTokenUrl,
 >;
 
 fn default_token_type() -> Option<BasicTokenType> {
@@ -78,8 +77,8 @@ pub struct NonStandardTokenResponse<EF: ExtraTokenFields> {
     #[serde(skip_serializing_if = "Option::is_none")]
     refresh_token: Option<RefreshToken>,
     #[serde(rename = "scope")]
-    #[serde(deserialize_with = "helpers::deserialize_space_delimited_vec")]
-    #[serde(serialize_with = "helpers::serialize_space_delimited_vec")]
+    #[serde(deserialize_with = "oauth2::helpers::deserialize_space_delimited_vec")]
+    #[serde(serialize_with = "oauth2::helpers::serialize_space_delimited_vec")]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     scopes: Option<Vec<Scope>>,

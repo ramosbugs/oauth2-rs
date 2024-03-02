@@ -133,6 +133,7 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
+//! # #[cfg(feature = "reqwest-blocking")]
 //! use oauth2::reqwest::reqwest;
 //! use url::Url;
 //!
@@ -205,9 +206,11 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
+//! # #[cfg(feature = "reqwest")]
 //! use oauth2::reqwest::reqwest;
 //! use url::Url;
 //!
+//! # #[cfg(feature = "reqwest")]
 //! # async fn err_wrapper() -> Result<(), anyhow::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
@@ -320,6 +323,7 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
+//! # #[cfg(feature = "reqwest-blocking")]
 //! use oauth2::reqwest::reqwest;
 //! use url::Url;
 //!
@@ -365,6 +369,7 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
+//! # #[cfg(feature = "reqwest-blocking")]
 //! use oauth2::reqwest::reqwest;
 //! use url::Url;
 //!
@@ -411,6 +416,7 @@
 //!     TokenUrl
 //! };
 //! use oauth2::basic::BasicClient;
+//! # #[cfg(feature = "reqwest-blocking")]
 //! use oauth2::reqwest::reqwest;
 //! use url::Url;
 //!

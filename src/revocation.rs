@@ -125,7 +125,10 @@ pub trait RevocableToken {
 /// #   EmptyExtraTokenFields {},
 /// # );
 /// #
-/// # let http_client = |_| -> Result<HttpResponse, BasicRequestTokenError<reqwest::Error>> {
+/// # #[derive(Debug, thiserror::Error)]
+/// # enum FakeError {}
+/// #
+/// # let http_client = |_| -> Result<HttpResponse, BasicRequestTokenError<FakeError>> {
 /// #     Ok(Response::builder()
 /// #         .status(StatusCode::OK)
 /// #         .body(Vec::new())

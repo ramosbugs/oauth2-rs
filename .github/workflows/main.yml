@@ -56,7 +56,9 @@ jobs:
       - name: Run tests
         run: cargo test --tests --examples
       - name: Doc tests
-        run: cargo test --doc
+        run: |
+          cargo test --doc
+          cargo test --doc --all-features
       - name: Test with all features enabled
         run: cargo test --all-features
       # Curl without reqwest (examples will not build)

@@ -8,6 +8,8 @@ use http::{
 
 use std::io::Read;
 
+pub use ureq;
+
 /// Error type returned by failed ureq HTTP requests.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

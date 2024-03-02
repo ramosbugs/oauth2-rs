@@ -7,6 +7,8 @@ use http::status::StatusCode;
 
 use std::io::Read;
 
+pub use curl;
+
 /// Error type returned by failed curl HTTP requests.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

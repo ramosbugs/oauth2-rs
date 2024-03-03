@@ -21,7 +21,7 @@
 //!
 
 use oauth2::basic::BasicClient;
-use oauth2::reqwest::reqwest;
+use oauth2::reqwest;
 use oauth2::{
     AuthType, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
     RedirectUrl, Scope, TokenUrl,

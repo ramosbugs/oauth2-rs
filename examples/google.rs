@@ -13,7 +13,7 @@
 //! ...and follow the instructions.
 //!
 
-use oauth2::reqwest::reqwest;
+use oauth2::reqwest;
 use oauth2::{basic::BasicClient, StandardRevocableToken, TokenResponse};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge, RedirectUrl,

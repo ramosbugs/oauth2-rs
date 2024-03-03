@@ -18,7 +18,7 @@ use oauth2::basic::{
     BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse,
     BasicTokenType,
 };
-use oauth2::reqwest::reqwest;
+use oauth2::reqwest;
 use oauth2::{
     AccessToken, AuthUrl, AuthorizationCode, Client, ClientId, ClientSecret, CsrfToken,
     EmptyExtraTokenFields, EndpointNotSet, ExtraTokenFields, RedirectUrl, RefreshToken, Scope,

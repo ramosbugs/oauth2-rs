@@ -14,7 +14,7 @@
 //!
 
 use oauth2::basic::BasicClient;
-use oauth2::reqwest::reqwest;
+use oauth2::reqwest;
 use oauth2::{
     AuthType, AuthUrl, ClientId, ClientSecret, DeviceAuthorizationResponse, DeviceAuthorizationUrl,
     ExtraDeviceAuthorizationFields, Scope, TokenUrl,

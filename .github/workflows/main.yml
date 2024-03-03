@@ -58,6 +58,7 @@ jobs:
       - name: Doc tests
         run: |
           cargo test --doc
+          cargo test --doc --no-default-features
           cargo test --doc --all-features
       - name: Test with all features enabled
         run: cargo test --all-features

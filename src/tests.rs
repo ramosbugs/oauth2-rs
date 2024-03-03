@@ -6,8 +6,8 @@ use crate::{
     ClientCredentialsTokenRequest, ClientId, ClientSecret, CodeTokenRequest, CsrfToken,
     DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationUrl, DeviceCode,
     DeviceCodeErrorResponse, DeviceCodeErrorResponseType, EmptyExtraDeviceAuthorizationFields,
-    EmptyExtraTokenFields, EndUserVerificationUrl, EndpointNotSet, EndpointSet, HttpRequest,
-    HttpResponse, PasswordTokenRequest, PkceCodeChallenge, PkceCodeChallengeMethod,
+    EmptyExtraTokenFields, EndUserVerificationUrl, EndpointNotSet, EndpointSet, HttpClientError,
+    HttpRequest, HttpResponse, PasswordTokenRequest, PkceCodeChallenge, PkceCodeChallengeMethod,
     PkceCodeVerifier, RedirectUrl, RefreshToken, RefreshTokenRequest, RequestTokenError,
     ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, Scope,
     StandardDeviceAuthorizationResponse, StandardErrorResponse, StandardRevocableToken,
@@ -332,7 +332,9 @@ fn test_send_sync_impl() {
     is_sync_and_send::<DeviceCodeErrorResponse>();
 
     #[cfg(feature = "curl")]
-    is_sync_and_send::<crate::curl::Error>();
+    is_sync_and_send::<HttpClientError<crate::curl::Error>>();
     #[cfg(any(feature = "reqwest", feature = "reqwest-blocking"))]
-    is_sync_and_send::<crate::reqwest::Error>();
+    is_sync_and_send::<HttpClientError<crate::reqwest::Error>>();
+    #[cfg(feature = "ureq")]
+    is_sync_and_send::<HttpClientError<crate::ureq::Error>>();
 }

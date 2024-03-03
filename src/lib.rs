@@ -32,39 +32,38 @@
 //! To prevent
 //! [SSRF](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html)
 //! vulnerabilities, be sure to configure the HTTP client **not to follow redirects**. For example,
-//! use [`redirect::Policy::none`](::reqwest::redirect::Policy::none) when using
-//! [`reqwest`](::reqwest), or [`redirects(0)`](::ureq::AgentBuilder::redirects) when using
-//! [`ureq`](::ureq).
+//! use [`redirect::Policy::none`](reqwest::redirect::Policy::none) when using
+//! [`reqwest`], or [`redirects(0)`](ureq::AgentBuilder::redirects) when using [`ureq`].
 //!
 //! ## HTTP Clients
 //!
 //! For the HTTP client modes described above, the following HTTP client implementations can be
 //! used:
-//!  * **[`reqwest`](::reqwest)**
+//!  * **[`reqwest`](reqwest)**
 //!
 //!    The `reqwest` HTTP client supports both the synchronous and asynchronous modes and is enabled
 //!    by default.
 //!
-//!    Synchronous client: [`reqwest::blocking::Client`](::reqwest::blocking::Client) (requires the
+//!    Synchronous client: [`reqwest::blocking::Client`] (requires the
 //!    `reqwest-blocking` feature flag)
 //!
-//!    Asynchronous client: [`reqwest::Client`](::reqwest::Client) (requires either the
+//!    Asynchronous client: [`reqwest::Client`] (requires either the
 //!    `reqwest` or `reqwest-blocking` feature flags)
 //!
-//!  * **[`curl`](::curl)**
+//!  * **[`curl`](curl)**
 //!
 //!    The `curl` HTTP client only supports the synchronous HTTP client mode and can be enabled in
 //!    `Cargo.toml` via the `curl` feature flag.
 //!
-//!    Synchronous client: [`oauth2::curl::CurlHttpClient`](crate::curl::CurlHttpClient)
+//!    Synchronous client: [`oauth2::CurlHttpClient`](CurlHttpClient)
 //!
-//! * **[`ureq`](::ureq)**
+//! * **[`ureq`](ureq)**
 //!
 //!    The `ureq` HTTP client is a simple HTTP client with minimal dependencies. It only supports
 //!    the synchronous HTTP client mode and can be enabled in `Cargo.toml` via the `ureq` feature
 //!    flag.
 //!
-//!    Synchronous client: [`ureq::Agent`](::ureq::Agent)
+//!    Synchronous client: [`ureq::Agent`]
 //!
 //!  * **Custom**
 //!
@@ -134,7 +133,7 @@
 //! };
 //! use oauth2::basic::BasicClient;
 //! # #[cfg(feature = "reqwest-blocking")]
-//! use oauth2::reqwest::reqwest;
+//! use oauth2::reqwest;
 //! use url::Url;
 //!
 //! # #[cfg(feature = "reqwest-blocking")]
@@ -207,7 +206,7 @@
 //! };
 //! use oauth2::basic::BasicClient;
 //! # #[cfg(feature = "reqwest")]
-//! use oauth2::reqwest::reqwest;
+//! use oauth2::reqwest;
 //! use url::Url;
 //!
 //! # #[cfg(feature = "reqwest")]
@@ -324,7 +323,7 @@
 //! };
 //! use oauth2::basic::BasicClient;
 //! # #[cfg(feature = "reqwest-blocking")]
-//! use oauth2::reqwest::reqwest;
+//! use oauth2::reqwest;
 //! use url::Url;
 //!
 //! # #[cfg(feature = "reqwest-blocking")]
@@ -370,7 +369,7 @@
 //! };
 //! use oauth2::basic::BasicClient;
 //! # #[cfg(feature = "reqwest-blocking")]
-//! use oauth2::reqwest::reqwest;
+//! use oauth2::reqwest;
 //! use url::Url;
 //!
 //! # #[cfg(feature = "reqwest-blocking")]
@@ -417,7 +416,7 @@
 //! };
 //! use oauth2::basic::BasicClient;
 //! # #[cfg(feature = "reqwest-blocking")]
-//! use oauth2::reqwest::reqwest;
+//! use oauth2::reqwest;
 //! use url::Url;
 //!
 //! # #[cfg(feature = "reqwest-blocking")]
@@ -481,7 +480,7 @@ mod code;
 /// HTTP client backed by the [curl](https://crates.io/crates/curl) crate.
 /// Requires "curl" feature.
 #[cfg(all(feature = "curl", not(target_arch = "wasm32")))]
-pub mod curl;
+mod curl_client;
 
 #[cfg(all(feature = "curl", target_arch = "wasm32"))]
 compile_error!("wasm32 is not supported with the `curl` feature. Use the `reqwest` backend or a custom backend for wasm32 support");
@@ -502,7 +501,7 @@ mod introspection;
 /// HTTP client backed by the [reqwest](https://crates.io/crates/reqwest) crate.
 /// Requires "reqwest" feature.
 #[cfg(any(feature = "reqwest", feature = "reqwest-blocking"))]
-pub mod reqwest;
+mod reqwest_client;
 
 /// OAuth 2.0 Token Revocation implementation
 /// ([RFC 7009](https://tools.ietf.org/html/rfc7009)).
@@ -518,10 +517,12 @@ mod types;
 /// HTTP client backed by the [ureq](https://crates.io/crates/ureq) crate.
 /// Requires "ureq" feature.
 #[cfg(feature = "ureq")]
-pub mod ureq;
+mod ureq_client;
 
 pub use crate::client::{Client, EndpointMaybeSet, EndpointNotSet, EndpointSet, EndpointState};
 pub use crate::code::AuthorizationRequest;
+#[cfg(all(feature = "curl", not(target_arch = "wasm32")))]
+pub use crate::curl_client::CurlHttpClient;
 pub use crate::devicecode::{
     DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationRequestFuture,
     DeviceAuthorizationResponse, DeviceCodeErrorResponse, DeviceCodeErrorResponseType,
@@ -550,10 +551,20 @@ pub use crate::types::{
     ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, RevocationUrl, Scope, TokenUrl,
     UserCode, VerificationUriComplete,
 };
+use std::error::Error;
 
 /// Public re-exports of types used for HTTP client interfaces.
 pub use http;
 pub use url;
+
+#[cfg(all(feature = "curl", not(target_arch = "wasm32")))]
+pub use ::curl;
+
+#[cfg(any(feature = "reqwest", feature = "reqwest-blocking"))]
+pub use ::reqwest;
+
+#[cfg(feature = "ureq")]
+pub use ::ureq;
 
 const CONTENT_TYPE_JSON: &str = "application/json";
 const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";
@@ -582,4 +593,25 @@ pub enum AuthType {
     RequestBody,
     /// The client_id and client_secret will be included using the basic auth authentication scheme.
     BasicAuth,
+}
+
+/// Error type returned by built-in HTTP clients when requests fail.
+#[non_exhaustive]
+#[derive(Debug, thiserror::Error)]
+pub enum HttpClientError<RE>
+where
+    RE: Error + 'static,
+{
+    /// Error returned by reqwest crate.
+    #[error("request failed")]
+    Reqwest(#[from] Box<RE>),
+    /// Non-reqwest HTTP error.
+    #[error("HTTP error")]
+    Http(#[from] http::Error),
+    /// I/O error.
+    #[error("I/O error")]
+    Io(#[from] std::io::Error),
+    /// Other error.
+    #[error("{}", _0)]
+    Other(String),
 }

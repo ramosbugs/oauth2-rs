@@ -1,4 +1,4 @@
-use crate::{HttpRequest, HttpResponse};
+use crate::{HttpClientError, HttpRequest, HttpResponse};
 
 use http::{
     header::{HeaderValue, CONTENT_TYPE},
@@ -8,28 +8,8 @@ use http::{
 
 use std::io::Read;
 
-pub use ureq;
-
-/// Error type returned by failed ureq HTTP requests.
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    /// Non-ureq HTTP error.
-    #[error("HTTP error")]
-    Http(#[from] http::Error),
-    /// IO error
-    #[error("IO error")]
-    IO(#[from] std::io::Error),
-    /// Other error.
-    #[error("Other error: {}", _0)]
-    Other(String),
-    /// Error returned by ureq crate.
-    // boxed due to https://github.com/algesten/ureq/issues/296
-    #[error("ureq request failed")]
-    Ureq(#[from] Box<ureq::Error>),
-}
-
 impl crate::SyncHttpClient for ureq::Agent {
-    type Error = Error;
+    type Error = HttpClientError<ureq::Error>;
 
     fn call(&self, request: HttpRequest) -> Result<HttpResponse, Self::Error> {
         let mut req = if *request.method() == Method::POST {
@@ -45,9 +25,8 @@ impl crate::SyncHttpClient for ureq::Agent {
                 // TODO: In newer `ureq` it should be easier to convert arbitrary byte sequences
                 // without unnecessary UTF-8 fallibility here.
                 value.to_str().map_err(|_| {
-                    Error::Other(format!(
-                        "invalid {} header value {:?}",
-                        name,
+                    HttpClientError::Other(format!(
+                        "invalid `{name}` header value {:?}",
                         value.as_bytes()
                     ))
                 })?,
@@ -76,6 +55,6 @@ impl crate::SyncHttpClient for ureq::Agent {
         let mut body = Vec::new();
         response.into_reader().read_to_end(&mut body)?;
 
-        builder.body(body).map_err(Error::Http)
+        builder.body(body).map_err(HttpClientError::Http)
     }
 }

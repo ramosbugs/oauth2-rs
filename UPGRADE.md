@@ -156,7 +156,7 @@ The `AsyncHttpClient` trait is implemented for the following types:
 The `SyncHttpClient` trait is implemented for the following types:
 * `reqwest::blocking::Client` (when the `reqwest-blocking` feature is enabled; see below)
 * `ureq::Agent` (when the `ureq` feature is enabled)
-* `oauth2::curl::CurlHttpClient` (when the `curl` feature is enabled)
+* `oauth2::CurlHttpClient` (when the `curl` feature is enabled)
 * Any function type that implements:
   ```rust
   Fn(HttpRequest) -> Result<HttpResponse, E>

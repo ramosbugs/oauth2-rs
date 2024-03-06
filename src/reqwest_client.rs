@@ -9,7 +9,7 @@ impl<'c> AsyncHttpClient<'c> for reqwest::Client {
     fn call(
         &'c self,
         request: HttpRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c>> {
+    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c + Send + Sync>> {
         Box::pin(async move {
             let response = self
                 .execute(request.try_into().map_err(Box::new)?)

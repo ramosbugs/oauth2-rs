@@ -28,12 +28,12 @@ pub trait AsyncHttpClient<'c> {
     fn call(
         &'c self,
         request: HttpRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c>>;
+    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c + Send + Sync>>;
 }
 impl<'c, E, F, T> AsyncHttpClient<'c> for T
 where
     E: Error + 'static,
-    F: Future<Output = Result<HttpResponse, E>> + 'c,
+    F: Future<Output = Result<HttpResponse, E>> + 'c + Send + Sync,
     // We can't implement this for FnOnce because the device authorization flow requires clients to
     // supportmultiple calls.
     T: Fn(HttpRequest) -> F,
@@ -43,7 +43,7 @@ where
     fn call(
         &'c self,
         request: HttpRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c>> {
+    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c + Send + Sync>> {
         Box::pin(self(request))
     }
 }

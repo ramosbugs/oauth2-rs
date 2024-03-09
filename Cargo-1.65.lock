@@ -211,12 +211,6 @@ dependencies = [
 
 [[package]]
 name = "base64"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
-
-[[package]]
-name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
@@ -1026,7 +1020,7 @@ version = "5.0.0-alpha.3"
 dependencies = [
  "anyhow",
  "async-std",
- "base64 0.13.1",
+ "base64",
  "chrono",
  "curl",
  "getrandom",
@@ -1287,7 +1281,7 @@ name = "reqwest"
 version = "0.11.25"
 source = "git+https://github.com/seanmonstar/reqwest.git?rev=2c11ef000b151c2eebeed2c18a7b81042220c6b0#2c11ef000b151c2eebeed2c18a7b81042220c6b0"
 dependencies = [
- "base64 0.21.7",
+ "base64",
  "bytes",
  "encoding_rs",
  "futures-channel",
@@ -1397,7 +1391,7 @@ version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c74cae0a4cf6ccbbf5f359f08efdf8ee7e1dc532573bf0db71968cb56b1448c"
 dependencies = [
- "base64 0.21.7",
+ "base64",
 ]
 
 [[package]]
@@ -1824,7 +1818,7 @@ version = "2.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11f214ce18d8b2cbe84ed3aa6486ed3f5b285cf8d8fbdbce9f3f767a724adc35"
 dependencies = [
- "base64 0.21.7",
+ "base64",
  "flate2",
  "log",
  "once_cell",

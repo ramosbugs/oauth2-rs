@@ -50,9 +50,9 @@ required-features = ["reqwest-blocking"]
 [dependencies]
 base64 = "0.13"
 thiserror = "1.0"
-http = "0.2"
+http = "1.0"
 rand = "0.8"
-reqwest = { version = "0.11", optional = true, default-features = false }
+reqwest = { git = "https://github.com/seanmonstar/reqwest.git", rev = "2c11ef000b151c2eebeed2c18a7b81042220c6b0", optional = true, default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"

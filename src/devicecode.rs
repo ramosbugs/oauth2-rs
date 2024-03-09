@@ -889,8 +889,7 @@ mod tests {
         }
         fn next(&mut self) -> DateTime<Utc> {
             let next_value = self.times.next().unwrap();
-            let naive = chrono::NaiveDateTime::from_timestamp(next_value, 0);
-            DateTime::<Utc>::from_utc(naive, chrono::Utc)
+            DateTime::from_timestamp(next_value, 0).unwrap()
         }
     }
 

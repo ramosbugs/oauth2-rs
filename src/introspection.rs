@@ -457,7 +457,7 @@ mod tests {
     use crate::tests::{mock_http_client, new_client};
     use crate::{AccessToken, AuthType, ClientId, IntrospectionUrl, RedirectUrl, Scope};
 
-    use chrono::{TimeZone, Utc};
+    use chrono::DateTime;
     use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
     use http::{HeaderValue, Response, StatusCode};
 
@@ -577,15 +577,15 @@ mod tests {
             introspection_response.token_type
         );
         assert_eq!(
-            Some(Utc.timestamp(1604073517, 0)),
+            Some(DateTime::from_timestamp(1604073517, 0).unwrap()),
             introspection_response.exp
         );
         assert_eq!(
-            Some(Utc.timestamp(1604073217, 0)),
+            Some(DateTime::from_timestamp(1604073217, 0).unwrap()),
             introspection_response.iat
         );
         assert_eq!(
-            Some(Utc.timestamp(1604073317, 0)),
+            Some(DateTime::from_timestamp(1604073317, 0).unwrap()),
             introspection_response.nbf
         );
         assert_eq!(Some("demo".to_string()), introspection_response.sub);

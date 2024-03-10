@@ -2,7 +2,7 @@ use crate::endpoint::{endpoint_request, endpoint_response};
 use crate::{
     AccessToken, AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, EndpointState,
     ErrorResponse, ExtraTokenFields, HttpRequest, IntrospectionUrl, RequestTokenError,
-    RevocableToken, Scope, SyncHttpClient, TokenRequestFuture, TokenResponse, TokenType,
+    RevocableToken, Scope, SyncHttpClient, TokenResponse, TokenType,
 };
 
 use chrono::serde::ts_seconds_option;
@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::Debug;
+use std::future::Future;
 use std::marker::PhantomData;
-use std::pin::Pin;
 
 impl<
         TE,
@@ -180,7 +180,7 @@ where
     pub fn request_async<'c, C>(
         self,
         http_client: &'c C,
-    ) -> Pin<Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, TIR>>>
+    ) -> impl Future<Output = Result<TIR, RequestTokenError<<C as AsyncHttpClient<'c>>::Error, TE>>> + 'c
     where
         Self: 'c,
         C: AsyncHttpClient<'c>,

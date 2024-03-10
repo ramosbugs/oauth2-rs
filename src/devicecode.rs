@@ -5,7 +5,7 @@ use crate::{
     AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, DeviceAuthorizationUrl, DeviceCode,
     EndUserVerificationUrl, EndpointState, ErrorResponse, ErrorResponseType, HttpRequest,
     HttpResponse, RequestTokenError, RevocableToken, Scope, StandardErrorResponse, SyncHttpClient,
-    TokenIntrospectionResponse, TokenRequestFuture, TokenResponse, TokenType, TokenUrl, UserCode,
+    TokenIntrospectionResponse, TokenResponse, TokenType, TokenUrl, UserCode,
 };
 
 use chrono::{DateTime, Utc};
@@ -18,7 +18,6 @@ use std::fmt::Error as FormatterError;
 use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 use std::marker::PhantomData;
-use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -97,10 +96,6 @@ where
         }
     }
 }
-
-/// Future returned by [`DeviceAuthorizationRequest::request_async`].
-pub type DeviceAuthorizationRequestFuture<'c, C, EF, TE> =
-    TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, DeviceAuthorizationResponse<EF>>;
 
 /// The request for a set of verification codes from the authorization server.
 ///
@@ -193,7 +188,12 @@ where
     pub fn request_async<'c, C, EF>(
         self,
         http_client: &'c C,
-    ) -> Pin<Box<DeviceAuthorizationRequestFuture<'c, C, EF, TE>>>
+    ) -> impl Future<
+        Output = Result<
+            DeviceAuthorizationResponse<EF>,
+            RequestTokenError<<C as AsyncHttpClient<'c>>::Error, TE>,
+        >,
+    > + 'c
     where
         Self: 'c,
         C: AsyncHttpClient<'c>,
@@ -326,9 +326,12 @@ where
         http_client: &'c C,
         sleep_fn: S,
         timeout: Option<Duration>,
-    ) -> Pin<
-        Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, DeviceCodeErrorResponse, TR>>,
-    >
+    ) -> impl Future<
+        Output = Result<
+            TR,
+            RequestTokenError<<C as AsyncHttpClient<'c>>::Error, DeviceCodeErrorResponse>,
+        >,
+    > + 'c
     where
         Self: 'c,
         C: AsyncHttpClient<'c>,

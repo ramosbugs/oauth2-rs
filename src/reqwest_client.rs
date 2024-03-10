@@ -6,10 +6,13 @@ use std::pin::Pin;
 impl<'c> AsyncHttpClient<'c> for reqwest::Client {
     type Error = HttpClientError<reqwest::Error>;
 
-    fn call(
-        &'c self,
-        request: HttpRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c>> {
+    #[cfg(target_arch = "wasm32")]
+    type Future = Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c>>;
+    #[cfg(not(target_arch = "wasm32"))]
+    type Future =
+        Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + Send + Sync + 'c>>;
+
+    fn call(&'c self, request: HttpRequest) -> Self::Future {
         Box::pin(async move {
             let response = self
                 .execute(request.try_into().map_err(Box::new)?)

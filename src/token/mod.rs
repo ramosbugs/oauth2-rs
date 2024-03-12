@@ -14,7 +14,6 @@ use std::error::Error;
 use std::fmt::Debug;
 use std::future::Future;
 use std::marker::PhantomData;
-use std::pin::Pin;
 use std::time::Duration;
 
 #[cfg(test)]
@@ -129,10 +128,6 @@ where
     }
 }
 
-/// Future returned by `request_async` methods.
-pub type TokenRequestFuture<'c, RE, TE, TR> =
-    dyn Future<Output = Result<TR, RequestTokenError<RE, TE>>> + 'c;
-
 /// A request to exchange an authorization code for an access token.
 ///
 /// See <https://tools.ietf.org/html/rfc6749#section-4.1.3>.
@@ -237,7 +232,7 @@ where
     pub fn request_async<'c, C>(
         self,
         http_client: &'c C,
-    ) -> Pin<Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, TR>>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<<C as AsyncHttpClient<'c>>::Error, TE>>> + 'c
     where
         Self: 'c,
         C: AsyncHttpClient<'c>,
@@ -322,7 +317,7 @@ where
     pub fn request_async<'c, C>(
         self,
         http_client: &'c C,
-    ) -> Pin<Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, TR>>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<<C as AsyncHttpClient<'c>>::Error, TE>>> + 'c
     where
         Self: 'c,
         C: AsyncHttpClient<'c>,
@@ -429,7 +424,7 @@ where
     pub fn request_async<'c, C>(
         self,
         http_client: &'c C,
-    ) -> Pin<Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, TR>>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<<C as AsyncHttpClient<'c>>::Error, TE>>> + 'c
     where
         Self: 'c,
         C: AsyncHttpClient<'c>,
@@ -535,7 +530,7 @@ where
     pub fn request_async<'c, C>(
         self,
         http_client: &'c C,
-    ) -> Pin<Box<TokenRequestFuture<'c, <C as AsyncHttpClient<'c>>::Error, TE, TR>>>
+    ) -> impl Future<Output = Result<TR, RequestTokenError<<C as AsyncHttpClient<'c>>::Error, TE>>> + 'c
     where
         Self: 'c,
         C: AsyncHttpClient<'c>,

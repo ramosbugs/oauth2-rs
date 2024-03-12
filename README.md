@@ -8,6 +8,10 @@ An extensible, strongly-typed implementation of OAuth2
 
 Documentation is available on [docs.rs](https://docs.rs/oauth2). Release notes are available on [GitHub](https://github.com/ramosbugs/oauth2-rs/releases).
 
+For authentication (e.g., single sign-on or social login) purposes, consider using the
+[`openidconnect`](https://github.com/ramosbugs/openidconnect-rs) crate, which is built on top of
+this one.
+
 ## Minimum Supported Rust Version (MSRV)
 
 The MSRV for *5.0* and newer releases of this crate is Rust **1.65**.

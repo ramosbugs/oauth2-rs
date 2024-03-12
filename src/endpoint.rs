@@ -12,7 +12,6 @@ use url::{form_urlencoded, Url};
 use std::borrow::Cow;
 use std::error::Error;
 use std::future::Future;
-use std::pin::Pin;
 
 /// An HTTP request.
 pub type HttpRequest = http::Request<Vec<u8>>;
@@ -25,11 +24,11 @@ pub trait AsyncHttpClient<'c> {
     /// Error type returned by HTTP client.
     type Error: Error + 'static;
 
+    /// Future type returned by HTTP client.
+    type Future: Future<Output = Result<HttpResponse, Self::Error>> + 'c;
+
     /// Perform a single HTTP request.
-    fn call(
-        &'c self,
-        request: HttpRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c>>;
+    fn call(&'c self, request: HttpRequest) -> Self::Future;
 }
 impl<'c, E, F, T> AsyncHttpClient<'c> for T
 where
@@ -40,12 +39,10 @@ where
     T: Fn(HttpRequest) -> F,
 {
     type Error = E;
+    type Future = F;
 
-    fn call(
-        &'c self,
-        request: HttpRequest,
-    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c>> {
-        Box::pin(self(request))
+    fn call(&'c self, request: HttpRequest) -> Self::Future {
+        self(request)
     }
 }
 

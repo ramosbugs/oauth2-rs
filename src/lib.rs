@@ -524,10 +524,9 @@ pub use crate::code::AuthorizationRequest;
 #[cfg(all(feature = "curl", not(target_arch = "wasm32")))]
 pub use crate::curl_client::CurlHttpClient;
 pub use crate::devicecode::{
-    DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationRequestFuture,
-    DeviceAuthorizationResponse, DeviceCodeErrorResponse, DeviceCodeErrorResponseType,
-    EmptyExtraDeviceAuthorizationFields, ExtraDeviceAuthorizationFields,
-    StandardDeviceAuthorizationResponse,
+    DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationResponse,
+    DeviceCodeErrorResponse, DeviceCodeErrorResponseType, EmptyExtraDeviceAuthorizationFields,
+    ExtraDeviceAuthorizationFields, StandardDeviceAuthorizationResponse,
 };
 pub use crate::endpoint::{AsyncHttpClient, HttpRequest, HttpResponse, SyncHttpClient};
 pub use crate::error::{
@@ -541,8 +540,7 @@ pub use crate::revocation::{
 };
 pub use crate::token::{
     ClientCredentialsTokenRequest, CodeTokenRequest, EmptyExtraTokenFields, ExtraTokenFields,
-    PasswordTokenRequest, RefreshTokenRequest, StandardTokenResponse, TokenRequestFuture,
-    TokenResponse, TokenType,
+    PasswordTokenRequest, RefreshTokenRequest, StandardTokenResponse, TokenResponse, TokenType,
 };
 pub use crate::types::{
     AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,

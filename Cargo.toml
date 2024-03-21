@@ -48,7 +48,7 @@ name = "wunderlist"
 required-features = ["reqwest-blocking"]
 
 [dependencies]
-base64 = "0.21"
+base64 = ">= 0.21, <0.23"
 thiserror = "1.0"
 http = "1.0"
 rand = "0.8"

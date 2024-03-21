@@ -3,6 +3,7 @@ use crate::{
     CONTENT_TYPE_FORMENCODED, CONTENT_TYPE_JSON,
 };
 
+use base64::prelude::*;
 use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::{HeaderValue, StatusCode};
 use serde::de::DeserializeOwned;
@@ -119,7 +120,7 @@ pub(crate) fn endpoint_request<'a>(
             let urlencoded_secret: String =
                 form_urlencoded::byte_serialize(secret.secret().as_bytes()).collect();
             let b64_credential =
-                base64::encode(format!("{}:{}", &urlencoded_id, urlencoded_secret));
+                BASE64_STANDARD.encode(format!("{}:{}", &urlencoded_id, urlencoded_secret));
             builder = builder.header(
                 AUTHORIZATION,
                 HeaderValue::from_str(&format!("Basic {}", &b64_credential)).unwrap(),

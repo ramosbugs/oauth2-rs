@@ -966,7 +966,7 @@ version = "5.0.0-alpha.3"
 dependencies = [
  "anyhow",
  "async-std",
- "base64 0.13.1",
+ "base64 0.21.7",
  "chrono",
  "curl",
  "getrandom",

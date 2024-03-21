@@ -1,3 +1,4 @@
+use base64::prelude::*;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -465,7 +466,7 @@ impl PkceCodeChallenge {
         // This implies 32-96 octets of random data to be base64 encoded.
         assert!((32..=96).contains(&num_bytes));
         let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
-        PkceCodeVerifier::new(base64::encode_config(random_bytes, base64::URL_SAFE_NO_PAD))
+        PkceCodeVerifier::new(BASE64_URL_SAFE_NO_PAD.encode(random_bytes))
     }
 
     /// Generate a SHA-256 PKCE code challenge from the supplied PKCE code verifier.
@@ -480,7 +481,7 @@ impl PkceCodeChallenge {
         assert!(code_verifier.secret().len() >= 43 && code_verifier.secret().len() <= 128);
 
         let digest = Sha256::digest(code_verifier.secret().as_bytes());
-        let code_challenge = base64::encode_config(digest, base64::URL_SAFE_NO_PAD);
+        let code_challenge = BASE64_URL_SAFE_NO_PAD.encode(digest);
 
         Self {
             code_challenge,
@@ -560,7 +561,7 @@ new_secret_type![
         /// * `num_bytes` - Number of random bytes to generate, prior to base64-encoding.
         pub fn new_random_len(num_bytes: u32) -> Self {
             let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
-            CsrfToken::new(base64::encode_config(random_bytes, base64::URL_SAFE_NO_PAD))
+            CsrfToken::new(BASE64_URL_SAFE_NO_PAD.encode(random_bytes))
         }
     }
 ];

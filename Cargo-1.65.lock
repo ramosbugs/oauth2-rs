@@ -965,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "oauth2"
-version = "5.0.0-alpha.3"
+version = "5.0.0-alpha.4"
 dependencies = [
  "anyhow",
  "async-std",

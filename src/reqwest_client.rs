@@ -19,8 +19,6 @@ impl<'c> AsyncHttpClient<'c> for reqwest::Client {
                 .await
                 .map_err(Box::new)?;
 
-            // This should be simpler once https://github.com/seanmonstar/reqwest/pull/2060 is
-            // merged.
             let mut builder = http::Response::builder().status(response.status());
 
             #[cfg(not(target_arch = "wasm32"))]
@@ -48,8 +46,6 @@ impl crate::SyncHttpClient for reqwest::blocking::Client {
             .execute(request.try_into().map_err(Box::new)?)
             .map_err(Box::new)?;
 
-        // This should be simpler once https://github.com/seanmonstar/reqwest/pull/2060 is
-        // merged.
         let mut builder = http::Response::builder()
             .status(response.status())
             .version(response.version());

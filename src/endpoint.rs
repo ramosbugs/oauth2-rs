@@ -249,7 +249,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::{clone_response, new_client, FakeError};
+    use crate::tests::{new_client, FakeError};
     use crate::{AuthorizationCode, TokenResponse};
 
     use http::{Response, StatusCode};
@@ -270,9 +270,7 @@ mod tests {
         let token = client
             .exchange_code(AuthorizationCode::new("ccc".to_string()))
             // NB: This tests that the closure doesn't require a static lifetime.
-            .request_async(&|_| async {
-                Ok(clone_response(&http_response)) as Result<_, FakeError>
-            })
+            .request_async(&|_| async { Ok(http_response.clone()) as Result<_, FakeError> })
             .await
             .unwrap();
 

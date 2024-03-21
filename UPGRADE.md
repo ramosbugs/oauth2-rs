@@ -136,10 +136,11 @@ traits, respectively, rather than a function type.
 > [!WARNING]
 > To prevent
 [SSRF](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html)
-vulnerabilities, be sure to configure the HTTP client **not to follow redirects**. For example,
-use [`redirect::Policy::none`](::reqwest::redirect::Policy::none) when using
-[`reqwest`](::reqwest), or [`redirects(0)`](::ureq::AgentBuilder::redirects) when using
-[`ureq`](::ureq).
+vulnerabilities, be sure to configure the HTTP client **not to follow redirects**. For example, use
+> [`redirect::Policy::none`](https://docs.rs/reqwest/latest/reqwest/redirect/struct.Policy.html#method.none)
+> when using `reqwest`, or
+> [`redirects(0)`](https://docs.rs/ureq/latest/ureq/struct.AgentBuilder.html#method.redirects)
+> when using `ureq`.
 
 The `AsyncHttpClient` trait is implemented for the following types:
 * `reqwest::Client` (when the default `reqwest` feature is enabled)
@@ -165,6 +166,12 @@ The `SyncHttpClient` trait is implemented for the following types:
   ```
   To implement a custom synchronous HTTP client, either directly implement the `SyncHttpClient`
   trait, or use a function that implements the signature above.
+
+### Upgrade `http` to 1.0 and `reqwest` to 0.12
+
+The 5.0 release of this crate depends on the new stable [`http`](https://docs.rs/http/latest/http/)
+1.0 release, which affects various public interfaces. In particular, `reqwest` has been upgraded
+to 0.12, which uses `http` 1.0.
 
 ### Enable the `reqwest-blocking` feature to use the synchronous `reqwest` HTTP client
 

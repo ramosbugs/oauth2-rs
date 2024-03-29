@@ -35,6 +35,7 @@ impl private::EndpointStateSealed for EndpointSet {}
 
 /// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an endpoint may have been
 /// set and can be used via fallible methods.
+#[derive(Clone)]
 pub struct EndpointMaybeSet;
 impl EndpointState for EndpointMaybeSet {}
 impl private::EndpointStateSealed for EndpointMaybeSet {}

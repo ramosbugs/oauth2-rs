@@ -21,12 +21,14 @@ pub trait EndpointState: private::EndpointStateSealed {}
 
 /// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an endpoint has not been
 /// set and cannot be used.
+#[derive(Clone)]
 pub struct EndpointNotSet;
 impl EndpointState for EndpointNotSet {}
 impl private::EndpointStateSealed for EndpointNotSet {}
 
 /// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an endpoint has been set
 /// and is ready to be used.
+#[derive(Clone)]
 pub struct EndpointSet;
 impl EndpointState for EndpointSet {}
 impl private::EndpointStateSealed for EndpointSet {}

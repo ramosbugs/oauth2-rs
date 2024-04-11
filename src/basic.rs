@@ -17,7 +17,6 @@ pub type BasicClient<
 > = Client<
     BasicErrorResponse,
     BasicTokenResponse,
-    BasicTokenType,
     BasicTokenIntrospectionResponse,
     StandardRevocableToken,
     BasicRevocationErrorResponse,

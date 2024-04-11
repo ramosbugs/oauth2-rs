@@ -3,7 +3,7 @@ use crate::endpoint::{endpoint_request, endpoint_response, endpoint_response_sta
 use crate::{
     AccessToken, AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, ConfigurationError,
     EndpointState, ErrorResponse, ErrorResponseType, HttpRequest, RefreshToken, RequestTokenError,
-    RevocationUrl, SyncHttpClient, TokenIntrospectionResponse, TokenResponse, TokenType,
+    RevocationUrl, SyncHttpClient, TokenIntrospectionResponse, TokenResponse,
 };
 
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,6 @@ use std::marker::PhantomData;
 impl<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -31,7 +30,6 @@ impl<
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -43,9 +41,8 @@ impl<
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,

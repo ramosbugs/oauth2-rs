@@ -200,6 +200,22 @@ the root. For example, if you were previously importing
 `oauth2::devicecode::DeviceAuthorizationResponse`, instead import
 `oauth2::DeviceAuthorizationResponse`.
 
+### Replace `TT` generic type parameter in `TokenResponse` with associated type
+
+Previously, the `TokenResponse` and `TokenIntrospectionResponse` traits had a generic type
+parameter `TT: TokenType`. This has been replaced with an associated type called `TokenType`.
+Uses of `BasicTokenResponse` and `BasicTokenIntrospectionResponse` should continue to work without
+changes, but custom implementations of either trait will need to be updated to replace the type
+parameter with an associated type.
+
+#### Remove `TT` generic type parameter from `Client` and each `*Request` type
+
+Removing the `TT` generic type parameter from `TokenResponse` (see above) made the `TT` parameters
+to `Client` and each `*Request` (e.g., `CodeTokenRequest`) redundant. Consequently, the `TT`
+parameter has been removed from each of these types. `BasicClient` should continue to work
+without any changes, but code that provides generic types for `Client` or any of the `*Response`
+types will need to be updated to remove the `TT` type parameter.
+
 ### Add `Display` to `ErrorResponse` trait
 
 To improve error messages, the

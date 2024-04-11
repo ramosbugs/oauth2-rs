@@ -22,7 +22,6 @@ mod tests;
 impl<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -35,7 +34,6 @@ impl<
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -47,9 +45,8 @@ impl<
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,
@@ -61,7 +58,7 @@ where
     pub(crate) fn exchange_client_credentials_impl<'a>(
         &'a self,
         token_url: &'a TokenUrl,
-    ) -> ClientCredentialsTokenRequest<'a, TE, TR, TT> {
+    ) -> ClientCredentialsTokenRequest<'a, TE, TR> {
         ClientCredentialsTokenRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
@@ -77,7 +74,7 @@ where
         &'a self,
         token_url: &'a TokenUrl,
         code: AuthorizationCode,
-    ) -> CodeTokenRequest<'a, TE, TR, TT> {
+    ) -> CodeTokenRequest<'a, TE, TR> {
         CodeTokenRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
@@ -96,7 +93,7 @@ where
         token_url: &'a TokenUrl,
         username: &'a ResourceOwnerUsername,
         password: &'a ResourceOwnerPassword,
-    ) -> PasswordTokenRequest<'a, TE, TR, TT> {
+    ) -> PasswordTokenRequest<'a, TE, TR> {
         PasswordTokenRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
@@ -114,7 +111,7 @@ where
         &'a self,
         token_url: &'a TokenUrl,
         refresh_token: &'a RefreshToken,
-    ) -> RefreshTokenRequest<'a, TE, TR, TT> {
+    ) -> RefreshTokenRequest<'a, TE, TR> {
         RefreshTokenRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
@@ -132,11 +129,10 @@ where
 ///
 /// See <https://tools.ietf.org/html/rfc6749#section-4.1.3>.
 #[derive(Debug)]
-pub struct CodeTokenRequest<'a, TE, TR, TT>
+pub struct CodeTokenRequest<'a, TE, TR>
 where
     TE: ErrorResponse,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    TR: TokenResponse,
 {
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
@@ -146,13 +142,12 @@ where
     pub(crate) pkce_verifier: Option<PkceCodeVerifier>,
     pub(crate) token_url: &'a TokenUrl,
     pub(crate) redirect_url: Option<Cow<'a, RedirectUrl>>,
-    pub(crate) _phantom: PhantomData<(TE, TR, TT)>,
+    pub(crate) _phantom: PhantomData<(TE, TR)>,
 }
-impl<'a, TE, TR, TT> CodeTokenRequest<'a, TE, TR, TT>
+impl<'a, TE, TR> CodeTokenRequest<'a, TE, TR>
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    TR: TokenResponse,
 {
     /// Appends an extra param to the token request.
     ///
@@ -245,11 +240,10 @@ where
 ///
 /// See <https://tools.ietf.org/html/rfc6749#section-6>.
 #[derive(Debug)]
-pub struct RefreshTokenRequest<'a, TE, TR, TT>
+pub struct RefreshTokenRequest<'a, TE, TR>
 where
     TE: ErrorResponse,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    TR: TokenResponse,
 {
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
@@ -258,13 +252,12 @@ where
     pub(crate) refresh_token: &'a RefreshToken,
     pub(crate) scopes: Vec<Cow<'a, Scope>>,
     pub(crate) token_url: &'a TokenUrl,
-    pub(crate) _phantom: PhantomData<(TE, TR, TT)>,
+    pub(crate) _phantom: PhantomData<(TE, TR)>,
 }
-impl<'a, TE, TR, TT> RefreshTokenRequest<'a, TE, TR, TT>
+impl<'a, TE, TR> RefreshTokenRequest<'a, TE, TR>
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    TR: TokenResponse,
 {
     /// Appends an extra param to the token request.
     ///
@@ -350,11 +343,10 @@ where
 ///
 /// See <https://tools.ietf.org/html/rfc6749#section-4.3>.
 #[derive(Debug)]
-pub struct PasswordTokenRequest<'a, TE, TR, TT>
+pub struct PasswordTokenRequest<'a, TE, TR>
 where
     TE: ErrorResponse,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    TR: TokenResponse,
 {
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
@@ -364,13 +356,12 @@ where
     pub(crate) password: &'a ResourceOwnerPassword,
     pub(crate) scopes: Vec<Cow<'a, Scope>>,
     pub(crate) token_url: &'a TokenUrl,
-    pub(crate) _phantom: PhantomData<(TE, TR, TT)>,
+    pub(crate) _phantom: PhantomData<(TE, TR)>,
 }
-impl<'a, TE, TR, TT> PasswordTokenRequest<'a, TE, TR, TT>
+impl<'a, TE, TR> PasswordTokenRequest<'a, TE, TR>
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    TR: TokenResponse,
 {
     /// Appends an extra param to the token request.
     ///
@@ -458,11 +449,10 @@ where
 ///
 /// See <https://tools.ietf.org/html/rfc6749#section-4.4>.
 #[derive(Debug)]
-pub struct ClientCredentialsTokenRequest<'a, TE, TR, TT>
+pub struct ClientCredentialsTokenRequest<'a, TE, TR>
 where
     TE: ErrorResponse,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    TR: TokenResponse,
 {
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
@@ -470,13 +460,12 @@ where
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) scopes: Vec<Cow<'a, Scope>>,
     pub(crate) token_url: &'a TokenUrl,
-    pub(crate) _phantom: PhantomData<(TE, TR, TT)>,
+    pub(crate) _phantom: PhantomData<(TE, TR)>,
 }
-impl<'a, TE, TR, TT> ClientCredentialsTokenRequest<'a, TE, TR, TT>
+impl<'a, TE, TR> ClientCredentialsTokenRequest<'a, TE, TR>
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    TR: TokenResponse,
 {
     /// Appends an extra param to the token request.
     ///
@@ -556,7 +545,7 @@ where
     }
 }
 
-/// Trait for OAuth2 access tokens.
+/// Type of OAuth2 access token.
 pub trait TokenType: Clone + DeserializeOwned + Debug + PartialEq + Serialize {}
 
 /// Trait for adding extra fields to the `TokenResponse`.
@@ -573,16 +562,16 @@ impl ExtraTokenFields for EmptyExtraTokenFields {}
 /// [Section 5.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-5.1). This trait exists
 /// separately from the `StandardTokenResponse` struct to support customization by clients,
 /// such as supporting interoperability with non-standards-complaint OAuth2 providers.
-pub trait TokenResponse<TT>: Debug + DeserializeOwned + Serialize
-where
-    TT: TokenType,
-{
+pub trait TokenResponse: Debug + DeserializeOwned + Serialize {
+    /// Type of OAuth2 access token included in this response.
+    type TokenType: TokenType;
+
     /// REQUIRED. The access token issued by the authorization server.
     fn access_token(&self) -> &AccessToken;
     /// REQUIRED. The type of the token issued as described in
     /// [Section 7.1](https://tools.ietf.org/html/rfc6749#section-7.1).
     /// Value is case insensitive and deserialized to the generic `TokenType` parameter.
-    fn token_type(&self) -> &TT;
+    fn token_type(&self) -> &Self::TokenType;
     /// RECOMMENDED. The lifetime in seconds of the access token. For example, the value 3600
     /// denotes that the access token will expire in one hour from the time the response was
     /// generated. If omitted, the authorization server SHOULD provide the expiration time via
@@ -682,11 +671,13 @@ where
         self.extra_fields = extra_fields;
     }
 }
-impl<EF, TT> TokenResponse<TT> for StandardTokenResponse<EF, TT>
+impl<EF, TT> TokenResponse for StandardTokenResponse<EF, TT>
 where
     EF: ExtraTokenFields,
     TT: TokenType,
 {
+    type TokenType = TT;
+
     /// REQUIRED. The access token issued by the authorization server.
     fn access_token(&self) -> &AccessToken {
         &self.access_token

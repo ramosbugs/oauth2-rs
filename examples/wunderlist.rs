@@ -19,12 +19,12 @@ use oauth2::basic::{
     BasicTokenType,
 };
 use oauth2::reqwest;
+use oauth2::StandardRevocableToken;
 use oauth2::{
     AccessToken, AuthUrl, AuthorizationCode, Client, ClientId, ClientSecret, CsrfToken,
     EmptyExtraTokenFields, EndpointNotSet, ExtraTokenFields, RedirectUrl, RefreshToken, Scope,
     TokenResponse, TokenUrl,
 };
-use oauth2::{StandardRevocableToken, TokenType};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -43,7 +43,6 @@ type SpecialClient<
 > = Client<
     BasicErrorResponse,
     SpecialTokenResponse,
-    BasicTokenType,
     BasicTokenIntrospectionResponse,
     StandardRevocableToken,
     BasicRevocationErrorResponse,
@@ -88,11 +87,11 @@ pub struct NonStandardTokenResponse<EF: ExtraTokenFields> {
     extra_fields: EF,
 }
 
-impl<EF> TokenResponse<BasicTokenType> for NonStandardTokenResponse<EF>
+impl<EF> TokenResponse for NonStandardTokenResponse<EF>
 where
     EF: ExtraTokenFields,
-    BasicTokenType: TokenType,
 {
+    type TokenType = BasicTokenType;
     /// REQUIRED. The access token issued by the authorization server.
     fn access_token(&self) -> &AccessToken {
         &self.access_token

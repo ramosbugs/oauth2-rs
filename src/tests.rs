@@ -84,7 +84,6 @@ pub(crate) mod colorful_extension {
     > = Client<
         StandardErrorResponse<ColorfulErrorResponseType>,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
-        ColorfulTokenType,
         StandardTokenIntrospectionResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulRevocableToken,
         StandardErrorResponse<ColorfulErrorResponseType>,
@@ -239,7 +238,6 @@ fn test_send_sync_impl() {
         Client<
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
-            BasicTokenType,
             StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
             StandardRevocableToken,
             BasicRevocationErrorResponse,
@@ -254,7 +252,6 @@ fn test_send_sync_impl() {
         ClientCredentialsTokenRequest<
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
-            BasicTokenType,
         >,
     >();
     is_sync_and_send::<ClientId>();
@@ -263,7 +260,6 @@ fn test_send_sync_impl() {
         CodeTokenRequest<
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
-            BasicTokenType,
         >,
     >();
     is_sync_and_send::<CsrfToken>();
@@ -274,7 +270,6 @@ fn test_send_sync_impl() {
         PasswordTokenRequest<
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
-            BasicTokenType,
         >,
     >();
     is_sync_and_send::<PkceCodeChallenge>();
@@ -286,7 +281,6 @@ fn test_send_sync_impl() {
         RefreshTokenRequest<
             StandardErrorResponse<BasicErrorResponseType>,
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
-            BasicTokenType,
         >,
     >();
     is_sync_and_send::<ResourceOwnerPassword>();
@@ -311,7 +305,6 @@ fn test_send_sync_impl() {
     is_sync_and_send::<
         DeviceAccessTokenRequest<
             StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
-            BasicTokenType,
             EmptyExtraDeviceAuthorizationFields,
         >,
     >();

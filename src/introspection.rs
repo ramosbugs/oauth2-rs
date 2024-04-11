@@ -19,7 +19,6 @@ use std::marker::PhantomData;
 impl<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -32,7 +31,6 @@ impl<
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -44,9 +42,8 @@ impl<
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,
@@ -59,7 +56,7 @@ where
         &'a self,
         introspection_url: &'a IntrospectionUrl,
         token: &'a AccessToken,
-    ) -> IntrospectionRequest<'a, TE, TIR, TT> {
+    ) -> IntrospectionRequest<'a, TE, TIR> {
         IntrospectionRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
@@ -77,11 +74,10 @@ where
 ///
 /// See <https://tools.ietf.org/html/rfc7662#section-2.1>.
 #[derive(Debug)]
-pub struct IntrospectionRequest<'a, TE, TIR, TT>
+pub struct IntrospectionRequest<'a, TE, TIR>
 where
     TE: ErrorResponse,
-    TIR: TokenIntrospectionResponse<TT>,
-    TT: TokenType,
+    TIR: TokenIntrospectionResponse,
 {
     pub(crate) token: &'a AccessToken,
     pub(crate) token_type_hint: Option<Cow<'a, str>>,
@@ -90,14 +86,13 @@ where
     pub(crate) client_secret: Option<&'a ClientSecret>,
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) introspection_url: &'a IntrospectionUrl,
-    pub(crate) _phantom: PhantomData<(TE, TIR, TT)>,
+    pub(crate) _phantom: PhantomData<(TE, TIR)>,
 }
 
-impl<'a, TE, TIR, TT> IntrospectionRequest<'a, TE, TIR, TT>
+impl<'a, TE, TIR> IntrospectionRequest<'a, TE, TIR>
 where
     TE: ErrorResponse + 'static,
-    TIR: TokenIntrospectionResponse<TT>,
-    TT: TokenType,
+    TIR: TokenIntrospectionResponse,
 {
     /// Sets the optional token_type_hint parameter.
     ///
@@ -195,10 +190,10 @@ where
 /// [Section 2.2 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-2.2). This trait exists
 /// separately from the `StandardTokenIntrospectionResponse` struct to support customization by
 /// clients, such as supporting interoperability with non-standards-complaint OAuth2 providers.
-pub trait TokenIntrospectionResponse<TT>: Debug + DeserializeOwned + Serialize
-where
-    TT: TokenType,
-{
+pub trait TokenIntrospectionResponse: Debug + DeserializeOwned + Serialize {
+    /// Type of OAuth2 access token included in this response.
+    type TokenType: TokenType;
+
     /// REQUIRED.  Boolean indicator of whether or not the presented token
     /// is currently active.  The specifics of a token's "active" state
     /// will vary depending on the implementation of the authorization
@@ -225,7 +220,7 @@ where
     /// OPTIONAL.  Type of the token as defined in
     /// [Section 5.1 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-5.1).
     /// Value is case insensitive and deserialized to the generic `TokenType` parameter.
-    fn token_type(&self) -> Option<&TT>;
+    fn token_type(&self) -> Option<&Self::TokenType>;
     /// OPTIONAL.  Integer timestamp, measured in the number of seconds
     /// since January 1 1970 UTC, indicating when this token will expire,
     /// as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
@@ -397,11 +392,13 @@ where
         self.extra_fields = extra_fields;
     }
 }
-impl<EF, TT> TokenIntrospectionResponse<TT> for StandardTokenIntrospectionResponse<EF, TT>
+impl<EF, TT> TokenIntrospectionResponse for StandardTokenIntrospectionResponse<EF, TT>
 where
     EF: ExtraTokenFields,
     TT: TokenType,
 {
+    type TokenType = TT;
+
     fn active(&self) -> bool {
         self.active
     }

@@ -1,7 +1,6 @@
 use crate::{
     AuthUrl, Client, ClientId, CsrfToken, EndpointState, ErrorResponse, PkceCodeChallenge,
     RedirectUrl, ResponseType, RevocableToken, Scope, TokenIntrospectionResponse, TokenResponse,
-    TokenType,
 };
 
 use url::Url;
@@ -11,7 +10,6 @@ use std::borrow::Cow;
 impl<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -24,7 +22,6 @@ impl<
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -36,9 +33,8 @@ impl<
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,

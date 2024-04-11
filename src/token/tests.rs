@@ -1162,7 +1162,6 @@ mod custom_errors {
     > = Client<
         CustomErrorResponse,
         StandardTokenResponse<ColorfulFields, ColorfulTokenType>,
-        ColorfulTokenType,
         StandardTokenIntrospectionResponse<ColorfulFields, ColorfulTokenType>,
         ColorfulRevocableToken,
         CustomErrorResponse,

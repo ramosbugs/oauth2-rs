@@ -5,7 +5,7 @@ use crate::{
     DeviceAuthorizationUrl, ErrorResponse, ExtraDeviceAuthorizationFields, IntrospectionRequest,
     IntrospectionUrl, PasswordTokenRequest, RedirectUrl, RefreshToken, RefreshTokenRequest,
     ResourceOwnerPassword, ResourceOwnerUsername, RevocableToken, RevocationRequest, RevocationUrl,
-    TokenIntrospectionResponse, TokenResponse, TokenType, TokenUrl,
+    TokenIntrospectionResponse, TokenResponse, TokenUrl,
 };
 
 use std::marker::PhantomData;
@@ -120,7 +120,6 @@ impl private::EndpointStateSealed for EndpointMaybeSet {}
 pub struct Client<
     TE,
     TR,
-    TT,
     TIR,
     RT,
     TRE,
@@ -131,9 +130,8 @@ pub struct Client<
     HasTokenUrl = EndpointNotSet,
 > where
     TE: ErrorResponse,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse,
     HasAuthUrl: EndpointState,
@@ -155,7 +153,6 @@ pub struct Client<
     pub(crate) phantom: PhantomData<(
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -166,11 +163,10 @@ pub struct Client<
         HasTokenUrl,
     )>,
 }
-impl<TE, TR, TT, TIR, RT, TRE>
+impl<TE, TR, TIR, RT, TRE>
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -182,9 +178,8 @@ impl<TE, TR, TT, TIR, RT, TRE>
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
 {
@@ -207,7 +202,6 @@ where
 impl<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -220,7 +214,6 @@ impl<
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -232,9 +225,8 @@ impl<
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,
@@ -269,7 +261,6 @@ where
     ) -> Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -305,7 +296,6 @@ where
     ) -> Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -350,7 +340,6 @@ where
     ) -> Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -384,7 +373,6 @@ where
     ) -> Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -417,7 +405,6 @@ where
     ) -> Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -451,7 +438,6 @@ where
     ) -> Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -491,7 +477,6 @@ where
     ) -> Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -525,7 +510,6 @@ where
     ) -> Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -561,7 +545,6 @@ where
     ) -> Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -597,7 +580,6 @@ where
     ) -> Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -642,7 +624,6 @@ where
 impl<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -654,7 +635,6 @@ impl<
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -666,9 +646,8 @@ impl<
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasDeviceAuthUrl: EndpointState,
@@ -713,7 +692,6 @@ where
 impl<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -725,7 +703,6 @@ impl<
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -737,9 +714,8 @@ impl<
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasDeviceAuthUrl: EndpointState,
@@ -784,22 +760,10 @@ where
 }
 
 /// Methods requiring a token endpoint.
-impl<
-        TE,
-        TR,
-        TT,
-        TIR,
-        RT,
-        TRE,
-        HasAuthUrl,
-        HasDeviceAuthUrl,
-        HasIntrospectionUrl,
-        HasRevocationUrl,
-    >
+impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, HasRevocationUrl>
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -811,9 +775,8 @@ impl<
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,
@@ -826,7 +789,7 @@ where
     ///
     /// Requires [`set_token_uri()`](Self::set_token_uri) to have been previously
     /// called to set the token endpoint.
-    pub fn exchange_client_credentials(&self) -> ClientCredentialsTokenRequest<TE, TR, TT> {
+    pub fn exchange_client_credentials(&self) -> ClientCredentialsTokenRequest<TE, TR> {
         self.exchange_client_credentials_impl(self.token_uri())
     }
 
@@ -839,7 +802,7 @@ where
     ///
     /// Requires [`set_token_uri()`](Self::set_token_uri) to have been previously
     /// called to set the token endpoint.
-    pub fn exchange_code(&self, code: AuthorizationCode) -> CodeTokenRequest<TE, TR, TT> {
+    pub fn exchange_code(&self, code: AuthorizationCode) -> CodeTokenRequest<TE, TR> {
         self.exchange_code_impl(self.token_uri(), code)
     }
 
@@ -852,7 +815,7 @@ where
     pub fn exchange_device_access_token<'a, EF>(
         &'a self,
         auth_response: &'a DeviceAuthorizationResponse<EF>,
-    ) -> DeviceAccessTokenRequest<'a, 'static, TR, TT, EF>
+    ) -> DeviceAccessTokenRequest<'a, 'static, TR, EF>
     where
         EF: ExtraDeviceAuthorizationFields,
     {
@@ -869,7 +832,7 @@ where
         &'a self,
         username: &'a ResourceOwnerUsername,
         password: &'a ResourceOwnerPassword,
-    ) -> PasswordTokenRequest<'a, TE, TR, TT> {
+    ) -> PasswordTokenRequest<'a, TE, TR> {
         self.exchange_password_impl(self.token_uri(), username, password)
     }
 
@@ -883,7 +846,7 @@ where
     pub fn exchange_refresh_token<'a>(
         &'a self,
         refresh_token: &'a RefreshToken,
-    ) -> RefreshTokenRequest<'a, TE, TR, TT> {
+    ) -> RefreshTokenRequest<'a, TE, TR> {
         self.exchange_refresh_token_impl(self.token_uri(), refresh_token)
     }
 
@@ -895,22 +858,10 @@ where
 }
 
 /// Methods with a possibly-set token endpoint.
-impl<
-        TE,
-        TR,
-        TT,
-        TIR,
-        RT,
-        TRE,
-        HasAuthUrl,
-        HasDeviceAuthUrl,
-        HasIntrospectionUrl,
-        HasRevocationUrl,
-    >
+impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, HasRevocationUrl>
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -922,9 +873,8 @@ impl<
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,
@@ -939,7 +889,7 @@ where
     /// called to set the token endpoint.
     pub fn exchange_client_credentials(
         &self,
-    ) -> Result<ClientCredentialsTokenRequest<TE, TR, TT>, ConfigurationError> {
+    ) -> Result<ClientCredentialsTokenRequest<TE, TR>, ConfigurationError> {
         Ok(self.exchange_client_credentials_impl(
             self.token_url
                 .as_ref()
@@ -959,7 +909,7 @@ where
     pub fn exchange_code(
         &self,
         code: AuthorizationCode,
-    ) -> Result<CodeTokenRequest<TE, TR, TT>, ConfigurationError> {
+    ) -> Result<CodeTokenRequest<TE, TR>, ConfigurationError> {
         Ok(self.exchange_code_impl(
             self.token_url
                 .as_ref()
@@ -977,7 +927,7 @@ where
     pub fn exchange_device_access_token<'a, EF>(
         &'a self,
         auth_response: &'a DeviceAuthorizationResponse<EF>,
-    ) -> Result<DeviceAccessTokenRequest<'a, 'static, TR, TT, EF>, ConfigurationError>
+    ) -> Result<DeviceAccessTokenRequest<'a, 'static, TR, EF>, ConfigurationError>
     where
         EF: ExtraDeviceAuthorizationFields,
     {
@@ -999,7 +949,7 @@ where
         &'a self,
         username: &'a ResourceOwnerUsername,
         password: &'a ResourceOwnerPassword,
-    ) -> Result<PasswordTokenRequest<'a, TE, TR, TT>, ConfigurationError> {
+    ) -> Result<PasswordTokenRequest<'a, TE, TR>, ConfigurationError> {
         Ok(self.exchange_password_impl(
             self.token_url
                 .as_ref()
@@ -1019,7 +969,7 @@ where
     pub fn exchange_refresh_token<'a>(
         &'a self,
         refresh_token: &'a RefreshToken,
-    ) -> Result<RefreshTokenRequest<'a, TE, TR, TT>, ConfigurationError> {
+    ) -> Result<RefreshTokenRequest<'a, TE, TR>, ConfigurationError> {
         Ok(self.exchange_refresh_token_impl(
             self.token_url
                 .as_ref()
@@ -1035,11 +985,10 @@ where
 }
 
 /// Methods requiring a device authorization endpoint.
-impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasIntrospectionUrl, HasRevocationUrl, HasTokenUrl>
+impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasIntrospectionUrl, HasRevocationUrl, HasTokenUrl>
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -1051,9 +1000,8 @@ impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasIntrospectionUrl, HasRevocationUrl
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,
@@ -1086,11 +1034,10 @@ where
 }
 
 /// Methods with a possibly-set device authorization endpoint.
-impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasIntrospectionUrl, HasRevocationUrl, HasTokenUrl>
+impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasIntrospectionUrl, HasRevocationUrl, HasTokenUrl>
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -1102,9 +1049,8 @@ impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasIntrospectionUrl, HasRevocationUrl
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,
@@ -1139,11 +1085,10 @@ where
 }
 
 /// Methods requiring an introspection endpoint.
-impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasRevocationUrl, HasTokenUrl>
+impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasRevocationUrl, HasTokenUrl>
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -1155,9 +1100,8 @@ impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasRevocationUrl, H
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,
@@ -1170,10 +1114,7 @@ where
     ///
     /// Requires [`set_introspection_url()`](Self::set_introspection_url) to have been previously
     /// called to set the introspection endpoint.
-    pub fn introspect<'a>(
-        &'a self,
-        token: &'a AccessToken,
-    ) -> IntrospectionRequest<'a, TE, TIR, TT> {
+    pub fn introspect<'a>(&'a self, token: &'a AccessToken) -> IntrospectionRequest<'a, TE, TIR> {
         self.introspect_impl(self.introspection_url(), token)
     }
 
@@ -1187,11 +1128,10 @@ where
 }
 
 /// Methods with a possibly-set introspection endpoint.
-impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasRevocationUrl, HasTokenUrl>
+impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasRevocationUrl, HasTokenUrl>
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -1203,9 +1143,8 @@ impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasRevocationUrl, H
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,
@@ -1221,7 +1160,7 @@ where
     pub fn introspect<'a>(
         &'a self,
         token: &'a AccessToken,
-    ) -> Result<IntrospectionRequest<'a, TE, TIR, TT>, ConfigurationError> {
+    ) -> Result<IntrospectionRequest<'a, TE, TIR>, ConfigurationError> {
         Ok(self.introspect_impl(
             self.introspection_url
                 .as_ref()
@@ -1237,11 +1176,10 @@ where
 }
 
 /// Methods requiring a revocation endpoint.
-impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, HasTokenUrl>
+impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, HasTokenUrl>
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -1253,9 +1191,8 @@ impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,
@@ -1287,11 +1224,10 @@ where
 }
 
 /// Methods with a possible-set revocation endpoint.
-impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, HasTokenUrl>
+impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, HasTokenUrl>
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -1303,9 +1239,8 @@ impl<TE, TR, TT, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,

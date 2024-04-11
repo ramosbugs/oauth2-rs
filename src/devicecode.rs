@@ -5,7 +5,7 @@ use crate::{
     AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, DeviceAuthorizationUrl, DeviceCode,
     EndUserVerificationUrl, EndpointState, ErrorResponse, ErrorResponseType, HttpRequest,
     HttpResponse, RequestTokenError, RevocableToken, Scope, StandardErrorResponse, SyncHttpClient,
-    TokenIntrospectionResponse, TokenResponse, TokenType, TokenUrl, UserCode,
+    TokenIntrospectionResponse, TokenResponse, TokenUrl, UserCode,
 };
 
 use chrono::{DateTime, Utc};
@@ -24,7 +24,6 @@ use std::time::Duration;
 impl<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -37,7 +36,6 @@ impl<
     Client<
         TE,
         TR,
-        TT,
         TIR,
         RT,
         TRE,
@@ -49,9 +47,8 @@ impl<
     >
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
-    TIR: TokenIntrospectionResponse<TT>,
+    TR: TokenResponse,
+    TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
     HasAuthUrl: EndpointState,
@@ -79,7 +76,7 @@ where
         &'a self,
         token_url: &'a TokenUrl,
         auth_response: &'a DeviceAuthorizationResponse<EF>,
-    ) -> DeviceAccessTokenRequest<'a, 'static, TR, TT, EF>
+    ) -> DeviceAccessTokenRequest<'a, 'static, TR, EF>
     where
         EF: ExtraDeviceAuthorizationFields,
     {
@@ -207,10 +204,9 @@ where
 ///
 /// See <https://tools.ietf.org/html/rfc8628#section-3.4>.
 #[derive(Clone)]
-pub struct DeviceAccessTokenRequest<'a, 'b, TR, TT, EF>
+pub struct DeviceAccessTokenRequest<'a, 'b, TR, EF>
 where
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    TR: TokenResponse,
     EF: ExtraDeviceAuthorizationFields,
 {
     pub(crate) auth_type: &'a AuthType,
@@ -221,13 +217,12 @@ where
     pub(crate) dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
     pub(crate) time_fn: Arc<dyn Fn() -> DateTime<Utc> + Send + Sync + 'b>,
     pub(crate) max_backoff_interval: Option<Duration>,
-    pub(crate) _phantom: PhantomData<(TR, TT, EF)>,
+    pub(crate) _phantom: PhantomData<(TR, EF)>,
 }
 
-impl<'a, 'b, TR, TT, EF> DeviceAccessTokenRequest<'a, 'b, TR, TT, EF>
+impl<'a, 'b, TR, EF> DeviceAccessTokenRequest<'a, 'b, TR, EF>
 where
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    TR: TokenResponse,
     EF: ExtraDeviceAuthorizationFields,
 {
     /// Appends an extra param to the token request.
@@ -255,7 +250,7 @@ where
     /// Specifies a function for returning the current time.
     ///
     /// This function is used while polling the authorization server.
-    pub fn set_time_fn<'t, T>(self, time_fn: T) -> DeviceAccessTokenRequest<'a, 't, TR, TT, EF>
+    pub fn set_time_fn<'t, T>(self, time_fn: T) -> DeviceAccessTokenRequest<'a, 't, TR, EF>
     where
         T: Fn() -> DateTime<Utc> + Send + Sync + 't,
     {
@@ -312,7 +307,7 @@ where
                 DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
                     interval = new_interval
                 }
-                DeviceAccessTokenPollResult::Done(res, _) => break res,
+                DeviceAccessTokenPollResult::Done(res) => break res,
             }
 
             // Sleep here using the provided sleep function.
@@ -362,7 +357,7 @@ where
                     DeviceAccessTokenPollResult::ContinueWithNewPollInterval(new_interval) => {
                         interval = new_interval
                     }
-                    DeviceAccessTokenPollResult::Done(res, _) => break res,
+                    DeviceAccessTokenPollResult::Done(res) => break res,
                 }
 
                 // Sleep here using the provided sleep function.
@@ -396,7 +391,7 @@ where
         &self,
         res: Result<HttpResponse, RE>,
         current_interval: Duration,
-    ) -> DeviceAccessTokenPollResult<TR, RE, DeviceCodeErrorResponse, TT>
+    ) -> DeviceAccessTokenPollResult<TR, RE, DeviceCodeErrorResponse>
     where
         RE: Error + 'static,
     {
@@ -436,15 +431,14 @@ where
                     }
 
                     // On any other error, just return the error.
-                    _ => DeviceAccessTokenPollResult::Done(
-                        Err(RequestTokenError::ServerResponse(dcer)),
-                        PhantomData,
-                    ),
+                    _ => DeviceAccessTokenPollResult::Done(Err(RequestTokenError::ServerResponse(
+                        dcer,
+                    ))),
                 }
             }
 
             // On any other success or failure, return the failure.
-            res => DeviceAccessTokenPollResult::Done(res, PhantomData),
+            res => DeviceAccessTokenPollResult::Done(res),
         }
     }
 
@@ -668,15 +662,14 @@ impl Display for DeviceCodeErrorResponseType {
 /// Error response specialization for device code OAuth2 implementation.
 pub type DeviceCodeErrorResponse = StandardErrorResponse<DeviceCodeErrorResponseType>;
 
-pub(crate) enum DeviceAccessTokenPollResult<TR, RE, TE, TT>
+pub(crate) enum DeviceAccessTokenPollResult<TR, RE, TE>
 where
     TE: ErrorResponse + 'static,
-    TR: TokenResponse<TT>,
-    TT: TokenType,
+    TR: TokenResponse,
     RE: Error + 'static,
 {
     ContinueWithNewPollInterval(Duration),
-    Done(Result<TR, RequestTokenError<RE, TE>>, PhantomData<TT>),
+    Done(Result<TR, RequestTokenError<RE, TE>>),
 }
 
 #[cfg(test)]

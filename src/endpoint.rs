@@ -188,7 +188,9 @@ where
     RE: Error + 'static,
     TE: ErrorResponse,
 {
-    if http_response.status() != StatusCode::OK {
+    if [StatusCode::OK, StatusCode::CREATED].contains(&http_response.status()) {
+        Ok(())
+    } else {
         let reason = http_response.body().as_slice();
         if reason.is_empty() {
             Err(RequestTokenError::Other(
@@ -203,8 +205,6 @@ where
             };
             Err(error)
         }
-    } else {
-        Ok(())
     }
 }
 

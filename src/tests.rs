@@ -150,7 +150,7 @@ pub(crate) mod colorful_extension {
         fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
             let message: &str = self.to_str();
 
-            write!(f, "{}", message)
+            write!(f, "{message}")
         }
     }
 

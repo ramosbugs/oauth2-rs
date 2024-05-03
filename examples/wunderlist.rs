@@ -222,8 +222,5 @@ fn main() {
         .add_extra_param("client_secret", client_secret_str)
         .request(&http_client);
 
-    println!(
-        "Wunderlist returned the following token:\n{:?}\n",
-        token_res
-    );
+    println!("Wunderlist returned the following token:\n{token_res:?}\n");
 }

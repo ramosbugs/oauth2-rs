@@ -707,12 +707,12 @@ fn test_exchange_code_with_simple_json_error() {
             assert_eq!(
                 "StandardErrorResponse { error: invalid_request, \
                  error_description: Some(\"stuff happened\"), error_uri: None }",
-                format!("{:?}", error_response)
+                format!("{error_response:?}")
             );
             // Test Display trait for ErrorResponse
             assert_eq!(
                 "invalid_request: stuff happened",
-                format!("{}", error_response)
+                format!("{error_response}")
             );
 
             // Test Debug trait for BasicErrorResponseType
@@ -732,14 +732,14 @@ fn test_exchange_code_with_simple_json_error() {
                 serde_json::from_str::<BasicErrorResponse>(&serialized_json).unwrap();
             assert_eq!(error_response, &deserialized_error);
         }
-        other => panic!("Unexpected error: {:?}", other),
+        other => panic!("Unexpected error: {other:?}"),
     }
 
     // Test Debug trait for RequestTokenError
     assert_eq!(
         "ServerResponse(StandardErrorResponse { error: invalid_request, \
          error_description: Some(\"stuff happened\"), error_uri: None })",
-        format!("{:?}", token_err)
+        format!("{token_err:?}")
     );
     // Test Display trait for RequestTokenError
     assert_eq!(
@@ -783,7 +783,7 @@ fn test_exchange_code_with_json_parse_error() {
                 json_err.inner().classify()
             );
         }
-        other => panic!("Unexpected error: {:?}", other),
+        other => panic!("Unexpected error: {other:?}"),
     }
 }
 
@@ -816,7 +816,7 @@ fn test_exchange_code_with_unexpected_content_type() {
                 error_str
             );
         }
-        other => panic!("Unexpected error: {:?}", other),
+        other => panic!("Unexpected error: {other:?}"),
     }
 }
 
@@ -860,7 +860,7 @@ fn test_exchange_code_with_invalid_token_type() {
                 json_err.inner().classify()
             );
         }
-        other => panic!("Unexpected error: {:?}", other),
+        other => panic!("Unexpected error: {other:?}"),
     }
 }
 
@@ -902,7 +902,7 @@ fn test_exchange_code_with_400_status_code() {
             );
             assert_eq!(None, error_response.error_uri());
         }
-        other => panic!("Unexpected error: {:?}", other),
+        other => panic!("Unexpected error: {other:?}"),
     }
 
     assert_eq!(
@@ -926,7 +926,7 @@ fn test_exchange_code_fails_gracefully_on_transport_error() {
 
     match token.err().unwrap() {
         RequestTokenError::Request(FakeError::Err) => (),
-        other => panic!("Unexpected error: {:?}", other),
+        other => panic!("Unexpected error: {other:?}"),
     }
 }
 
@@ -1111,14 +1111,14 @@ fn test_extension_with_simple_json_error() {
             .unwrap();
             assert_eq!(error_response, &deserialized_error);
         }
-        other => panic!("Unexpected error: {:?}", other),
+        other => panic!("Unexpected error: {other:?}"),
     }
 
     // Test Debug trait for RequestTokenError
     assert_eq!(
         "ServerResponse(StandardErrorResponse { error: too_light, \
          error_description: Some(\"stuff happened\"), error_uri: Some(\"https://errors\") })",
-        format!("{:?}", token_err)
+        format!("{token_err:?}")
     );
     // Test Display trait for RequestTokenError
     assert_eq!(
@@ -1210,7 +1210,7 @@ fn test_extension_with_custom_json_error() {
         RequestTokenError::ServerResponse(e) => {
             assert_eq!("non-compliant oauth implementation ;-)", e.custom_error)
         }
-        e => panic!("failed to correctly parse custom server error, got {:?}", e),
+        e => panic!("failed to correctly parse custom server error, got {e:?}"),
     };
 }
 

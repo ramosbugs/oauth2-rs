@@ -693,10 +693,9 @@ mod tests {
         \"verification_uri\": \"https://verify/here\", \
         \"user_code\": \"abcde\", \
         \"verification_uri_complete\": \"https://verify/here?abcde\", \
-        \"expires_in\": {}, \
+        \"expires_in\": {expires_in}, \
         \"interval\": 1 \
-        }}",
-            expires_in
+        }}"
         );
 
         let device_auth_url =

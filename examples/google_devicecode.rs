@@ -83,5 +83,5 @@ fn main() {
         .request(&http_client, std::thread::sleep, None)
         .expect("Failed to get token");
 
-    println!("Google returned the following token:\n{:?}\n", token);
+    println!("Google returned the following token:\n{token:?}\n");
 }

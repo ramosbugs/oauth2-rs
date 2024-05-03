@@ -103,7 +103,7 @@ where
             formatted.push(')');
         }
 
-        write!(f, "{}", formatted)
+        write!(f, "{formatted}")
     }
 }
 

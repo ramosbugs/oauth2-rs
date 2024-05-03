@@ -227,9 +227,7 @@ where
         Err(
           RequestTokenError::Other(
             format!(
-              "unexpected response Content-Type: {:?}, should be `{}`",
-              content_type,
-              CONTENT_TYPE_JSON
+              "unexpected response Content-Type: {content_type:?}, should be `{CONTENT_TYPE_JSON}`",
             )
           )
         )

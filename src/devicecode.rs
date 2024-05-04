@@ -455,8 +455,7 @@ where
         let timeout_dur = timeout.unwrap_or_else(|| self.dev_auth_resp.expires_in());
         let chrono_timeout = chrono::Duration::from_std(timeout_dur).map_err(|e| {
             RequestTokenError::Other(format!(
-                "failed to convert `{:?}` to `chrono::Duration`: {}",
-                timeout_dur, e
+                "failed to convert `{timeout_dur:?}` to `chrono::Duration`: {e}"
             ))
         })?;
 
@@ -694,10 +693,9 @@ mod tests {
         \"verification_uri\": \"https://verify/here\", \
         \"user_code\": \"abcde\", \
         \"verification_uri_complete\": \"https://verify/here?abcde\", \
-        \"expires_in\": {}, \
+        \"expires_in\": {expires_in}, \
         \"interval\": 1 \
-        }}",
-            expires_in
+        }}"
         );
 
         let device_auth_url =

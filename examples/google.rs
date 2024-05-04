@@ -132,10 +132,7 @@ fn main() {
         .set_pkce_verifier(pkce_code_verifier)
         .request(&http_client);
 
-    println!(
-        "Google returned the following token:\n{:?}\n",
-        token_response
-    );
+    println!("Google returned the following token:\n{token_response:?}\n");
 
     // Revoke the obtained token
     let token_response = token_response.unwrap();

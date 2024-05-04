@@ -115,7 +115,7 @@ fn main() {
     // Exchange the code with a token.
     let token_res = client.exchange_code(code).request(&http_client);
 
-    println!("Github returned the following token:\n{:?}\n", token_res);
+    println!("Github returned the following token:\n{token_res:?}\n");
 
     if let Ok(token) = token_res {
         // NB: Github returns a single comma-separated "scope" parameter instead of multiple
@@ -130,6 +130,6 @@ fn main() {
         } else {
             Vec::new()
         };
-        println!("Github returned the following scopes:\n{:?}\n", scopes);
+        println!("Github returned the following scopes:\n{scopes:?}\n");
     }
 }

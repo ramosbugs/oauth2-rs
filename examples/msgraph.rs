@@ -138,5 +138,5 @@ fn main() {
         .set_pkce_verifier(pkce_code_verifier)
         .request(&http_client);
 
-    println!("MS Graph returned the following token:\n{:?}\n", token);
+    println!("MS Graph returned the following token:\n{token:?}\n");
 }

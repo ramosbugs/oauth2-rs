@@ -65,7 +65,7 @@ fn main() -> Result<(), anyhow::Error> {
         .exchange_password(&letterboxd_username, &letterboxd_password)
         .request(&|request| http_client.execute(request))?;
 
-    println!("{:?}", token_result);
+    println!("{token_result:?}");
 
     Ok(())
 }

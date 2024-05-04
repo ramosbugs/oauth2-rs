@@ -48,7 +48,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .request_async(&http_client, tokio::time::sleep, None)
         .await;
 
-    eprintln!("Token:{:?}", token_result);
+    eprintln!("Token:{token_result:?}");
 
     Ok(())
 }

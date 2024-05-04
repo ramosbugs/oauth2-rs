@@ -611,7 +611,7 @@ mod tests {
     #[test]
     fn test_secret_redaction() {
         let secret = ClientSecret::new("top_secret".to_string());
-        assert_eq!("ClientSecret([redacted])", format!("{:?}", secret));
+        assert_eq!("ClientSecret([redacted])", format!("{secret:?}"));
     }
 
     #[test]

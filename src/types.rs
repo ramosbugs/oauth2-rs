@@ -159,12 +159,20 @@ macro_rules! new_secret_type {
             pub fn new(s: $type) -> Self {
                 $name(s)
             }
+
             #[doc = $secret_doc]
             ///
             /// # Security Warning
             ///
             /// Leaking this value may compromise the security of the OAuth2 flow.
             pub fn secret(&self) -> &$type { &self.0 }
+
+            #[doc = $secret_doc]
+            ///
+            /// # Security Warning
+            ///
+            /// Leaking this value may compromise the security of the OAuth2 flow.
+            pub fn into_secret(self) -> $type { self.0 }
         }
         impl Debug for $name {
             fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
@@ -606,7 +614,13 @@ new_secret_type![
 
 #[cfg(test)]
 mod tests {
-    use crate::{ClientSecret, PkceCodeChallenge, PkceCodeVerifier};
+    use crate::{ClientSecret, CsrfToken, PkceCodeChallenge, PkceCodeVerifier};
+
+    #[test]
+    fn test_secret_conversion() {
+        let secret = CsrfToken::new("top_secret".into());
+        assert_eq!(secret.into_secret().into_boxed_str(), "top_secret".into());
+    }
 
     #[test]
     fn test_secret_redaction() {

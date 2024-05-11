@@ -204,9 +204,7 @@ mod tests {
     #[test]
     fn test_authorize_url() {
         let client = new_client();
-        let (url, _) = client
-            .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
-            .url();
+        let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token")).url();
 
         assert_eq!(
             Url::parse(
@@ -240,9 +238,9 @@ mod tests {
         let client = new_client();
 
         let (url, _) = client
-            .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+            .authorize_url(|| CsrfToken::new("csrf_token"))
             .set_pkce_challenge(PkceCodeChallenge::from_code_verifier_sha256(
-                &PkceCodeVerifier::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string()),
+                &PkceCodeVerifier::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"),
             ))
             .url();
         assert_eq!(
@@ -263,7 +261,7 @@ mod tests {
         let client = new_client();
 
         let (url, _) = client
-            .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+            .authorize_url(|| CsrfToken::new("csrf_token"))
             .use_implicit_flow()
             .url();
 
@@ -278,14 +276,12 @@ mod tests {
 
     #[test]
     fn test_authorize_url_with_param() {
-        let client = BasicClient::new(ClientId::new("aaa".to_string()))
-            .set_client_secret(ClientSecret::new("bbb".to_string()))
-            .set_auth_uri(AuthUrl::new("https://example.com/auth?foo=bar".to_string()).unwrap())
-            .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap());
+        let client = BasicClient::new(ClientId::new("aaa"))
+            .set_client_secret(ClientSecret::new("bbb"))
+            .set_auth_uri(AuthUrl::new("https://example.com/auth?foo=bar").unwrap())
+            .set_token_uri(TokenUrl::new("https://example.com/token").unwrap());
 
-        let (url, _) = client
-            .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
-            .url();
+        let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token")).url();
 
         assert_eq!(
             Url::parse(
@@ -298,12 +294,9 @@ mod tests {
 
     #[test]
     fn test_authorize_url_with_scopes() {
-        let scopes = vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ];
+        let scopes = vec![Scope::new("read"), Scope::new("write")];
         let (url, _) = new_client()
-            .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+            .authorize_url(|| CsrfToken::new("csrf_token"))
             .add_scopes(scopes)
             .url();
 
@@ -323,8 +316,8 @@ mod tests {
     #[test]
     fn test_authorize_url_with_one_scope() {
         let (url, _) = new_client()
-            .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
-            .add_scope(Scope::new("read".to_string()))
+            .authorize_url(|| CsrfToken::new("csrf_token"))
+            .add_scope(Scope::new("read"))
             .url();
 
         assert_eq!(
@@ -345,8 +338,8 @@ mod tests {
         let client = new_client();
 
         let (url, _) = client
-            .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
-            .set_response_type(&ResponseType::new("code token".to_string()))
+            .authorize_url(|| CsrfToken::new("csrf_token"))
+            .set_response_type(&ResponseType::new("code token"))
             .add_extra_param("foo", "bar")
             .url();
 
@@ -362,12 +355,10 @@ mod tests {
 
     #[test]
     fn test_authorize_url_with_redirect_url() {
-        let client = new_client()
-            .set_redirect_uri(RedirectUrl::new("https://localhost/redirect".to_string()).unwrap());
+        let client =
+            new_client().set_redirect_uri(RedirectUrl::new("https://localhost/redirect").unwrap());
 
-        let (url, _) = client
-            .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
-            .url();
+        let (url, _) = client.authorize_url(|| CsrfToken::new("csrf_token")).url();
 
         assert_eq!(
             Url::parse(
@@ -383,13 +374,13 @@ mod tests {
 
     #[test]
     fn test_authorize_url_with_redirect_url_override() {
-        let client = new_client()
-            .set_redirect_uri(RedirectUrl::new("https://localhost/redirect".to_string()).unwrap());
+        let client =
+            new_client().set_redirect_uri(RedirectUrl::new("https://localhost/redirect").unwrap());
 
         let (url, _) = client
-            .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
+            .authorize_url(|| CsrfToken::new("csrf_token"))
             .set_redirect_uri(Cow::Owned(
-                RedirectUrl::new("https://localhost/alternative".to_string()).unwrap(),
+                RedirectUrl::new("https://localhost/alternative").unwrap(),
             ))
             .url();
 

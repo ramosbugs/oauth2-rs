@@ -11,7 +11,7 @@ const TENANT_ID: &str = "{tenant}";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let client = BasicClient::new(ClientId::new("client_id".to_string()))
+    let client = BasicClient::new(ClientId::new("client_id"))
         .set_auth_uri(AuthUrl::new(format!(
             "https://login.microsoftonline.com/{}/oauth2/v2.0/authorize",
             TENANT_ID
@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let details: StandardDeviceAuthorizationResponse = client
         .exchange_device_code()
-        .add_scope(Scope::new("read".to_string()))
+        .add_scope(Scope::new("read"))
         .request_async(&http_client)
         .await?;
 

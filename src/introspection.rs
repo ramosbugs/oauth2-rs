@@ -462,13 +462,11 @@ mod tests {
     fn test_token_introspection_successful_with_basic_auth_minimal_response() {
         let client = new_client()
             .set_auth_type(AuthType::BasicAuth)
-            .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-            .set_introspection_url(
-                IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
-            );
+            .set_redirect_uri(RedirectUrl::new("https://redirect/here").unwrap())
+            .set_introspection_url(IntrospectionUrl::new("https://introspection/url").unwrap());
 
         let introspection_response = client
-            .introspect(&AccessToken::new("access_token_123".to_string()))
+            .introspect(&AccessToken::new("access_token_123"))
             .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
@@ -512,13 +510,11 @@ mod tests {
     fn test_token_introspection_successful_with_basic_auth_full_response() {
         let client = new_client()
             .set_auth_type(AuthType::BasicAuth)
-            .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-            .set_introspection_url(
-                IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
-            );
+            .set_redirect_uri(RedirectUrl::new("https://redirect/here").unwrap())
+            .set_introspection_url(IntrospectionUrl::new("https://introspection/url").unwrap());
 
         let introspection_response = client
-            .introspect(&AccessToken::new("access_token_123".to_string()))
+            .introspect(&AccessToken::new("access_token_123"))
             .set_token_type_hint("access_token")
             .request(&mock_http_client(
                 vec![
@@ -558,16 +554,10 @@ mod tests {
 
         assert!(introspection_response.active);
         assert_eq!(
-            Some(vec![
-                Scope::new("email".to_string()),
-                Scope::new("profile".to_string())
-            ]),
+            Some(vec![Scope::new("email"), Scope::new("profile")]),
             introspection_response.scopes
         );
-        assert_eq!(
-            Some(ClientId::new("aaa".to_string())),
-            introspection_response.client_id
-        );
+        assert_eq!(Some(ClientId::new("aaa")), introspection_response.client_id);
         assert_eq!(Some("demo".to_string()), introspection_response.username);
         assert_eq!(
             Some(BasicTokenType::Bearer),

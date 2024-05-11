@@ -40,12 +40,10 @@ fn main() {
         env::var("MSGRAPH_CLIENT_SECRET")
             .expect("Missing the MSGRAPH_CLIENT_SECRET environment variable."),
     );
-    let auth_url =
-        AuthUrl::new("https://login.microsoftonline.com/common/oauth2/v2.0/authorize".to_string())
-            .expect("Invalid authorization endpoint URL");
-    let token_url =
-        TokenUrl::new("https://login.microsoftonline.com/common/oauth2/v2.0/token".to_string())
-            .expect("Invalid token endpoint URL");
+    let auth_url = AuthUrl::new("https://login.microsoftonline.com/common/oauth2/v2.0/authorize")
+        .expect("Invalid authorization endpoint URL");
+    let token_url = TokenUrl::new("https://login.microsoftonline.com/common/oauth2/v2.0/token")
+        .expect("Invalid token endpoint URL");
 
     // Set up the config for the Microsoft Graph OAuth2 process.
     let client = BasicClient::new(graph_client_id)
@@ -58,8 +56,7 @@ fn main() {
         // This example will be running its own server at localhost:3003.
         // See below for the server implementation.
         .set_redirect_uri(
-            RedirectUrl::new("http://localhost:3003/redirect".to_string())
-                .expect("Invalid redirect URL"),
+            RedirectUrl::new("http://localhost:3003/redirect").expect("Invalid redirect URL"),
         );
 
     let http_client = reqwest::blocking::ClientBuilder::new()
@@ -76,9 +73,7 @@ fn main() {
     let (authorize_url, csrf_state) = client
         .authorize_url(CsrfToken::new_random)
         // This example requests read access to OneDrive.
-        .add_scope(Scope::new(
-            "https://graph.microsoft.com/Files.Read".to_string(),
-        ))
+        .add_scope(Scope::new("https://graph.microsoft.com/Files.Read"))
         .set_pkce_challenge(pkce_code_challenge)
         .url();
 
@@ -104,13 +99,13 @@ fn main() {
         let code = url
             .query_pairs()
             .find(|(key, _)| key == "code")
-            .map(|(_, code)| AuthorizationCode::new(code.into_owned()))
+            .map(|(_, code)| AuthorizationCode::new(code))
             .unwrap();
 
         let state = url
             .query_pairs()
             .find(|(key, _)| key == "state")
-            .map(|(_, state)| CsrfToken::new(state.into_owned()))
+            .map(|(_, state)| CsrfToken::new(state))
             .unwrap();
 
         let message = "Go back to your terminal :)";

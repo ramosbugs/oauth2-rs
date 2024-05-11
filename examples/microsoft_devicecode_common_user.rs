@@ -7,15 +7,15 @@ use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let client = BasicClient::new(ClientId::new("client_id".to_string()))
+    let client = BasicClient::new(ClientId::new("client_id"))
         .set_auth_uri(AuthUrl::new(
-            "https://login.microsoftonline.com/common/oauth2/v2.0/authorize".to_string(),
+            "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
         )?)
         .set_token_uri(TokenUrl::new(
-            "https://login.microsoftonline.com/common/oauth2/v2.0/token".to_string(),
+            "https://login.microsoftonline.com/common/oauth2/v2.0/token",
         )?)
         .set_device_authorization_url(DeviceAuthorizationUrl::new(
-            "https://login.microsoftonline.com/common/oauth2/v2.0/devicecode".to_string(),
+            "https://login.microsoftonline.com/common/oauth2/v2.0/devicecode",
         )?);
 
     let http_client = reqwest::ClientBuilder::new()
@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let details: StandardDeviceAuthorizationResponse = client
         .exchange_device_code()
-        .add_scope(Scope::new("read".to_string()))
+        .add_scope(Scope::new("read"))
         .request_async(&http_client)
         .await?;
 

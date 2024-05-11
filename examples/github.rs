@@ -83,13 +83,13 @@ fn main() {
         let code = url
             .query_pairs()
             .find(|(key, _)| key == "code")
-            .map(|(_, code)| AuthorizationCode::new(code.into_owned()))
+            .map(|(_, code)| AuthorizationCode::new(code))
             .unwrap();
 
         let state = url
             .query_pairs()
             .find(|(key, _)| key == "state")
-            .map(|(_, state)| CsrfToken::new(state.into_owned()))
+            .map(|(_, state)| CsrfToken::new(state))
             .unwrap();
 
         let message = "Go back to your terminal :)";

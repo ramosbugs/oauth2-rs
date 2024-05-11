@@ -486,7 +486,7 @@ impl PkceCodeChallenge {
 
         Self {
             code_challenge,
-            code_challenge_method: PkceCodeChallengeMethod::new("S256".to_string()),
+            code_challenge_method: PkceCodeChallengeMethod::new("S256"),
         }
     }
 
@@ -523,7 +523,7 @@ impl PkceCodeChallenge {
 
         Self {
             code_challenge,
-            code_challenge_method: PkceCodeChallengeMethod::new("plain".to_string()),
+            code_challenge_method: PkceCodeChallengeMethod::new("plain"),
         }
     }
 
@@ -611,7 +611,7 @@ mod tests {
 
     #[test]
     fn test_secret_redaction() {
-        let secret = ClientSecret::new("top_secret".to_string());
+        let secret = ClientSecret::new("top_secret");
         assert_eq!("ClientSecret([redacted])", format!("{secret:?}"));
     }
 
@@ -642,8 +642,7 @@ mod tests {
     #[test]
     fn test_code_verifier_challenge() {
         // Example from https://tools.ietf.org/html/rfc7636#appendix-B
-        let code_verifier =
-            PkceCodeVerifier::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string());
+        let code_verifier = PkceCodeVerifier::new("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk");
         assert_eq!(
             PkceCodeChallenge::from_code_verifier_sha256(&code_verifier).as_str(),
             "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",

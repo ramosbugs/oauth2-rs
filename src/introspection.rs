@@ -466,7 +466,7 @@ mod tests {
             .set_introspection_url(IntrospectionUrl::new("https://introspection/url").unwrap());
 
         let introspection_response = client
-            .introspect(&AccessToken::new("access_token_123".to_string()))
+            .introspect(&AccessToken::new("access_token_123"))
             .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
@@ -514,7 +514,7 @@ mod tests {
             .set_introspection_url(IntrospectionUrl::new("https://introspection/url").unwrap());
 
         let introspection_response = client
-            .introspect(&AccessToken::new("access_token_123".to_string()))
+            .introspect(&AccessToken::new("access_token_123"))
             .set_token_type_hint("access_token")
             .request(&mock_http_client(
                 vec![

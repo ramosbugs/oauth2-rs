@@ -81,7 +81,7 @@ impl private::EndpointStateSealed for EndpointMaybeSet {}
 /// # use oauth2::{*, basic::*};
 /// #
 /// # let client = BasicClient::new(ClientId::new("aaa"))
-/// #     .set_client_secret(ClientSecret::new("bbb".to_string()))
+/// #     .set_client_secret(ClientSecret::new("bbb"))
 /// #     .set_auth_uri(AuthUrl::new("https://example.com/auth").unwrap())
 /// #     .set_token_uri(TokenUrl::new("https://example.com/token").unwrap())
 /// #     .set_revocation_url(RevocationUrl::new("https://revocation/url").unwrap());
@@ -107,7 +107,7 @@ impl private::EndpointStateSealed for EndpointMaybeSet {}
 /// # };
 /// #
 /// let res = client
-///     .revoke_token(AccessToken::new("some token".to_string()).into())
+///     .revoke_token(AccessToken::new("some token").into())
 ///     .unwrap()
 ///     .request(&http_client);
 ///

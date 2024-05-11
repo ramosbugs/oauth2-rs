@@ -141,7 +141,7 @@
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client = BasicClient::new(ClientId::new("client_id"))
-//!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
+//!     .set_client_secret(ClientSecret::new("client_secret"))
 //!     .set_auth_uri(AuthUrl::new("http://authorize")?)
 //!     .set_token_uri(TokenUrl::new("http://token")?)
 //!     // Set the URL the user will be redirected to after the authorization process.
@@ -177,7 +177,7 @@
 //! // Now you can trade it for an access token.
 //! let token_result =
 //!     client
-//!         .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
+//!         .exchange_code(AuthorizationCode::new("some authorization code"))
 //!         // Set the PKCE code verifier.
 //!         .set_pkce_verifier(pkce_verifier)
 //!         .request(&http_client)?;
@@ -214,7 +214,7 @@
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
 //! let client = BasicClient::new(ClientId::new("client_id"))
-//!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
+//!     .set_client_secret(ClientSecret::new("client_secret"))
 //!     .set_auth_uri(AuthUrl::new("http://authorize")?)
 //!     .set_token_uri(TokenUrl::new("http://token")?)
 //!     // Set the URL the user will be redirected to after the authorization process.
@@ -249,7 +249,7 @@
 //!
 //! // Now you can trade it for an access token.
 //! let token_result = client
-//!     .exchange_code(AuthorizationCode::new("some authorization code".to_string()))
+//!     .exchange_code(AuthorizationCode::new("some authorization code"))
 //!     // Set the PKCE code verifier.
 //!     .set_pkce_verifier(pkce_verifier)
 //!     .request_async(&http_client)
@@ -282,7 +282,7 @@
 //!
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id"))
-//!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
+//!     .set_client_secret(ClientSecret::new("client_secret"))
 //!     .set_auth_uri(AuthUrl::new("http://authorize")?);
 //!
 //! // Generate the full authorization URL.
@@ -329,7 +329,7 @@
 //! # #[cfg(feature = "reqwest-blocking")]
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id"))
-//!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
+//!     .set_client_secret(ClientSecret::new("client_secret"))
 //!     .set_auth_uri(AuthUrl::new("http://authorize")?)
 //!     .set_token_uri(TokenUrl::new("http://token")?);
 //!
@@ -343,7 +343,7 @@
 //!     client
 //!         .exchange_password(
 //!             &ResourceOwnerUsername::new("user"),
-//!             &ResourceOwnerPassword::new("pass".to_string())
+//!             &ResourceOwnerPassword::new("pass")
 //!         )
 //!         .add_scope(Scope::new("read"))
 //!         .request(&http_client)?;
@@ -375,7 +375,7 @@
 //! # #[cfg(feature = "reqwest-blocking")]
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id"))
-//!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
+//!     .set_client_secret(ClientSecret::new("client_secret"))
 //!     .set_auth_uri(AuthUrl::new("http://authorize")?)
 //!     .set_token_uri(TokenUrl::new("http://token")?);
 //!
@@ -423,7 +423,7 @@
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let device_auth_url = DeviceAuthorizationUrl::new("http://deviceauth")?;
 //! let client = BasicClient::new(ClientId::new("client_id"))
-//!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
+//!     .set_client_secret(ClientSecret::new("client_secret"))
 //!     .set_auth_uri(AuthUrl::new("http://authorize")?)
 //!     .set_token_uri(TokenUrl::new("http://token")?)
 //!     .set_device_authorization_url(device_auth_url);

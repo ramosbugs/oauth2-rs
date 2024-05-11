@@ -116,7 +116,7 @@ pub trait RevocableToken {
 /// # fn err_wrapper() -> Result<(), anyhow::Error> {
 /// #
 /// # let token_response = BasicTokenResponse::new(
-/// #   AccessToken::new("access".to_string()),
+/// #   AccessToken::new("access"),
 /// #   BasicTokenType::Bearer,
 /// #   EmptyExtraTokenFields {},
 /// # );
@@ -386,7 +386,7 @@ mod tests {
         let client = new_client().set_revocation_url_option(None);
 
         let result = client
-            .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+            .revoke_token(AccessToken::new("access_token_123").into())
             .unwrap_err();
 
         assert_eq!(result.to_string(), "No revocation endpoint URL specified");
@@ -398,7 +398,7 @@ mod tests {
 
         let result = client
             .set_revocation_url(RevocationUrl::new("http://revocation/url").unwrap())
-            .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+            .revoke_token(AccessToken::new("access_token_123").into())
             .unwrap_err();
 
         assert_eq!(
@@ -413,7 +413,7 @@ mod tests {
             new_client().set_revocation_url(RevocationUrl::new("https://revocation/url").unwrap());
 
         let revocation_response = client
-          .revoke_token(AccessToken::new("access_token_123".to_string()).into()).unwrap()
+          .revoke_token(AccessToken::new("access_token_123").into()).unwrap()
           .request(&mock_http_client(
               vec![
                   (ACCEPT, "application/json"),
@@ -456,7 +456,7 @@ mod tests {
             new_client().set_revocation_url(RevocationUrl::new("https://revocation/url").unwrap());
 
         client
-            .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+            .revoke_token(AccessToken::new("access_token_123").into())
             .unwrap()
             .request(&mock_http_client(
                 vec![
@@ -484,7 +484,7 @@ mod tests {
             new_client().set_revocation_url(RevocationUrl::new("https://revocation/url").unwrap());
 
         client
-            .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+            .revoke_token(AccessToken::new("access_token_123").into())
             .unwrap()
             .request(&mock_http_client(
                 vec![
@@ -508,7 +508,7 @@ mod tests {
             new_client().set_revocation_url(RevocationUrl::new("https://revocation/url").unwrap());
 
         client
-            .revoke_token(AccessToken::new("access_token_123".to_string()).into())
+            .revoke_token(AccessToken::new("access_token_123").into())
             .unwrap()
             .request(&mock_http_client(
                 vec![
@@ -536,7 +536,7 @@ mod tests {
             new_client().set_revocation_url(RevocationUrl::new("https://revocation/url").unwrap());
 
         client
-            .revoke_token(RefreshToken::new("refresh_token_123".to_string()).into())
+            .revoke_token(RefreshToken::new("refresh_token_123").into())
             .unwrap()
             .request(&mock_http_client(
                 vec![
@@ -561,7 +561,7 @@ mod tests {
     #[test]
     fn test_extension_token_revocation_successful() {
         let client = ColorfulClient::new(ClientId::new("aaa"))
-            .set_client_secret(ClientSecret::new("bbb".to_string()))
+            .set_client_secret(ClientSecret::new("bbb"))
             .set_auth_uri(AuthUrl::new("https://example.com/auth").unwrap())
             .set_token_uri(TokenUrl::new("https://example.com/token").unwrap())
             .set_revocation_url(RevocationUrl::new("https://revocation/url").unwrap());

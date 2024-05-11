@@ -705,7 +705,7 @@ mod tests {
         client
             .exchange_device_code()
             .add_extra_param("foo", "bar")
-            .add_scope(Scope::new("openid".to_string()))
+            .add_scope(Scope::new("openid"))
             .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
@@ -790,10 +790,7 @@ mod tests {
 
         assert_eq!("12/34", token.access_token().secret());
         assert_eq!(BasicTokenType::Bearer, *token.token_type());
-        assert_eq!(
-            Some(&vec![Scope::new("openid".to_string()),]),
-            token.scopes()
-        );
+        assert_eq!(Some(&vec![Scope::new("openid"),]), token.scopes());
         assert_eq!(None, token.expires_in());
         assert!(token.refresh_token().is_none());
     }
@@ -862,10 +859,7 @@ mod tests {
 
         assert_eq!("12/34", token.access_token().secret());
         assert_eq!(BasicTokenType::Bearer, *token.token_type());
-        assert_eq!(
-            Some(&vec![Scope::new("openid".to_string()),]),
-            token.scopes()
-        );
+        assert_eq!(Some(&vec![Scope::new("openid"),]), token.scopes());
         assert_eq!(None, token.expires_in());
         assert!(token.refresh_token().is_none());
     }
@@ -943,10 +937,7 @@ mod tests {
 
         assert_eq!("12/34", token.access_token().secret());
         assert_eq!(BasicTokenType::Bearer, *token.token_type());
-        assert_eq!(
-            Some(&vec![Scope::new("openid".to_string()),]),
-            token.scopes()
-        );
+        assert_eq!(Some(&vec![Scope::new("openid"),]), token.scopes());
         assert_eq!(None, token.expires_in());
         assert!(token.refresh_token().is_none());
     }

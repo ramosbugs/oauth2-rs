@@ -80,7 +80,7 @@ impl private::EndpointStateSealed for EndpointMaybeSet {}
 /// # use http::Response;
 /// # use oauth2::{*, basic::*};
 /// #
-/// # let client = BasicClient::new(ClientId::new("aaa".to_string()))
+/// # let client = BasicClient::new(ClientId::new("aaa"))
 /// #     .set_client_secret(ClientSecret::new("bbb".to_string()))
 /// #     .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
 /// #     .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap())

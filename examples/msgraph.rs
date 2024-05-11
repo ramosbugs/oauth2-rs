@@ -76,9 +76,7 @@ fn main() {
     let (authorize_url, csrf_state) = client
         .authorize_url(CsrfToken::new_random)
         // This example requests read access to OneDrive.
-        .add_scope(Scope::new(
-            "https://graph.microsoft.com/Files.Read".to_string(),
-        ))
+        .add_scope(Scope::new("https://graph.microsoft.com/Files.Read"))
         .set_pkce_challenge(pkce_code_challenge)
         .url();
 

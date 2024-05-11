@@ -68,12 +68,8 @@ fn main() {
     let (authorize_url, csrf_state) = client
         .authorize_url(CsrfToken::new_random)
         // This example is requesting access to the "calendar" features and the user's profile.
-        .add_scope(Scope::new(
-            "https://www.googleapis.com/auth/calendar".to_string(),
-        ))
-        .add_scope(Scope::new(
-            "https://www.googleapis.com/auth/plus.me".to_string(),
-        ))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/calendar"))
+        .add_scope(Scope::new("https://www.googleapis.com/auth/plus.me"))
         .set_pkce_challenge(pkce_code_challenge)
         .url();
 

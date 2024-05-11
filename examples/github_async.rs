@@ -60,8 +60,8 @@ async fn main() {
     let (authorize_url, csrf_state) = client
         .authorize_url(CsrfToken::new_random)
         // This example is requesting access to the user's public repos and email.
-        .add_scope(Scope::new("public_repo".to_string()))
-        .add_scope(Scope::new("user:email".to_string()))
+        .add_scope(Scope::new("public_repo"))
+        .add_scope(Scope::new("user:email"))
         .url();
 
     println!("Open this URL in your browser:\n{authorize_url}\n");

@@ -140,7 +140,7 @@
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
-//! let client = BasicClient::new(ClientId::new("client_id".to_string()))
+//! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
 //!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
 //!     .set_token_uri(TokenUrl::new("http://token".to_string())?)
@@ -154,8 +154,8 @@
 //! let (auth_url, csrf_token) = client
 //!     .authorize_url(CsrfToken::new_random)
 //!     // Set the desired scopes.
-//!     .add_scope(Scope::new("read".to_string()))
-//!     .add_scope(Scope::new("write".to_string()))
+//!     .add_scope(Scope::new("read"))
+//!     .add_scope(Scope::new("write"))
 //!     // Set the PKCE code challenge.
 //!     .set_pkce_challenge(pkce_challenge)
 //!     .url();
@@ -213,7 +213,7 @@
 //! # async fn err_wrapper() -> Result<(), anyhow::Error> {
 //! // Create an OAuth2 client by specifying the client ID, client secret, authorization URL and
 //! // token URL.
-//! let client = BasicClient::new(ClientId::new("client_id".to_string()))
+//! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
 //!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
 //!     .set_token_uri(TokenUrl::new("http://token".to_string())?)
@@ -227,8 +227,8 @@
 //! let (auth_url, csrf_token) = client
 //!     .authorize_url(CsrfToken::new_random)
 //!     // Set the desired scopes.
-//!     .add_scope(Scope::new("read".to_string()))
-//!     .add_scope(Scope::new("write".to_string()))
+//!     .add_scope(Scope::new("read"))
+//!     .add_scope(Scope::new("write"))
 //!     // Set the PKCE code challenge.
 //!     .set_pkce_challenge(pkce_challenge)
 //!     .url();
@@ -281,7 +281,7 @@
 //! use url::Url;
 //!
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
-//! let client = BasicClient::new(ClientId::new("client_id".to_string()))
+//! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
 //!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?);
 //!
@@ -328,7 +328,7 @@
 //!
 //! # #[cfg(feature = "reqwest-blocking")]
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
-//! let client = BasicClient::new(ClientId::new("client_id".to_string()))
+//! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
 //!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
 //!     .set_token_uri(TokenUrl::new("http://token".to_string())?);
@@ -342,10 +342,10 @@
 //! let token_result =
 //!     client
 //!         .exchange_password(
-//!             &ResourceOwnerUsername::new("user".to_string()),
+//!             &ResourceOwnerUsername::new("user"),
 //!             &ResourceOwnerPassword::new("pass".to_string())
 //!         )
-//!         .add_scope(Scope::new("read".to_string()))
+//!         .add_scope(Scope::new("read"))
 //!         .request(&http_client)?;
 //! # Ok(())
 //! # }
@@ -374,7 +374,7 @@
 //!
 //! # #[cfg(feature = "reqwest-blocking")]
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
-//! let client = BasicClient::new(ClientId::new("client_id".to_string()))
+//! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
 //!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
 //!     .set_token_uri(TokenUrl::new("http://token".to_string())?);
@@ -387,7 +387,7 @@
 //!
 //! let token_result = client
 //!     .exchange_client_credentials()
-//!     .add_scope(Scope::new("read".to_string()))
+//!     .add_scope(Scope::new("read"))
 //!     .request(&http_client)?;
 //! # Ok(())
 //! # }
@@ -422,7 +422,7 @@
 //! # #[cfg(feature = "reqwest-blocking")]
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let device_auth_url = DeviceAuthorizationUrl::new("http://deviceauth".to_string())?;
-//! let client = BasicClient::new(ClientId::new("client_id".to_string()))
+//! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
 //!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
 //!     .set_token_uri(TokenUrl::new("http://token".to_string())?)
@@ -436,7 +436,7 @@
 //!
 //! let details: StandardDeviceAuthorizationResponse = client
 //!     .exchange_device_code()
-//!     .add_scope(Scope::new("read".to_string()))
+//!     .add_scope(Scope::new("read"))
 //!     .request(&http_client)?;
 //!
 //! println!(

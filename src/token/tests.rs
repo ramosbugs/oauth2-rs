@@ -39,7 +39,7 @@ where
 
 #[test]
 fn test_exchange_code_successful_with_minimal_json_response() {
-    let client = BasicClient::new(ClientId::new("aaa".to_string()))
+    let client = BasicClient::new(ClientId::new("aaa"))
         .set_client_secret(ClientSecret::new("bbb".to_string()))
         .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
         .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap());
@@ -117,10 +117,7 @@ fn test_exchange_code_successful_with_complete_json_response() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(3600, token.expires_in().unwrap().as_secs());
@@ -141,7 +138,7 @@ fn test_exchange_code_successful_with_complete_json_response() {
 
 #[test]
 fn test_exchange_client_credentials_with_basic_auth() {
-    let client = BasicClient::new(ClientId::new("aaa/;&".to_string()))
+    let client = BasicClient::new(ClientId::new("aaa/;&"))
         .set_client_secret(ClientSecret::new("bbb/;&".to_string()))
         .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
         .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap())
@@ -175,10 +172,7 @@ fn test_exchange_client_credentials_with_basic_auth() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
@@ -187,7 +181,7 @@ fn test_exchange_client_credentials_with_basic_auth() {
 
 #[test]
 fn test_exchange_client_credentials_with_basic_auth_but_no_client_secret() {
-    let client = BasicClient::new(ClientId::new("aaa/;&".to_string()))
+    let client = BasicClient::new(ClientId::new("aaa/;&"))
         .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
         .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap())
         .set_auth_type(AuthType::BasicAuth);
@@ -219,10 +213,7 @@ fn test_exchange_client_credentials_with_basic_auth_but_no_client_secret() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
@@ -234,8 +225,8 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
     let client = new_client().set_auth_type(AuthType::RequestBody);
     let token = client
         .exchange_client_credentials()
-        .add_scope(Scope::new("read".to_string()))
-        .add_scope(Scope::new("write".to_string()))
+        .add_scope(Scope::new("read"))
+        .add_scope(Scope::new("write"))
         .request(&mock_http_client(
             vec![
                 (ACCEPT, "application/json"),
@@ -265,10 +256,7 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
@@ -305,10 +293,7 @@ fn test_exchange_refresh_token_with_basic_auth() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
@@ -346,10 +331,7 @@ fn test_exchange_refresh_token_with_json_response() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
@@ -361,11 +343,11 @@ fn test_exchange_password_with_json_response() {
     let client = new_client();
     let token = client
         .exchange_password(
-            &ResourceOwnerUsername::new("user".to_string()),
+            &ResourceOwnerUsername::new("user"),
             &ResourceOwnerPassword::new("pass".to_string()),
         )
-        .add_scope(Scope::new("read".to_string()))
-        .add_scope(Scope::new("write".to_string()))
+        .add_scope(Scope::new("read"))
+        .add_scope(Scope::new("write"))
         .request(&mock_http_client(
             vec![
                 (ACCEPT, "application/json"),
@@ -396,10 +378,7 @@ fn test_exchange_password_with_json_response() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
@@ -444,10 +423,7 @@ fn test_exchange_code_successful_with_redirect_url() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
@@ -495,10 +471,7 @@ fn test_exchange_code_successful_with_redirect_url_override() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
@@ -543,10 +516,7 @@ fn test_exchange_code_successful_with_basic_auth() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
@@ -599,10 +569,7 @@ fn test_exchange_code_successful_with_pkce_and_extension() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
@@ -648,10 +615,7 @@ fn test_exchange_refresh_token_successful_with_extension() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(BasicTokenType::Bearer, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(None, token.expires_in());
@@ -822,7 +786,7 @@ fn test_exchange_code_with_unexpected_content_type() {
 
 #[test]
 fn test_exchange_code_with_invalid_token_type() {
-    let client = BasicClient::new(ClientId::new("aaa".to_string()))
+    let client = BasicClient::new(ClientId::new("aaa"))
         .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
         .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap());
 
@@ -913,7 +877,7 @@ fn test_exchange_code_with_400_status_code() {
 
 #[test]
 fn test_exchange_code_fails_gracefully_on_transport_error() {
-    let client = BasicClient::new(ClientId::new("aaa".to_string()))
+    let client = BasicClient::new(ClientId::new("aaa"))
         .set_client_secret(ClientSecret::new("bbb".to_string()))
         .set_auth_uri(AuthUrl::new("https://auth".to_string()).unwrap())
         .set_token_uri(TokenUrl::new("https://token".to_string()).unwrap());
@@ -932,7 +896,7 @@ fn test_exchange_code_fails_gracefully_on_transport_error() {
 
 #[test]
 fn test_extension_successful_with_minimal_json_response() {
-    let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
+    let client = ColorfulClient::new(ClientId::new("aaa"))
         .set_client_secret(ClientSecret::new("bbb".to_string()))
         .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
         .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap());
@@ -983,7 +947,7 @@ fn test_extension_successful_with_minimal_json_response() {
 
 #[test]
 fn test_extension_successful_with_complete_json_response() {
-    let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
+    let client = ColorfulClient::new(ClientId::new("aaa"))
         .set_client_secret(ClientSecret::new("bbb".to_string()))
         .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
         .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap())
@@ -1024,10 +988,7 @@ fn test_extension_successful_with_complete_json_response() {
     assert_eq!("12/34", token.access_token().secret());
     assert_eq!(ColorfulTokenType::Red, *token.token_type());
     assert_eq!(
-        Some(&vec![
-            Scope::new("read".to_string()),
-            Scope::new("write".to_string()),
-        ]),
+        Some(&vec![Scope::new("read"), Scope::new("write"),]),
         token.scopes()
     );
     assert_eq!(3600, token.expires_in().unwrap().as_secs());
@@ -1051,7 +1012,7 @@ fn test_extension_successful_with_complete_json_response() {
 
 #[test]
 fn test_extension_with_simple_json_error() {
-    let client = ColorfulClient::new(ClientId::new("aaa".to_string()))
+    let client = ColorfulClient::new(ClientId::new("aaa"))
         .set_client_secret(ClientSecret::new("bbb".to_string()))
         .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
         .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap());
@@ -1175,7 +1136,7 @@ mod custom_errors {
 
 #[test]
 fn test_extension_with_custom_json_error() {
-    let client = CustomErrorClient::new(ClientId::new("aaa".to_string()))
+    let client = CustomErrorClient::new(ClientId::new("aaa"))
         .set_client_secret(ClientSecret::new("bbb".to_string()))
         .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
         .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap());

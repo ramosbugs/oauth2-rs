@@ -558,16 +558,10 @@ mod tests {
 
         assert!(introspection_response.active);
         assert_eq!(
-            Some(vec![
-                Scope::new("email".to_string()),
-                Scope::new("profile".to_string())
-            ]),
+            Some(vec![Scope::new("email"), Scope::new("profile")]),
             introspection_response.scopes
         );
-        assert_eq!(
-            Some(ClientId::new("aaa".to_string())),
-            introspection_response.client_id
-        );
+        assert_eq!(Some(ClientId::new("aaa")), introspection_response.client_id);
         assert_eq!(Some("demo".to_string()), introspection_response.username);
         assert_eq!(
             Some(BasicTokenType::Bearer),

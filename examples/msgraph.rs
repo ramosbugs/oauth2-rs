@@ -40,12 +40,10 @@ fn main() {
         env::var("MSGRAPH_CLIENT_SECRET")
             .expect("Missing the MSGRAPH_CLIENT_SECRET environment variable."),
     );
-    let auth_url =
-        AuthUrl::new("https://login.microsoftonline.com/common/oauth2/v2.0/authorize".to_string())
-            .expect("Invalid authorization endpoint URL");
-    let token_url =
-        TokenUrl::new("https://login.microsoftonline.com/common/oauth2/v2.0/token".to_string())
-            .expect("Invalid token endpoint URL");
+    let auth_url = AuthUrl::new("https://login.microsoftonline.com/common/oauth2/v2.0/authorize")
+        .expect("Invalid authorization endpoint URL");
+    let token_url = TokenUrl::new("https://login.microsoftonline.com/common/oauth2/v2.0/token")
+        .expect("Invalid token endpoint URL");
 
     // Set up the config for the Microsoft Graph OAuth2 process.
     let client = BasicClient::new(graph_client_id)
@@ -58,8 +56,7 @@ fn main() {
         // This example will be running its own server at localhost:3003.
         // See below for the server implementation.
         .set_redirect_uri(
-            RedirectUrl::new("http://localhost:3003/redirect".to_string())
-                .expect("Invalid redirect URL"),
+            RedirectUrl::new("http://localhost:3003/redirect").expect("Invalid redirect URL"),
         );
 
     let http_client = reqwest::blocking::ClientBuilder::new()

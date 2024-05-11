@@ -280,8 +280,8 @@ mod tests {
     fn test_authorize_url_with_param() {
         let client = BasicClient::new(ClientId::new("aaa"))
             .set_client_secret(ClientSecret::new("bbb".to_string()))
-            .set_auth_uri(AuthUrl::new("https://example.com/auth?foo=bar".to_string()).unwrap())
-            .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap());
+            .set_auth_uri(AuthUrl::new("https://example.com/auth?foo=bar").unwrap())
+            .set_token_uri(TokenUrl::new("https://example.com/token").unwrap());
 
         let (url, _) = client
             .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
@@ -359,8 +359,8 @@ mod tests {
 
     #[test]
     fn test_authorize_url_with_redirect_url() {
-        let client = new_client()
-            .set_redirect_uri(RedirectUrl::new("https://localhost/redirect".to_string()).unwrap());
+        let client =
+            new_client().set_redirect_uri(RedirectUrl::new("https://localhost/redirect").unwrap());
 
         let (url, _) = client
             .authorize_url(|| CsrfToken::new("csrf_token".to_string()))
@@ -380,8 +380,8 @@ mod tests {
 
     #[test]
     fn test_authorize_url_with_redirect_url_override() {
-        let client = new_client()
-            .set_redirect_uri(RedirectUrl::new("https://localhost/redirect".to_string()).unwrap());
+        let client =
+            new_client().set_redirect_uri(RedirectUrl::new("https://localhost/redirect").unwrap());
 
         let (url, _) = client
             .authorize_url(|| CsrfToken::new("csrf_token".to_string()))

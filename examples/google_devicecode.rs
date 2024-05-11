@@ -38,13 +38,12 @@ fn main() {
         env::var("GOOGLE_CLIENT_SECRET")
             .expect("Missing the GOOGLE_CLIENT_SECRET environment variable."),
     );
-    let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
+    let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth")
         .expect("Invalid authorization endpoint URL");
-    let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_string())
+    let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token")
         .expect("Invalid token endpoint URL");
-    let device_auth_url =
-        DeviceAuthorizationUrl::new("https://oauth2.googleapis.com/device/code".to_string())
-            .expect("Invalid device authorization endpoint URL");
+    let device_auth_url = DeviceAuthorizationUrl::new("https://oauth2.googleapis.com/device/code")
+        .expect("Invalid device authorization endpoint URL");
 
     // Set up the config for the Google OAuth2 process.
     //

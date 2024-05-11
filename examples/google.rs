@@ -33,9 +33,9 @@ fn main() {
         env::var("GOOGLE_CLIENT_SECRET")
             .expect("Missing the GOOGLE_CLIENT_SECRET environment variable."),
     );
-    let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
+    let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth")
         .expect("Invalid authorization endpoint URL");
-    let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_string())
+    let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token")
         .expect("Invalid token endpoint URL");
 
     // Set up the config for the Google OAuth2 process.
@@ -45,12 +45,10 @@ fn main() {
         .set_token_uri(token_url)
         // This example will be running its own server at localhost:8080.
         // See below for the server implementation.
-        .set_redirect_uri(
-            RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
-        )
+        .set_redirect_uri(RedirectUrl::new("http://localhost:8080").expect("Invalid redirect URL"))
         // Google supports OAuth 2.0 Token Revocation (RFC-7009)
         .set_revocation_url(
-            RevocationUrl::new("https://oauth2.googleapis.com/revoke".to_string())
+            RevocationUrl::new("https://oauth2.googleapis.com/revoke")
                 .expect("Invalid revocation endpoint URL"),
         );
 

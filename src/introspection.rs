@@ -462,10 +462,8 @@ mod tests {
     fn test_token_introspection_successful_with_basic_auth_minimal_response() {
         let client = new_client()
             .set_auth_type(AuthType::BasicAuth)
-            .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-            .set_introspection_url(
-                IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
-            );
+            .set_redirect_uri(RedirectUrl::new("https://redirect/here").unwrap())
+            .set_introspection_url(IntrospectionUrl::new("https://introspection/url").unwrap());
 
         let introspection_response = client
             .introspect(&AccessToken::new("access_token_123".to_string()))
@@ -512,10 +510,8 @@ mod tests {
     fn test_token_introspection_successful_with_basic_auth_full_response() {
         let client = new_client()
             .set_auth_type(AuthType::BasicAuth)
-            .set_redirect_uri(RedirectUrl::new("https://redirect/here".to_string()).unwrap())
-            .set_introspection_url(
-                IntrospectionUrl::new("https://introspection/url".to_string()).unwrap(),
-            );
+            .set_redirect_uri(RedirectUrl::new("https://redirect/here").unwrap())
+            .set_introspection_url(IntrospectionUrl::new("https://introspection/url").unwrap());
 
         let introspection_response = client
             .introspect(&AccessToken::new("access_token_123".to_string()))

@@ -698,8 +698,7 @@ mod tests {
         }}"
         );
 
-        let device_auth_url =
-            DeviceAuthorizationUrl::new("https://deviceauth/here".to_string()).unwrap();
+        let device_auth_url = DeviceAuthorizationUrl::new("https://deviceauth/here").unwrap();
 
         let client = new_client().set_device_authorization_url(device_auth_url.clone());
         client

@@ -142,10 +142,10 @@
 //! // token URL.
 //! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
-//!     .set_token_uri(TokenUrl::new("http://token".to_string())?)
+//!     .set_auth_uri(AuthUrl::new("http://authorize")?)
+//!     .set_token_uri(TokenUrl::new("http://token")?)
 //!     // Set the URL the user will be redirected to after the authorization process.
-//!     .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
+//!     .set_redirect_uri(RedirectUrl::new("http://redirect")?);
 //!
 //! // Generate a PKCE challenge.
 //! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -215,10 +215,10 @@
 //! // token URL.
 //! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
-//!     .set_token_uri(TokenUrl::new("http://token".to_string())?)
+//!     .set_auth_uri(AuthUrl::new("http://authorize")?)
+//!     .set_token_uri(TokenUrl::new("http://token")?)
 //!     // Set the URL the user will be redirected to after the authorization process.
-//!     .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
+//!     .set_redirect_uri(RedirectUrl::new("http://redirect")?);
 //!
 //! // Generate a PKCE challenge.
 //! let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -283,7 +283,7 @@
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?);
+//!     .set_auth_uri(AuthUrl::new("http://authorize")?);
 //!
 //! // Generate the full authorization URL.
 //! let (auth_url, csrf_token) = client
@@ -330,8 +330,8 @@
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
-//!     .set_token_uri(TokenUrl::new("http://token".to_string())?);
+//!     .set_auth_uri(AuthUrl::new("http://authorize")?)
+//!     .set_token_uri(TokenUrl::new("http://token")?);
 //!
 //! let http_client = reqwest::blocking::ClientBuilder::new()
 //!     // Following redirects opens the client up to SSRF vulnerabilities.
@@ -376,8 +376,8 @@
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
-//!     .set_token_uri(TokenUrl::new("http://token".to_string())?);
+//!     .set_auth_uri(AuthUrl::new("http://authorize")?)
+//!     .set_token_uri(TokenUrl::new("http://token")?);
 //!
 //! let http_client = reqwest::blocking::ClientBuilder::new()
 //!     // Following redirects opens the client up to SSRF vulnerabilities.
@@ -421,11 +421,11 @@
 //!
 //! # #[cfg(feature = "reqwest-blocking")]
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
-//! let device_auth_url = DeviceAuthorizationUrl::new("http://deviceauth".to_string())?;
+//! let device_auth_url = DeviceAuthorizationUrl::new("http://deviceauth")?;
 //! let client = BasicClient::new(ClientId::new("client_id"))
 //!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
-//!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?)
-//!     .set_token_uri(TokenUrl::new("http://token".to_string())?)
+//!     .set_auth_uri(AuthUrl::new("http://authorize")?)
+//!     .set_token_uri(TokenUrl::new("http://token")?)
 //!     .set_device_authorization_url(device_auth_url);
 //!
 //! let http_client = reqwest::blocking::ClientBuilder::new()

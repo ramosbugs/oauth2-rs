@@ -249,7 +249,8 @@ macro_rules! new_url_type {
         pub struct $name(Url, String);
         impl $name {
             #[doc = $new_doc]
-            pub fn new(url: String) -> Result<Self, ::url::ParseError> {
+            pub fn new(url: impl Into<String>) -> Result<Self, ::url::ParseError> {
+                let url = url.into();
                 Ok($name(Url::parse(&url)?, url))
             }
             #[doc = $from_url_doc]

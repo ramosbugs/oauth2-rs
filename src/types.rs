@@ -156,8 +156,8 @@ macro_rules! new_secret_type {
             $($item)*
 
             #[doc = $new_doc]
-            pub fn new(s: $type) -> Self {
-                $name(s)
+            pub fn new(s: impl Into<$type>) -> Self {
+                $name(s.into())
             }
             #[doc = $secret_doc]
             ///

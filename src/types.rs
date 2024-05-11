@@ -86,8 +86,8 @@ macro_rules! new_type {
             $($item)*
 
             #[doc = $new_doc]
-            pub const fn new(s: $type) -> Self {
-                $name(s)
+            pub fn new(s: impl Into<$type>) -> Self {
+                $name(s.into())
             }
         }
         impl Deref for $name {

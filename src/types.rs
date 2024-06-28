@@ -77,7 +77,8 @@ macro_rules! new_type {
         }
     ) => {
         $(#[$attr])*
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, PartialEq, Eq, Hash, ::serde::Serialize, ::serde::Deserialize)]
+        #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
         pub struct $name(
             $(#[$type_attr])*
             $type
@@ -344,13 +345,28 @@ macro_rules! new_url_type {
             }
         }
         impl Eq for $name {}
+
+
+        #[cfg(feature = "schemars")]
+        impl schemars::JsonSchema for $name {
+            fn schema_name() -> String {
+                stringify!($name).to_owned()
+            }
+
+            fn schema_id() -> std::borrow::Cow<'static, str> {
+                std::borrow::Cow::Borrowed(concat!("oauth2::", stringify!($name)))
+            }
+
+            fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+                gen.subschema_for::<String>()
+            }
+        }
     };
 }
 
 new_type![
     /// Client identifier issued to the client during the registration process described by
     /// [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).
-    #[derive(Deserialize, Serialize, Eq, Hash)]
     ClientId(String)
 ];
 
@@ -385,19 +401,16 @@ new_url_type![
 new_type![
     /// Authorization endpoint response (grant) type defined in
     /// [Section 3.1.1](https://tools.ietf.org/html/rfc6749#section-3.1.1).
-    #[derive(Deserialize, Serialize, Eq, Hash)]
     ResponseType(String)
 ];
 new_type![
     /// Resource owner's username used directly as an authorization grant to obtain an access
     /// token.
-    #[derive(Deserialize, Serialize, Eq, Hash)]
     ResourceOwnerUsername(String)
 ];
 
 new_type![
     /// Access token scope, as defined by the authorization server.
-    #[derive(Deserialize, Serialize, Eq, Hash)]
     Scope(String)
 ];
 impl AsRef<str> for Scope {
@@ -409,7 +422,6 @@ impl AsRef<str> for Scope {
 new_type![
     /// Code Challenge Method used for [PKCE](https://tools.ietf.org/html/rfc7636) protection
     /// via the `code_challenge_method` parameter.
-    #[derive(Deserialize, Serialize, Eq, Hash)]
     PkceCodeChallengeMethod(String)
 ];
 // This type intentionally does not implement Clone in order to make it difficult to reuse PKCE
@@ -661,5 +673,40 @@ mod tests {
             PkceCodeChallenge::from_code_verifier_sha256(&code_verifier).as_str(),
             "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
         );
+    }
+
+    #[cfg(feature = "schemars")]
+    mod json_schema {
+        use schemars::schema_for;
+        use serde_json::json;
+
+        use crate::{ClientId, RedirectUrl};
+
+        #[test]
+        fn generates_new_type_json_schema() {
+            let expected_schema = json!({
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "title": "ClientId",
+              "description": "Client identifier issued to the client during the registration process described by [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).",
+              "type": "string"
+            });
+
+            let schema = schema_for!(ClientId);
+            let actual_schema = serde_json::to_value(&schema).unwrap();
+            assert_eq!(expected_schema, actual_schema)
+        }
+
+        #[test]
+        fn generates_new_url_type_json_schema() {
+            let expected_schema = json!({
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "title": "RedirectUrl",
+              "type": "string"
+            });
+
+            let schema = schema_for!(RedirectUrl);
+            let actual_schema = serde_json::to_value(&schema).unwrap();
+            assert_eq!(expected_schema, actual_schema);
+        }
     }
 }

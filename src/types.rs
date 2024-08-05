@@ -152,6 +152,7 @@ macro_rules! new_secret_type {
             #[$attr]
         )*
         #[cfg_attr(feature = "timing-resistant-secret-traits", derive(Eq))]
+        #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
         pub struct $name($type);
         impl $name {
             $($item)*
@@ -680,7 +681,7 @@ mod tests {
         use schemars::schema_for;
         use serde_json::json;
 
-        use crate::{ClientId, RedirectUrl};
+        use crate::{ClientId, ClientSecret, RedirectUrl};
 
         #[test]
         fn generates_new_type_json_schema() {
@@ -692,6 +693,20 @@ mod tests {
             });
 
             let schema = schema_for!(ClientId);
+            let actual_schema = serde_json::to_value(&schema).unwrap();
+            assert_eq!(expected_schema, actual_schema)
+        }
+
+        #[test]
+        fn generates_new_secret_type_json_schema() {
+            let expected_schema = json!({
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "title": "ClientSecret",
+              "description": "Client password issued to the client during the registration process described by [Section 2.2](https://tools.ietf.org/html/rfc6749#section-2.2).",
+              "type": "string"
+            });
+
+            let schema = schema_for!(ClientSecret);
             let actual_schema = serde_json::to_value(&schema).unwrap();
             assert_eq!(expected_schema, actual_schema)
         }

@@ -156,6 +156,7 @@ pub(crate) fn endpoint_request<'a>(
 
 pub(crate) fn endpoint_response<RE, TE, DO>(
     http_response: HttpResponse,
+    check_body: bool
 ) -> Result<DO, RequestTokenError<RE, TE>>
 where
     RE: Error,
@@ -164,7 +165,9 @@ where
 {
     check_response_status(&http_response)?;
 
-    check_response_body(&http_response)?;
+    if check_body { 
+        check_response_body(&http_response)?;
+    }
 
     let response_body = http_response.body().as_slice();
     serde_path_to_error::deserialize(&mut serde_json::Deserializer::from_slice(response_body))

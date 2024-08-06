@@ -84,6 +84,7 @@ where
             pkce_verifier: None,
             token_url,
             redirect_url: self.redirect_url.as_ref().map(Cow::Borrowed),
+            check_response_body: None,
             _phantom: PhantomData,
         }
     }
@@ -142,6 +143,7 @@ where
     pub(crate) pkce_verifier: Option<PkceCodeVerifier>,
     pub(crate) token_url: &'a TokenUrl,
     pub(crate) redirect_url: Option<Cow<'a, RedirectUrl>>,
+    pub(crate) check_response_body: Option<bool>,
     pub(crate) _phantom: PhantomData<(TE, TR)>,
 }
 impl<'a, TE, TR> CodeTokenRequest<'a, TE, TR>
@@ -187,6 +189,15 @@ where
         self
     }
 
+    ///
+    /// Disables body checks for exchange response.
+    /// Useful when APIs use a different Content-Type for instance.
+    ///
+    pub fn disable_check_response_body(mut self) -> Self {
+        self.check_response_body = Some(false);
+        self
+    }
+
     fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
         RE: Error + 'static,
@@ -212,6 +223,13 @@ where
         .map_err(|err| RequestTokenError::Other(format!("failed to prepare request: {err}")))
     }
 
+    fn should_check_response_body(&self) -> bool {
+        match self.check_response_body {
+            None => true,
+            Some(c) => c 
+        }
+    }
+
     /// Synchronously sends the request to the authorization server and awaits a response.
     pub fn request<C>(
         self,
@@ -220,7 +238,8 @@ where
     where
         C: SyncHttpClient,
     {
-        endpoint_response(http_client.call(self.prepare_request()?)?)
+        let check_body = self.should_check_response_body();
+        endpoint_response(http_client.call(self.prepare_request()?)?, check_body)
     }
 
     /// Asynchronously sends the request to the authorization server and returns a Future.
@@ -232,7 +251,8 @@ where
         Self: 'c,
         C: AsyncHttpClient<'c>,
     {
-        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
+        let check_body = self.should_check_response_body();
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?, check_body) })
     }
 }
 
@@ -304,7 +324,7 @@ where
     where
         C: SyncHttpClient,
     {
-        endpoint_response(http_client.call(self.prepare_request()?)?)
+        endpoint_response(http_client.call(self.prepare_request()?)?, true)
     }
     /// Asynchronously sends the request to the authorization server and awaits a response.
     pub fn request_async<'c, C>(
@@ -315,7 +335,7 @@ where
         Self: 'c,
         C: AsyncHttpClient<'c>,
     {
-        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?, true) })
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
@@ -408,7 +428,7 @@ where
     where
         C: SyncHttpClient,
     {
-        endpoint_response(http_client.call(self.prepare_request()?)?)
+        endpoint_response(http_client.call(self.prepare_request()?)?, true)
     }
 
     /// Asynchronously sends the request to the authorization server and awaits a response.
@@ -420,7 +440,7 @@ where
         Self: 'c,
         C: AsyncHttpClient<'c>,
     {
-        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?, true) })
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
@@ -512,7 +532,7 @@ where
     where
         C: SyncHttpClient,
     {
-        endpoint_response(http_client.call(self.prepare_request()?)?)
+        endpoint_response(http_client.call(self.prepare_request()?)?, true)
     }
 
     /// Asynchronously sends the request to the authorization server and awaits a response.
@@ -524,7 +544,7 @@ where
         Self: 'c,
         C: AsyncHttpClient<'c>,
     {
-        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?, true) })
     }
 
     fn prepare_request<RE>(&self) -> Result<HttpRequest, RequestTokenError<RE, TE>>

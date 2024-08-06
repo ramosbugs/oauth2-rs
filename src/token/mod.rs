@@ -224,10 +224,9 @@ where
     }
 
     fn should_check_response_body(&self) -> bool {
-        if self.check_response_body.is_none() {
-            true
-        } else {
-            self.check_response_body.unwrap()
+        match self.check_response_body {
+            None => true,
+            Some(c) => c 
         }
     }
 

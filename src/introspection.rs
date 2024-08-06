@@ -168,7 +168,7 @@ where
     where
         C: SyncHttpClient,
     {
-        endpoint_response(http_client.call(self.prepare_request()?)?)
+        endpoint_response(http_client.call(self.prepare_request()?)?, true)
     }
 
     /// Asynchronously sends the request to the authorization server and returns a Future.
@@ -180,7 +180,7 @@ where
         Self: 'c,
         C: AsyncHttpClient<'c>,
     {
-        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?, true) })
     }
 }
 

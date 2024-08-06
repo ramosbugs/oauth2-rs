@@ -178,7 +178,7 @@ where
         C: SyncHttpClient,
         EF: ExtraDeviceAuthorizationFields,
     {
-        endpoint_response(http_client.call(self.prepare_request()?)?)
+        endpoint_response(http_client.call(self.prepare_request()?)?, true)
     }
 
     /// Asynchronously sends the request to the authorization server and returns a Future.
@@ -196,7 +196,7 @@ where
         C: AsyncHttpClient<'c>,
         EF: ExtraDeviceAuthorizationFields,
     {
-        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?, true) })
     }
 }
 
@@ -413,7 +413,7 @@ where
         };
 
         // Explicitly process the response with a DeviceCodeErrorResponse
-        let res = endpoint_response::<RE, DeviceCodeErrorResponse, TR>(http_response);
+        let res = endpoint_response::<RE, DeviceCodeErrorResponse, TR>(http_response, true);
         match res {
             // On a ServerResponse error, the error needs inspecting as a DeviceCodeErrorResponse
             // to work out whether a retry needs to happen.

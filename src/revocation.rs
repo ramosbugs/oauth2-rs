@@ -303,7 +303,7 @@ where
         Self: 'c,
         C: AsyncHttpClient<'c>,
     {
-        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
+        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?, true) })
     }
 }
 

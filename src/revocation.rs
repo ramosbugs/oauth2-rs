@@ -1,5 +1,5 @@
 use crate::basic::BasicErrorResponseType;
-use crate::endpoint::{endpoint_request, endpoint_response, endpoint_response_status_only};
+use crate::endpoint::{endpoint_request, endpoint_response_status_only};
 use crate::{
     AccessToken, AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, ConfigurationError,
     EndpointState, ErrorResponse, ErrorResponseType, HttpRequest, RefreshToken, RequestTokenError,
@@ -303,7 +303,9 @@ where
         Self: 'c,
         C: AsyncHttpClient<'c>,
     {
-        Box::pin(async move { endpoint_response(http_client.call(self.prepare_request()?).await?) })
+        Box::pin(async move {
+            endpoint_response_status_only(http_client.call(self.prepare_request()?).await?)
+        })
     }
 }
 

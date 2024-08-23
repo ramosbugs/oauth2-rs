@@ -23,9 +23,3 @@ Rust releases going back at least 6 months. Changes that break compatibility wit
 older than 6 months will no longer be considered SemVer breaking changes and will not result in a
 new major version number for this crate. MSRV changes will coincide with minor version updates
 and will not happen in patch releases.
-
-
-## Sponsorship
-
-This project is sponsored by [Unflakable](https://unflakable.com), a service for tracking and
-quarantining flaky tests.

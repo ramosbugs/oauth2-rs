@@ -37,8 +37,8 @@ fn main() -> Result<(), anyhow::Error> {
             .expect("Missing the LETTERBOXD_CLIENT_SECRET environment variable."),
     );
     // Letterboxd uses the Resource Owner flow and does not have an auth url
-    let auth_url = AuthUrl::new("https://api.letterboxd.com/api/v0/auth/404".to_string())?;
-    let token_url = TokenUrl::new("https://api.letterboxd.com/api/v0/auth/token".to_string())?;
+    let auth_url = AuthUrl::new("https://api.letterboxd.com/api/v0/auth/404")?;
+    let token_url = TokenUrl::new("https://api.letterboxd.com/api/v0/auth/token")?;
 
     // Set up the config for the Letterboxd OAuth2 process.
     let client = BasicClient::new(letterboxd_client_id.clone())

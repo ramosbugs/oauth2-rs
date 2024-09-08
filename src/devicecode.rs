@@ -734,14 +734,13 @@ mod tests {
         }}"
         );
 
-        let device_auth_url =
-            DeviceAuthorizationUrl::new("https://deviceauth/here".to_string()).unwrap();
+        let device_auth_url = DeviceAuthorizationUrl::new("https://deviceauth/here").unwrap();
 
         let client = new_client().set_device_authorization_url(device_auth_url.clone());
         client
             .exchange_device_code()
             .add_extra_param("foo", "bar")
-            .add_scope(Scope::new("openid".to_string()))
+            .add_scope(Scope::new("openid"))
             .request(&mock_http_client(
                 vec![
                     (ACCEPT, "application/json"),
@@ -826,10 +825,7 @@ mod tests {
 
         assert_eq!("12/34", token.access_token().secret());
         assert_eq!(BasicTokenType::Bearer, *token.token_type());
-        assert_eq!(
-            Some(&vec![Scope::new("openid".to_string()),]),
-            token.scopes()
-        );
+        assert_eq!(Some(&vec![Scope::new("openid"),]), token.scopes());
         assert_eq!(None, token.expires_in());
         assert!(token.refresh_token().is_none());
     }
@@ -898,10 +894,7 @@ mod tests {
 
         assert_eq!("12/34", token.access_token().secret());
         assert_eq!(BasicTokenType::Bearer, *token.token_type());
-        assert_eq!(
-            Some(&vec![Scope::new("openid".to_string()),]),
-            token.scopes()
-        );
+        assert_eq!(Some(&vec![Scope::new("openid"),]), token.scopes());
         assert_eq!(None, token.expires_in());
         assert!(token.refresh_token().is_none());
     }
@@ -979,10 +972,7 @@ mod tests {
 
         assert_eq!("12/34", token.access_token().secret());
         assert_eq!(BasicTokenType::Bearer, *token.token_type());
-        assert_eq!(
-            Some(&vec![Scope::new("openid".to_string()),]),
-            token.scopes()
-        );
+        assert_eq!(Some(&vec![Scope::new("openid"),]), token.scopes());
         assert_eq!(None, token.expires_in());
         assert!(token.refresh_token().is_none());
     }

@@ -33,9 +33,9 @@ fn main() {
         env::var("GITHUB_CLIENT_SECRET")
             .expect("Missing the GITHUB_CLIENT_SECRET environment variable."),
     );
-    let auth_url = AuthUrl::new("https://github.com/login/oauth/authorize".to_string())
+    let auth_url = AuthUrl::new("https://github.com/login/oauth/authorize")
         .expect("Invalid authorization endpoint URL");
-    let token_url = TokenUrl::new("https://github.com/login/oauth/access_token".to_string())
+    let token_url = TokenUrl::new("https://github.com/login/oauth/access_token")
         .expect("Invalid token endpoint URL");
 
     // Set up the config for the Github OAuth2 process.
@@ -45,9 +45,7 @@ fn main() {
         .set_token_uri(token_url)
         // This example will be running its own server at localhost:8080.
         // See below for the server implementation.
-        .set_redirect_uri(
-            RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
-        );
+        .set_redirect_uri(RedirectUrl::new("http://localhost:8080").expect("Invalid redirect URL"));
 
     let http_client = reqwest::blocking::ClientBuilder::new()
         // Following redirects opens the client up to SSRF vulnerabilities.
@@ -59,8 +57,8 @@ fn main() {
     let (authorize_url, csrf_state) = client
         .authorize_url(CsrfToken::new_random)
         // This example is requesting access to the user's public repos and email.
-        .add_scope(Scope::new("public_repo".to_string()))
-        .add_scope(Scope::new("user:email".to_string()))
+        .add_scope(Scope::new("public_repo"))
+        .add_scope(Scope::new("user:email"))
         .url();
 
     println!("Open this URL in your browser:\n{authorize_url}\n");
@@ -85,13 +83,13 @@ fn main() {
         let code = url
             .query_pairs()
             .find(|(key, _)| key == "code")
-            .map(|(_, code)| AuthorizationCode::new(code.into_owned()))
+            .map(|(_, code)| AuthorizationCode::new(code))
             .unwrap();
 
         let state = url
             .query_pairs()
             .find(|(key, _)| key == "state")
-            .map(|(_, state)| CsrfToken::new(state.into_owned()))
+            .map(|(_, state)| CsrfToken::new(state))
             .unwrap();
 
         let message = "Go back to your terminal :)";

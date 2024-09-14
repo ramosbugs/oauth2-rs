@@ -272,7 +272,6 @@
 //! use oauth2::{
 //!     AuthUrl,
 //!     ClientId,
-//!     ClientSecret,
 //!     CsrfToken,
 //!     RedirectUrl,
 //!     Scope
@@ -282,7 +281,6 @@
 //!
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! let client = BasicClient::new(ClientId::new("client_id".to_string()))
-//!     .set_client_secret(ClientSecret::new("client_secret".to_string()))
 //!     .set_auth_uri(AuthUrl::new("http://authorize".to_string())?);
 //!
 //! // Generate the full authorization URL.

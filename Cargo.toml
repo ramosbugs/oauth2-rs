@@ -1,6 +1,10 @@
 [package]
 name = "oauth2"
-authors = ["Alex Crichton <alex@alexcrichton.com>", "Florin Lipan <florinlipan@gmail.com>", "David A. Ramos <ramos@cs.stanford.edu>"]
+authors = [
+  "Alex Crichton <alex@alexcrichton.com>",
+  "Florin Lipan <florinlipan@gmail.com>",
+  "David A. Ramos <ramos@cs.stanford.edu>",
+]
 version = "5.0.0-alpha.4"
 license = "MIT OR Apache-2.0"
 description = "An extensible, strongly-typed implementation of OAuth2"
@@ -22,6 +26,7 @@ native-tls = ["reqwest/native-tls"]
 reqwest-blocking = ["reqwest/blocking"]
 rustls-tls = ["reqwest/rustls-tls"]
 timing-resistant-secret-traits = []
+schemars = ["dep:schemars"]
 
 [[example]]
 name = "github"
@@ -60,6 +65,9 @@ ureq = { version = "2", optional = true }
 url = { version = "2.1", features = ["serde"] }
 chrono = { version = "0.4.31", default-features = false, features = ["clock", "serde", "std", "wasmbind"] }
 serde_path_to_error = "0.1.2"
+
+# Feature: schemars
+schemars = { version = "0.8", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }

@@ -51,37 +51,39 @@ jobs:
       # builds.
       - name: Use Rust 1.65 lockfile
         if: ${{ matrix.rust_os.rust == '1.65.0' }}
-        run: cp Cargo-1.65.lock Cargo.lock
+        run: |
+          cp Cargo-1.65.lock Cargo.lock
+          echo "CARGO_LOCKED=--locked" >> $GITHUB_ENV
 
       - name: Run tests
-        run: cargo test --tests --examples
+        run: cargo ${CARGO_LOCKED} test --tests --examples
       - name: Doc tests
         run: |
-          cargo test --doc
-          cargo test --doc --no-default-features
-          cargo test --doc --all-features
+          cargo ${CARGO_LOCKED} test --doc
+          cargo ${CARGO_LOCKED} test --doc --no-default-features
+          cargo ${CARGO_LOCKED} test --doc --all-features
       - name: Test with all features enabled
-        run: cargo test --all-features
+        run: cargo ${CARGO_LOCKED} test --all-features
       # Curl without reqwest (examples will not build)
       - name: Test with curl (w/o reqwest)
-        run: cargo test --tests --features curl --no-default-features
+        run: cargo ${CARGO_LOCKED} test --tests --features curl --no-default-features
 
       - name: Check fmt
         if: ${{ matrix.rust_os.rust == '1.65.0' }}
-        run: cargo fmt --all -- --check
+        run: cargo ${CARGO_LOCKED} fmt --all -- --check
 
       - name: Clippy
         if: ${{ matrix.rust_os.rust == '1.65.0' }}
-        run: cargo clippy --all --all-features -- --deny warnings
+        run: cargo ${CARGO_LOCKED} clippy --all --all-features -- --deny warnings
 
       - name: Audit
         if: ${{ matrix.rust_os.rust == 'stable' }}
         run: |
-          cargo install --force cargo-audit
+          cargo ${CARGO_LOCKED} install --force cargo-audit
           # The chrono thread safety issue doesn't affect this crate since the crate does not rely
           # on the system's local time zone, only UTC. See:
           # https://github.com/chronotope/chrono/issues/499#issuecomment-946388161
-          cargo audit --ignore RUSTSEC-2020-0159
+          cargo ${CARGO_LOCKED} audit --ignore RUSTSEC-2020-0159
 
       - name: Check WASM build
-        run: cargo check --target wasm32-unknown-unknown
+        run: cargo ${CARGO_LOCKED} check --target wasm32-unknown-unknown

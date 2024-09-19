@@ -74,6 +74,10 @@ fn main() {
         .add_scope(Scope::new(
             "https://www.googleapis.com/auth/plus.me".to_string(),
         ))
+        // refresh_token - also request a refresh token if you need to automatically refresh the access token
+        .add_extra_param("access_type", "offline".to_string())
+        .add_extra_param("prompt", "consent".to_string())
+        // end refresh_token
         .set_pkce_challenge(pkce_code_challenge)
         .url();
 

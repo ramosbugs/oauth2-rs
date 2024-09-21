@@ -67,12 +67,11 @@ fn main() {
     // Generate the authorization URL to which we'll redirect the user.
     let (authorize_url, csrf_state) = client
         .authorize_url(CsrfToken::new_random)
-        // This example is requesting access to the "calendar" features and the user's profile.
+        // This example is requesting access to the openid and email scopes. These are very
+        // basic scopes that are usually required for using Google's OAuth 2.0 flow.
+        .add_scope(Scope::new("openid".to_string()))
         .add_scope(Scope::new(
-            "https://www.googleapis.com/auth/calendar".to_string(),
-        ))
-        .add_scope(Scope::new(
-            "https://www.googleapis.com/auth/plus.me".to_string(),
+            "https://www.googleapis.com/auth/userinfo.email".to_string(),
         ))
         .set_pkce_challenge(pkce_code_challenge)
         .url();

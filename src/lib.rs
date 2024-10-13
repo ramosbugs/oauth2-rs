@@ -599,7 +599,7 @@ where
     RE: Error + 'static,
 {
     /// Error returned by reqwest crate.
-    #[error("request failed")]
+    #[error("client error")]
     Reqwest(#[from] Box<RE>),
     /// Non-reqwest HTTP error.
     #[error("HTTP error")]

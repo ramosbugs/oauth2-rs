@@ -126,7 +126,15 @@ pub(crate) fn endpoint_request<'a>(
                 HeaderValue::from_str(&format!("Basic {}", &b64_credential)).unwrap(),
             );
         }
-        (AuthType::RequestBody, _) | (AuthType::BasicAuth, None) => {
+        (AuthType::BasicAuthNoEscape, Some(secret)) => {
+            let b64_credential =
+                BASE64_STANDARD.encode(format!("{}:{}", &client_id.as_str(), &secret.secret()));
+            builder = builder.header(
+                AUTHORIZATION,
+                HeaderValue::from_str(&format!("Basic {}", &b64_credential)).unwrap(),
+            );
+        }
+        (AuthType::RequestBody, _) | (AuthType::BasicAuth | AuthType::BasicAuthNoEscape, None) => {
             params.push(("client_id", client_id));
             if let Some(client_secret) = client_secret {
                 params.push(("client_secret", client_secret.secret()));

@@ -589,6 +589,9 @@ pub enum AuthType {
     RequestBody,
     /// The client_id and client_secret will be included using the basic auth authentication scheme.
     BasicAuth,
+    /// Same as BasicAuth but does not url escape the client_id and client_secret prior to base64 encoding
+    /// This can be used for server implementations that are not strictly compliant with the specification
+    BasicAuthNoEscape,
 }
 
 /// Error type returned by built-in HTTP clients when requests fail.

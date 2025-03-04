@@ -419,7 +419,7 @@ new_secret_type![
     /// `code_verifier` parameter. The value must have a minimum length of 43 characters and a
     /// maximum length of 128 characters.  Each character must be ASCII alphanumeric or one of
     /// the characters "-" / "." / "_" / "~".
-    #[derive(Deserialize, Serialize)]
+    #[derive(Deserialize, Serialize, Clone)]
     PkceCodeVerifier(String)
 ];
 

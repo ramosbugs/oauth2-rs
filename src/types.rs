@@ -1,5 +1,5 @@
 use base64::prelude::*;
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use url::Url;
@@ -473,7 +473,7 @@ impl PkceCodeChallenge {
         // characters and a maximum length of 128 characters".
         // This implies 32-96 octets of random data to be base64 encoded.
         assert!((32..=96).contains(&num_bytes));
-        let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
+        let random_bytes: Vec<u8> = (0..num_bytes).map(|_| rng().random::<u8>()).collect();
         PkceCodeVerifier::new(BASE64_URL_SAFE_NO_PAD.encode(random_bytes))
     }
 
@@ -568,7 +568,7 @@ new_secret_type![
         ///
         /// * `num_bytes` - Number of random bytes to generate, prior to base64-encoding.
         pub fn new_random_len(num_bytes: u32) -> Self {
-            let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
+            let random_bytes: Vec<u8> = (0..num_bytes).map(|_| rng().random::<u8>()).collect();
             CsrfToken::new(BASE64_URL_SAFE_NO_PAD.encode(random_bytes))
         }
     }

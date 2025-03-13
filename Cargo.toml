@@ -51,7 +51,7 @@ required-features = ["reqwest-blocking"]
 base64 = ">= 0.21, <0.23"
 thiserror = "1.0"
 http = "1.0"
-rand = "0.8"
+rand = "0.9"
 reqwest = { version = "0.12", optional = true, default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -62,7 +62,7 @@ chrono = { version = "0.4.31", default-features = false, features = ["clock", "s
 serde_path_to_error = "0.1.2"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2", features = ["js"] }
+getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 curl = { version = "0.4.0", optional = true }

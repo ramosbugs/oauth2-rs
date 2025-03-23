@@ -10,7 +10,7 @@ impl<'c> AsyncHttpClient<'c> for reqwest::Client {
     type Future = Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + 'c>>;
     #[cfg(not(target_arch = "wasm32"))]
     type Future =
-        Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + Send + Sync + 'c>>;
+        Pin<Box<dyn Future<Output = Result<HttpResponse, Self::Error>> + Send + 'c>>;
 
     fn call(&'c self, request: HttpRequest) -> Self::Future {
         Box::pin(async move {

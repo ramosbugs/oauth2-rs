@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         rust_os:
-          - { rust: 1.65.0, os: ubuntu-20.04 }
+          - { rust: 1.65.0, os: ubuntu-22.04 }
           - { rust: stable, os: ubuntu-latest }
           - { rust: beta, os: ubuntu-latest }
           - { rust: nightly, os: ubuntu-latest }

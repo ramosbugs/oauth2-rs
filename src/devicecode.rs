@@ -396,7 +396,47 @@ where
         RE: Error + 'static,
     {
         let http_response = match res {
-            Ok(inner) => inner,
+            Ok(inner) => {
+                let body: serde_json::Value = match serde_path_to_error::deserialize(
+                    &mut serde_json::Deserializer::from_slice(inner.body()),
+                ) {
+                    Ok(body) => body,
+                    Err(e) => {
+                        return DeviceAccessTokenPollResult::Done(Err(RequestTokenError::Parse(
+                            e,
+                            inner.body().to_vec(),
+                        )));
+                    }
+                };
+
+                if let Some(error) = body.get("error").and_then(|e| e.as_str()) {
+                    let device_code_error_response_type =
+                        DeviceCodeErrorResponseType::from_str(error);
+
+                    match device_code_error_response_type {
+                        DeviceCodeErrorResponseType::AuthorizationPending => {
+                            return DeviceAccessTokenPollResult::ContinueWithNewPollInterval(
+                                current_interval,
+                            );
+                        }
+                        DeviceCodeErrorResponseType::SlowDown => {
+                            return DeviceAccessTokenPollResult::ContinueWithNewPollInterval(
+                                current_interval + Duration::from_secs(5),
+                            );
+                        }
+                        _ => {
+                            return DeviceAccessTokenPollResult::Done(Err(
+                                RequestTokenError::ServerResponse(StandardErrorResponse {
+                                    error: device_code_error_response_type,
+                                    error_description: None,
+                                    error_uri: None,
+                                }),
+                            ))
+                        }
+                    }
+                }
+                inner
+            }
             Err(_) => {
                 // RFC 8628 requires a backoff in cases of connection timeout, but we can't
                 // distinguish between connection timeouts and other HTTP client request errors

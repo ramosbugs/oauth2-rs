@@ -90,6 +90,12 @@ macro_rules! new_type {
                 $name(s)
             }
         }
+        impl std::str::FromStr for $name {
+            type Err = std::convert::Infallible;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self::new(s.to_string()))
+            }
+        }
         impl Deref for $name {
             type Target = $type;
             fn deref(&self) -> &$type {
@@ -173,6 +179,12 @@ macro_rules! new_secret_type {
             ///
             /// Leaking this value may compromise the security of the OAuth2 flow.
             pub fn into_secret(self) -> $type { self.0 }
+        }
+        impl std::str::FromStr for $name {
+            type Err = std::convert::Infallible;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self::new(s.to_string()))
+            }
         }
         impl Debug for $name {
             fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {

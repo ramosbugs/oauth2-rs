@@ -431,6 +431,14 @@ pub struct PkceCodeChallenge {
     code_challenge_method: PkceCodeChallengeMethod,
 }
 impl PkceCodeChallenge {
+    /// Create a new PkceCodeChallenge to wrap the given String challenge and method
+    pub fn new(code_challenge: String, code_challenge_method: PkceCodeChallengeMethod) -> Self {
+        PkceCodeChallenge {
+            code_challenge,
+            code_challenge_method,
+        }
+    }
+
     /// Generate a new random, base64-encoded SHA-256 PKCE code.
     pub fn new_random_sha256() -> (Self, PkceCodeVerifier) {
         Self::new_random_sha256_len(32)

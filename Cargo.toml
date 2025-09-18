@@ -44,6 +44,10 @@ name = "msgraph"
 required-features = ["reqwest-blocking"]
 
 [[example]]
+name = "twitch"
+required-features = ["reqwest-blocking"]
+
+[[example]]
 name = "wunderlist"
 required-features = ["reqwest-blocking"]
 

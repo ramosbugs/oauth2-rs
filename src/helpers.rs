@@ -1,4 +1,5 @@
 use serde::de::value::SeqAccessDeserializer;
+use serde::de::Visitor;
 use serde::ser::{Impossible, SerializeStructVariant, SerializeTupleVariant};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
@@ -355,6 +356,57 @@ pub fn variant_name<T: Serialize>(t: &T) -> &'static str {
     }
 
     t.serialize(VariantName).unwrap()
+}
+
+/// Serde deserializer for an optional u64 that may be represented as a string or integer.
+///
+/// Some OAuth2 providers (e.g., Azure) return the `expires_in` field as a string instead
+/// of an integer. This function accepts both formats.
+///
+/// # Example
+///
+/// Both of these JSON values will deserialize successfully:
+///
+///  * `{"expires_in": 3600}` - integer format
+///  * `{"expires_in": "3600"}` - string format (Azure)
+pub fn deserialize_optional_u64_or_string<'de, D>(deserializer: D) -> Result<Option<u64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct StringOrInt;
+
+    impl<'de> Visitor<'de> for StringOrInt {
+        type Value = Option<u64>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("string or unsigned integer")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Some(
+                value.parse::<u64>().map_err(serde::de::Error::custom)?,
+            ))
+        }
+
+        fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Some(value))
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+    }
+
+    deserializer.deserialize_any(StringOrInt)
 }
 
 #[cfg(test)]

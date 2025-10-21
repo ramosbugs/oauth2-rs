@@ -1239,3 +1239,46 @@ fn test_extension_serializer() {
         serialized,
     );
 }
+
+#[test]
+fn test_exchange_code_with_expires_in_as_string() {
+    // See https://feedback.azure.com/d365community/idea/7772fd95-26e6-ec11-a81b-0022484ee92d
+    let client = BasicClient::new(ClientId::new("aaa".to_string()))
+        .set_client_secret(ClientSecret::new("bbb".to_string()))
+        .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
+        .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap());
+
+    let token = client
+        .exchange_code(AuthorizationCode::new("ccc".to_string()))
+        .request(&mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+                (AUTHORIZATION, "Basic YWFhOmJiYg=="),
+            ],
+            "grant_type=authorization_code&code=ccc",
+            None,
+            Response::builder()
+                .status(StatusCode::OK)
+                .header(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str("application/json").unwrap(),
+                )
+                .body(
+                    "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"expires_in\": \"3600\"\
+                       }"
+                    .to_string()
+                    .into_bytes(),
+                )
+                .unwrap(),
+        ))
+        .unwrap();
+
+    assert_eq!("12/34", token.access_token().secret());
+    assert_eq!(BasicTokenType::Bearer, *token.token_type());
+    assert_eq!(3600, token.expires_in().unwrap().as_secs());
+    assert!(token.refresh_token().is_none());
+}

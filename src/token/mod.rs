@@ -605,6 +605,10 @@ where
     #[serde(deserialize_with = "crate::helpers::deserialize_untagged_enum_case_insensitive")]
     token_type: TT,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// The lifetime in seconds of the access token. Should be an integer according to the RFC,
+    /// but some providers such as Azure AD return a string.
+    #[serde(default)]
+    #[serde(deserialize_with = "crate::helpers::deserialize_optional_u64_or_string")]
     expires_in: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     refresh_token: Option<RefreshToken>,

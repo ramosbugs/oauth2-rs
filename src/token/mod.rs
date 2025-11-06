@@ -62,7 +62,7 @@ where
         ClientCredentialsTokenRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
+            client_secret: self.client_secret.as_ref().map(Cow::Borrowed),
             extra_params: Vec::new(),
             scopes: Vec::new(),
             token_url,
@@ -78,7 +78,7 @@ where
         CodeTokenRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
+            client_secret: self.client_secret.as_ref().map(Cow::Borrowed),
             code,
             extra_params: Vec::new(),
             pkce_verifier: None,
@@ -97,7 +97,7 @@ where
         PasswordTokenRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
+            client_secret: self.client_secret.as_ref().map(Cow::Borrowed),
             username,
             password,
             extra_params: Vec::new(),
@@ -115,7 +115,7 @@ where
         RefreshTokenRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
+            client_secret: self.client_secret.as_ref().map(Cow::Borrowed),
             extra_params: Vec::new(),
             refresh_token,
             scopes: Vec::new(),
@@ -136,7 +136,7 @@ where
 {
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
-    pub(crate) client_secret: Option<&'a ClientSecret>,
+    pub(crate) client_secret: Option<Cow<'a, ClientSecret>>,
     pub(crate) code: AuthorizationCode,
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) pkce_verifier: Option<PkceCodeVerifier>,
@@ -187,6 +187,12 @@ where
         self
     }
 
+    /// Overrides the `client_secret` to the one specified.
+    pub fn set_client_secret(mut self, client_secret: Cow<'a, ClientSecret>) -> Self {
+        self.client_secret = Some(client_secret);
+        self
+    }
+
     fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
         RE: Error + 'static,
@@ -202,7 +208,7 @@ where
         endpoint_request(
             self.auth_type,
             self.client_id,
-            self.client_secret,
+            self.client_secret.as_ref().map(|s| s.as_ref()),
             &self.extra_params,
             self.redirect_url,
             None,
@@ -247,7 +253,7 @@ where
 {
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
-    pub(crate) client_secret: Option<&'a ClientSecret>,
+    pub(crate) client_secret: Option<Cow<'a, ClientSecret>>,
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) refresh_token: &'a RefreshToken,
     pub(crate) scopes: Vec<Cow<'a, Scope>>,
@@ -296,6 +302,12 @@ where
         self
     }
 
+    /// Overrides the `client_secret` to the one specified.
+    pub fn set_client_secret(mut self, client_secret: Cow<'a, ClientSecret>) -> Self {
+        self.client_secret = Some(client_secret);
+        self
+    }
+
     /// Synchronously sends the request to the authorization server and awaits a response.
     pub fn request<C>(
         self,
@@ -325,7 +337,7 @@ where
         endpoint_request(
             self.auth_type,
             self.client_id,
-            self.client_secret,
+            self.client_secret.as_ref().map(AsRef::as_ref),
             &self.extra_params,
             None,
             Some(&self.scopes),
@@ -350,7 +362,7 @@ where
 {
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
-    pub(crate) client_secret: Option<&'a ClientSecret>,
+    pub(crate) client_secret: Option<Cow<'a, ClientSecret>>,
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) username: &'a ResourceOwnerUsername,
     pub(crate) password: &'a ResourceOwnerPassword,
@@ -400,6 +412,12 @@ where
         self
     }
 
+    /// Overrides the `client_secret` to the one specified.
+    pub fn set_client_secret(mut self, client_secret: Cow<'a, ClientSecret>) -> Self {
+        self.client_secret = Some(client_secret);
+        self
+    }
+
     /// Synchronously sends the request to the authorization server and awaits a response.
     pub fn request<C>(
         self,
@@ -430,7 +448,7 @@ where
         endpoint_request(
             self.auth_type,
             self.client_id,
-            self.client_secret,
+            self.client_secret.as_ref().map(AsRef::as_ref),
             &self.extra_params,
             None,
             Some(&self.scopes),
@@ -456,7 +474,7 @@ where
 {
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
-    pub(crate) client_secret: Option<&'a ClientSecret>,
+    pub(crate) client_secret: Option<Cow<'a, ClientSecret>>,
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) scopes: Vec<Cow<'a, Scope>>,
     pub(crate) token_url: &'a TokenUrl,
@@ -504,6 +522,12 @@ where
         self
     }
 
+    /// Overrides the `client_secret` to the one specified.
+    pub fn set_client_secret(mut self, client_secret: Cow<'a, ClientSecret>) -> Self {
+        self.client_secret = Some(client_secret);
+        self
+    }
+
     /// Synchronously sends the request to the authorization server and awaits a response.
     pub fn request<C>(
         self,
@@ -534,7 +558,7 @@ where
         endpoint_request(
             self.auth_type,
             self.client_id,
-            self.client_secret,
+            self.client_secret.as_ref().map(AsRef::as_ref),
             &self.extra_params,
             None,
             Some(&self.scopes),

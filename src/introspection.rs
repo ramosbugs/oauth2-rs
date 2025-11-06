@@ -60,7 +60,7 @@ where
         IntrospectionRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
+            client_secret: self.client_secret.as_ref().map(Cow::Borrowed),
             extra_params: Vec::new(),
             introspection_url,
             token,
@@ -83,7 +83,7 @@ where
     pub(crate) token_type_hint: Option<Cow<'a, str>>,
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
-    pub(crate) client_secret: Option<&'a ClientSecret>,
+    pub(crate) client_secret: Option<Cow<'a, ClientSecret>>,
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) introspection_url: &'a IntrospectionUrl,
     pub(crate) _phantom: PhantomData<(TE, TIR)>,
@@ -113,6 +113,12 @@ where
     {
         self.token_type_hint = Some(value.into());
 
+        self
+    }
+
+    /// Overrides the `client_secret` to the one specified.
+    pub fn set_client_secret(mut self, client_secret: Cow<'a, ClientSecret>) -> Self {
+        self.client_secret = Some(client_secret);
         self
     }
 
@@ -150,7 +156,7 @@ where
         endpoint_request(
             self.auth_type,
             self.client_id,
-            self.client_secret,
+            self.client_secret.as_ref().map(AsRef::as_ref),
             &self.extra_params,
             None,
             None,

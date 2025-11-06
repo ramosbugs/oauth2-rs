@@ -68,7 +68,7 @@ where
         Ok(RevocationRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
+            client_secret: self.client_secret.as_ref().map(Cow::Borrowed),
             extra_params: Vec::new(),
             revocation_url,
             token,
@@ -219,7 +219,7 @@ where
     pub(crate) token: RT,
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
-    pub(crate) client_secret: Option<&'a ClientSecret>,
+    pub(crate) client_secret: Option<Cow<'a, ClientSecret>>,
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) revocation_url: &'a RevocationUrl,
     pub(crate) _phantom: PhantomData<(RT, TE)>,
@@ -252,6 +252,12 @@ where
         self
     }
 
+    /// Overrides the `client_secret` to the one specified.
+    pub fn set_client_secret(mut self, client_secret: Cow<'a, ClientSecret>) -> Self {
+        self.client_secret = Some(client_secret);
+        self
+    }
+
     fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
         RE: Error + 'static,
@@ -264,7 +270,7 @@ where
         endpoint_request(
             self.auth_type,
             self.client_id,
-            self.client_secret,
+            self.client_secret.as_ref().map(AsRef::as_ref),
             &self.extra_params,
             None,
             None,

@@ -64,7 +64,7 @@ where
         DeviceAuthorizationRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
+            client_secret: self.client_secret.as_ref().map(Cow::Borrowed),
             extra_params: Vec::new(),
             scopes: Vec::new(),
             device_authorization_url,
@@ -83,7 +83,7 @@ where
         DeviceAccessTokenRequest {
             auth_type: &self.auth_type,
             client_id: &self.client_id,
-            client_secret: self.client_secret.as_ref(),
+            client_secret: self.client_secret.as_ref().map(Cow::Borrowed),
             extra_params: Vec::new(),
             token_url,
             dev_auth_resp: auth_response,
@@ -104,7 +104,7 @@ where
 {
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
-    pub(crate) client_secret: Option<&'a ClientSecret>,
+    pub(crate) client_secret: Option<Cow<'a, ClientSecret>>,
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) scopes: Vec<Cow<'a, Scope>>,
     pub(crate) device_authorization_url: &'a DeviceAuthorizationUrl,
@@ -152,6 +152,12 @@ where
         self
     }
 
+    /// Overrides the `client_secret` to the one specified.
+    pub fn set_client_secret(mut self, client_secret: Cow<'a, ClientSecret>) -> Self {
+        self.client_secret = Some(client_secret);
+        self
+    }
+
     fn prepare_request<RE>(self) -> Result<HttpRequest, RequestTokenError<RE, TE>>
     where
         RE: Error + 'static,
@@ -159,7 +165,7 @@ where
         endpoint_request(
             self.auth_type,
             self.client_id,
-            self.client_secret,
+            self.client_secret.as_ref().map(AsRef::as_ref),
             &self.extra_params,
             None,
             Some(&self.scopes),
@@ -211,7 +217,7 @@ where
 {
     pub(crate) auth_type: &'a AuthType,
     pub(crate) client_id: &'a ClientId,
-    pub(crate) client_secret: Option<&'a ClientSecret>,
+    pub(crate) client_secret: Option<Cow<'a, ClientSecret>>,
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) token_url: &'a TokenUrl,
     pub(crate) dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
@@ -244,6 +250,12 @@ where
         V: Into<Cow<'a, str>>,
     {
         self.extra_params.push((name.into(), value.into()));
+        self
+    }
+
+    /// Overrides the `client_secret` to the one specified.
+    pub fn set_client_secret(mut self, client_secret: Cow<'a, ClientSecret>) -> Self {
+        self.client_secret = Some(client_secret);
         self
     }
 
@@ -374,7 +386,7 @@ where
         endpoint_request(
             self.auth_type,
             self.client_id,
-            self.client_secret,
+            self.client_secret.as_ref().map(AsRef::as_ref),
             &self.extra_params,
             None,
             None,

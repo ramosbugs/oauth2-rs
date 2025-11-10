@@ -16,6 +16,7 @@ use crate::{
 
 use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use http::{HeaderValue, Response, StatusCode};
+use rand::random;
 
 use std::borrow::Cow;
 use std::time::Duration;
@@ -232,6 +233,11 @@ fn test_exchange_client_credentials_with_basic_auth_but_no_client_secret() {
 #[test]
 fn test_exchange_client_credentials_with_body_auth_and_scope() {
     let client = new_client().set_auth_type(AuthType::RequestBody);
+    let status = if random::<bool>() {
+        StatusCode::OK
+    } else {
+        StatusCode::CREATED
+    };
     let token = client
         .exchange_client_credentials()
         .add_scope(Scope::new("read".to_string()))
@@ -244,7 +250,7 @@ fn test_exchange_client_credentials_with_body_auth_and_scope() {
             "grant_type=client_credentials&scope=read+write&client_id=aaa&client_secret=bbb",
             None,
             Response::builder()
-                .status(StatusCode::OK)
+                .status(status)
                 .header(
                     CONTENT_TYPE,
                     HeaderValue::from_str("APPLICATION/jSoN").unwrap(),

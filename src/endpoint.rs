@@ -188,7 +188,7 @@ where
     RE: Error + 'static,
     TE: ErrorResponse,
 {
-    if http_response.status() != StatusCode::OK {
+    if !http_response.status().is_success() {
         let reason = http_response.body().as_slice();
         if reason.is_empty() {
             Err(RequestTokenError::Other(

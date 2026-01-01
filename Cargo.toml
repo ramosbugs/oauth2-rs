@@ -20,7 +20,7 @@ default = ["reqwest", "rustls-tls"]
 pkce-plain = []
 native-tls = ["reqwest/native-tls"]
 reqwest-blocking = ["reqwest/blocking"]
-rustls-tls = ["reqwest/rustls-tls"]
+rustls-tls = ["reqwest/rustls"]
 timing-resistant-secret-traits = []
 
 [[example]]
@@ -52,7 +52,7 @@ base64 = ">= 0.21, <0.23"
 thiserror = "1.0"
 http = "1.0"
 rand = "0.8"
-reqwest = { version = "0.12", optional = true, default-features = false }
+reqwest = { version = "0.13", optional = true, default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"

@@ -517,6 +517,9 @@ mod types;
 #[cfg(feature = "ureq")]
 mod ureq_client;
 
+#[cfg(feature = "ureq_3")]
+mod ureq_3_client;
+
 pub use crate::client::{Client, EndpointMaybeSet, EndpointNotSet, EndpointSet, EndpointState};
 pub use crate::code::AuthorizationRequest;
 #[cfg(all(feature = "curl", not(target_arch = "wasm32")))]
@@ -561,6 +564,9 @@ pub use ::reqwest;
 
 #[cfg(feature = "ureq")]
 pub use ::ureq;
+
+#[cfg(feature = "ureq_3")]
+pub use ::ureq_3;
 
 const CONTENT_TYPE_JSON: &str = "application/json";
 const CONTENT_TYPE_FORMENCODED: &str = "application/x-www-form-urlencoded";

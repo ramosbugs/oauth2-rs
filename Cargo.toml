@@ -1,13 +1,13 @@
 [package]
 name = "oauth2"
 authors = ["Alex Crichton <alex@alexcrichton.com>", "Florin Lipan <florinlipan@gmail.com>", "David A. Ramos <ramos@cs.stanford.edu>"]
-version = "5.0.0"
+version = "5.1.0"
 license = "MIT OR Apache-2.0"
 description = "An extensible, strongly-typed implementation of OAuth2"
 repository = "https://github.com/ramosbugs/oauth2-rs"
 edition = "2021"
 readme = "README.md"
-rust-version = "1.65"
+rust-version = "1.71"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -16,11 +16,11 @@ all-features = true
 maintenance = { status = "actively-developed" }
 
 [features]
-default = ["reqwest", "rustls-tls"]
+default = ["reqwest", "rustls"]
 pkce-plain = []
 native-tls = ["reqwest/native-tls"]
 reqwest-blocking = ["reqwest/blocking"]
-rustls-tls = ["reqwest/rustls-tls"]
+rustls = ["reqwest/rustls"]
 timing-resistant-secret-traits = []
 
 [[example]]
@@ -49,15 +49,15 @@ required-features = ["reqwest-blocking"]
 
 [dependencies]
 base64 = ">= 0.21, <0.23"
-thiserror = "1.0"
+thiserror = "2.0"
 http = "1.0"
-rand = "0.8"
-reqwest = { version = "0.12", optional = true, default-features = false }
+rand = "0.9"
+reqwest = { version = "0.13", optional = true, default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
 ureq = { version = "2", optional = true }
-url = { version = "2.1", features = ["serde"] }
+url = { version = "2.5", features = ["serde"] }
 chrono = { version = "0.4.31", default-features = false, features = ["clock", "serde", "std", "wasmbind"] }
 serde_path_to_error = "0.1.2"
 

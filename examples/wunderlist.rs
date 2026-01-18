@@ -18,13 +18,16 @@ use oauth2::basic::{
     BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse,
     BasicTokenType,
 };
-use oauth2::reqwest;
-use oauth2::StandardRevocableToken;
+use oauth2::{
+    reqwest, AuthEndpointNotSet, IntrospectionEndpointNotSet, RevocationEndpointNotSet,
+    TokenEndpointNotSet,
+};
 use oauth2::{
     AccessToken, AuthUrl, AuthorizationCode, Client, ClientId, ClientSecret, CsrfToken,
-    EmptyExtraTokenFields, EndpointNotSet, ExtraTokenFields, RedirectUrl, RefreshToken, Scope,
-    TokenResponse, TokenUrl,
+    EmptyExtraTokenFields, ExtraTokenFields, RedirectUrl, RefreshToken, Scope, TokenResponse,
+    TokenUrl,
 };
+use oauth2::{DeviceAuthEndpointNotSet, StandardRevocableToken};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -35,11 +38,11 @@ use std::time::Duration;
 
 type SpecialTokenResponse = NonStandardTokenResponse<EmptyExtraTokenFields>;
 type SpecialClient<
-    HasAuthUrl = EndpointNotSet,
-    HasDeviceAuthUrl = EndpointNotSet,
-    HasIntrospectionUrl = EndpointNotSet,
-    HasRevocationUrl = EndpointNotSet,
-    HasTokenUrl = EndpointNotSet,
+    HasAuthUrl = AuthEndpointNotSet,
+    HasDeviceAuthUrl = DeviceAuthEndpointNotSet,
+    HasIntrospectionUrl = IntrospectionEndpointNotSet,
+    HasRevocationUrl = RevocationEndpointNotSet,
+    HasTokenUrl = TokenEndpointNotSet,
 > = Client<
     BasicErrorResponse,
     SpecialTokenResponse,

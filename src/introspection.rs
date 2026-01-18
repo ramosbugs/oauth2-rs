@@ -1,8 +1,12 @@
+use crate::client::{
+    AuthEndpointState, DeviceAuthEndpointState, IntrospectionEndpointState,
+    RevocationEndpointState, TokenEndpointState,
+};
 use crate::endpoint::{endpoint_request, endpoint_response};
 use crate::{
-    AccessToken, AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, EndpointState,
-    ErrorResponse, ExtraTokenFields, HttpRequest, IntrospectionUrl, RequestTokenError,
-    RevocableToken, Scope, SyncHttpClient, TokenResponse, TokenType,
+    AccessToken, AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, ErrorResponse,
+    ExtraTokenFields, HttpRequest, IntrospectionUrl, RequestTokenError, RevocableToken, Scope,
+    SyncHttpClient, TokenResponse, TokenType,
 };
 
 use chrono::serde::ts_seconds_option;
@@ -46,11 +50,11 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     pub(crate) fn introspect_impl<'a>(
         &'a self,

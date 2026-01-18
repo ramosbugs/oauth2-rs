@@ -11,34 +11,134 @@ use crate::{
 use std::marker::PhantomData;
 
 mod private {
-    /// Private trait to make `EndpointState` a sealed trait.
+    /// Private trait to seal endpoint typestates ([`AuthEndpointState`], [`DeviceAuthEndpointState`], [`IntrospectionEndpointState`], [`RevocationEndpointState`], and [`TokenEndpointState`]).
     pub trait EndpointStateSealed {}
 }
 
-/// [Typestate](https://cliffle.com/blog/rust-typestate/) base trait indicating whether an endpoint
-/// has been configured via its corresponding setter.
-pub trait EndpointState: private::EndpointStateSealed {}
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) trait indicating whether an
+/// authorization endpoint has been configured via its corresponding setter.
+pub trait AuthEndpointState: private::EndpointStateSealed {}
 
-/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an endpoint has not been
-/// set and cannot be used.
-#[derive(Clone, Debug)]
-pub struct EndpointNotSet;
-impl EndpointState for EndpointNotSet {}
-impl private::EndpointStateSealed for EndpointNotSet {}
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) trait indicating whether a
+/// device authorization endpoint has been configured via its corresponding setter.
+pub trait DeviceAuthEndpointState: private::EndpointStateSealed {}
 
-/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an endpoint has been set
-/// and is ready to be used.
-#[derive(Clone, Debug)]
-pub struct EndpointSet;
-impl EndpointState for EndpointSet {}
-impl private::EndpointStateSealed for EndpointSet {}
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) trait indicating whether an
+/// introspection endpoint has been configured via its corresponding setter.
+pub trait IntrospectionEndpointState: private::EndpointStateSealed {}
 
-/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an endpoint may have been
-/// set and can be used via fallible methods.
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) trait indicating whether an
+/// revocation endpoint has been configured via its corresponding setter.
+pub trait RevocationEndpointState: private::EndpointStateSealed {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) trait indicating whether a
+/// token endpoint has been configured via its corresponding setter.
+pub trait TokenEndpointState: private::EndpointStateSealed {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an authorization
+/// endpoint has not been set and cannot be used.
 #[derive(Clone, Debug)]
-pub struct EndpointMaybeSet;
-impl EndpointState for EndpointMaybeSet {}
-impl private::EndpointStateSealed for EndpointMaybeSet {}
+pub struct AuthEndpointNotSet;
+impl AuthEndpointState for AuthEndpointNotSet {}
+impl private::EndpointStateSealed for AuthEndpointNotSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an authorization
+/// endpoint has been set and is ready to be used.
+#[derive(Clone, Debug)]
+pub struct AuthEndpointSet;
+impl AuthEndpointState for AuthEndpointSet {}
+impl private::EndpointStateSealed for AuthEndpointSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an authorization
+/// endpoint may have been set and can be used via fallible methods.
+#[derive(Clone, Debug)]
+pub struct AuthEndpointMaybeSet;
+impl AuthEndpointState for AuthEndpointMaybeSet {}
+impl private::EndpointStateSealed for AuthEndpointMaybeSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that a device
+/// authorization endpoint has not been set and cannot be used.
+#[derive(Clone, Debug)]
+pub struct DeviceAuthEndpointNotSet;
+impl DeviceAuthEndpointState for DeviceAuthEndpointNotSet {}
+impl private::EndpointStateSealed for DeviceAuthEndpointNotSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that a device
+/// authorization endpoint has been set and is ready to be used.
+#[derive(Clone, Debug)]
+pub struct DeviceAuthEndpointSet;
+impl DeviceAuthEndpointState for DeviceAuthEndpointSet {}
+impl private::EndpointStateSealed for DeviceAuthEndpointSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that a device
+/// authorization endpoint may have been set and can be used via fallible methods.
+#[derive(Clone, Debug)]
+pub struct DeviceAuthEndpointMaybeSet;
+impl DeviceAuthEndpointState for DeviceAuthEndpointMaybeSet {}
+impl private::EndpointStateSealed for DeviceAuthEndpointMaybeSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an introspection
+/// endpoint has not been set and cannot be used.
+#[derive(Clone, Debug)]
+pub struct IntrospectionEndpointNotSet;
+impl IntrospectionEndpointState for IntrospectionEndpointNotSet {}
+impl private::EndpointStateSealed for IntrospectionEndpointNotSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an introspection
+/// endpoint has been set and is ready to be used.
+#[derive(Clone, Debug)]
+pub struct IntrospectionEndpointSet;
+impl IntrospectionEndpointState for IntrospectionEndpointSet {}
+impl private::EndpointStateSealed for IntrospectionEndpointSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that an introspection
+/// endpoint may have been set and can be used via fallible methods.
+#[derive(Clone, Debug)]
+pub struct IntrospectionEndpointMaybeSet;
+impl IntrospectionEndpointState for IntrospectionEndpointMaybeSet {}
+impl private::EndpointStateSealed for IntrospectionEndpointMaybeSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that a revocation
+/// endpoint has not been set and cannot be used.
+#[derive(Clone, Debug)]
+pub struct RevocationEndpointNotSet;
+impl RevocationEndpointState for RevocationEndpointNotSet {}
+impl private::EndpointStateSealed for RevocationEndpointNotSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that a revocation
+/// endpoint has been set and is ready to be used.
+#[derive(Clone, Debug)]
+pub struct RevocationEndpointSet;
+impl RevocationEndpointState for RevocationEndpointSet {}
+impl private::EndpointStateSealed for RevocationEndpointSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that a revocation
+/// endpoint may have been set and can be used via fallible methods.
+#[derive(Clone, Debug)]
+pub struct RevocationEndpointMaybeSet;
+impl RevocationEndpointState for RevocationEndpointMaybeSet {}
+impl private::EndpointStateSealed for RevocationEndpointMaybeSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that a token
+/// endpoint has not been set and cannot be used.
+#[derive(Clone, Debug)]
+pub struct TokenEndpointNotSet;
+impl TokenEndpointState for TokenEndpointNotSet {}
+impl private::EndpointStateSealed for TokenEndpointNotSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that a token
+/// endpoint has been set and is ready to be used.
+#[derive(Clone, Debug)]
+pub struct TokenEndpointSet;
+impl TokenEndpointState for TokenEndpointSet {}
+impl private::EndpointStateSealed for TokenEndpointSet {}
+
+/// [Typestate](https://cliffle.com/blog/rust-typestate/) indicating that a token
+/// endpoint may have been set and can be used via fallible methods.
+#[derive(Clone, Debug)]
+pub struct TokenEndpointMaybeSet;
+impl TokenEndpointState for TokenEndpointMaybeSet {}
+impl private::EndpointStateSealed for TokenEndpointMaybeSet {}
 
 /// Stores the configuration for an OAuth2 client.
 ///
@@ -126,22 +226,22 @@ pub struct Client<
     TIR,
     RT,
     TRE,
-    HasAuthUrl = EndpointNotSet,
-    HasDeviceAuthUrl = EndpointNotSet,
-    HasIntrospectionUrl = EndpointNotSet,
-    HasRevocationUrl = EndpointNotSet,
-    HasTokenUrl = EndpointNotSet,
+    HasAuthUrl = AuthEndpointNotSet,
+    HasDeviceAuthUrl = DeviceAuthEndpointNotSet,
+    HasIntrospectionUrl = IntrospectionEndpointNotSet,
+    HasRevocationUrl = RevocationEndpointNotSet,
+    HasTokenUrl = TokenEndpointNotSet,
 > where
     TE: ErrorResponse,
     TR: TokenResponse,
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     pub(crate) client_id: ClientId,
     pub(crate) client_secret: Option<ClientSecret>,
@@ -173,11 +273,11 @@ impl<TE, TR, TIR, RT, TRE>
         TIR,
         RT,
         TRE,
-        EndpointNotSet,
-        EndpointNotSet,
-        EndpointNotSet,
-        EndpointNotSet,
-        EndpointNotSet,
+        AuthEndpointNotSet,
+        DeviceAuthEndpointNotSet,
+        IntrospectionEndpointNotSet,
+        RevocationEndpointNotSet,
+        TokenEndpointNotSet,
     >
 where
     TE: ErrorResponse + 'static,
@@ -232,11 +332,11 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     /// Set the type of client authentication used for communicating with the authorization
     /// server.
@@ -267,7 +367,7 @@ where
         TIR,
         RT,
         TRE,
-        EndpointSet,
+        AuthEndpointSet,
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
         HasRevocationUrl,
@@ -302,7 +402,7 @@ where
         TIR,
         RT,
         TRE,
-        EndpointMaybeSet,
+        AuthEndpointMaybeSet,
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
         HasRevocationUrl,
@@ -347,7 +447,7 @@ where
         RT,
         TRE,
         HasAuthUrl,
-        EndpointSet,
+        DeviceAuthEndpointSet,
         HasIntrospectionUrl,
         HasRevocationUrl,
         HasTokenUrl,
@@ -380,7 +480,7 @@ where
         RT,
         TRE,
         HasAuthUrl,
-        EndpointMaybeSet,
+        DeviceAuthEndpointMaybeSet,
         HasIntrospectionUrl,
         HasRevocationUrl,
         HasTokenUrl,
@@ -413,7 +513,7 @@ where
         TRE,
         HasAuthUrl,
         HasDeviceAuthUrl,
-        EndpointSet,
+        IntrospectionEndpointSet,
         HasRevocationUrl,
         HasTokenUrl,
     > {
@@ -446,7 +546,7 @@ where
         TRE,
         HasAuthUrl,
         HasDeviceAuthUrl,
-        EndpointMaybeSet,
+        IntrospectionEndpointMaybeSet,
         HasRevocationUrl,
         HasTokenUrl,
     > {
@@ -486,7 +586,7 @@ where
         HasAuthUrl,
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
-        EndpointSet,
+        RevocationEndpointSet,
         HasTokenUrl,
     > {
         Client {
@@ -519,7 +619,7 @@ where
         HasAuthUrl,
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
-        EndpointMaybeSet,
+        RevocationEndpointMaybeSet,
         HasTokenUrl,
     > {
         Client {
@@ -555,7 +655,7 @@ where
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
         HasRevocationUrl,
-        EndpointSet,
+        TokenEndpointSet,
     > {
         Client {
             client_id: self.client_id,
@@ -590,7 +690,7 @@ where
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
         HasRevocationUrl,
-        EndpointMaybeSet,
+        TokenEndpointMaybeSet,
     > {
         Client {
             client_id: self.client_id,
@@ -641,7 +741,7 @@ impl<
         TIR,
         RT,
         TRE,
-        EndpointSet,
+        AuthEndpointSet,
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
         HasRevocationUrl,
@@ -653,10 +753,10 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     /// Return the authorization endpoint.
     pub fn auth_uri(&self) -> &AuthUrl {
@@ -709,7 +809,7 @@ impl<
         TIR,
         RT,
         TRE,
-        EndpointMaybeSet,
+        AuthEndpointMaybeSet,
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
         HasRevocationUrl,
@@ -721,10 +821,10 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     /// Return the authorization endpoint.
     pub fn auth_uri(&self) -> Option<&AuthUrl> {
@@ -774,7 +874,7 @@ impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, Ha
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
         HasRevocationUrl,
-        EndpointSet,
+        TokenEndpointSet,
     >
 where
     TE: ErrorResponse + 'static,
@@ -782,10 +882,10 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
 {
     /// Request an access token using the
     /// [Client Credentials Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4).
@@ -872,7 +972,7 @@ impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, Ha
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
         HasRevocationUrl,
-        EndpointMaybeSet,
+        TokenEndpointMaybeSet,
     >
 where
     TE: ErrorResponse + 'static,
@@ -880,10 +980,10 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
 {
     /// Request an access token using the
     /// [Client Credentials Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4).
@@ -996,7 +1096,7 @@ impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasIntrospectionUrl, HasRevocationUrl, Ha
         RT,
         TRE,
         HasAuthUrl,
-        EndpointSet,
+        DeviceAuthEndpointSet,
         HasIntrospectionUrl,
         HasRevocationUrl,
         HasTokenUrl,
@@ -1007,10 +1107,10 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     /// Begin the [RFC 8628](https://tools.ietf.org/html/rfc8628) Device Authorization Flow and
     /// retrieve a Device Authorization Response.
@@ -1045,7 +1145,7 @@ impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasIntrospectionUrl, HasRevocationUrl, Ha
         RT,
         TRE,
         HasAuthUrl,
-        EndpointMaybeSet,
+        DeviceAuthEndpointMaybeSet,
         HasIntrospectionUrl,
         HasRevocationUrl,
         HasTokenUrl,
@@ -1056,10 +1156,10 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     /// Begin the [RFC 8628](https://tools.ietf.org/html/rfc8628) Device Authorization Flow.
     ///
@@ -1097,7 +1197,7 @@ impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasRevocationUrl, HasTo
         TRE,
         HasAuthUrl,
         HasDeviceAuthUrl,
-        EndpointSet,
+        IntrospectionEndpointSet,
         HasRevocationUrl,
         HasTokenUrl,
     >
@@ -1107,10 +1207,10 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     /// Retrieve metadata for an access token using the
     /// [`RFC 7662`](https://tools.ietf.org/html/rfc7662) introspection endpoint.
@@ -1140,7 +1240,7 @@ impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasRevocationUrl, HasTo
         TRE,
         HasAuthUrl,
         HasDeviceAuthUrl,
-        EndpointMaybeSet,
+        IntrospectionEndpointMaybeSet,
         HasRevocationUrl,
         HasTokenUrl,
     >
@@ -1150,10 +1250,10 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     /// Retrieve metadata for an access token using the
     /// [`RFC 7662`](https://tools.ietf.org/html/rfc7662) introspection endpoint.
@@ -1189,7 +1289,7 @@ impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, Ha
         HasAuthUrl,
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
-        EndpointSet,
+        RevocationEndpointSet,
         HasTokenUrl,
     >
 where
@@ -1198,10 +1298,10 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     /// Revoke an access or refresh token using the [RFC 7009](https://tools.ietf.org/html/rfc7009)
     /// revocation endpoint.
@@ -1237,7 +1337,7 @@ impl<TE, TR, TIR, RT, TRE, HasAuthUrl, HasDeviceAuthUrl, HasIntrospectionUrl, Ha
         HasAuthUrl,
         HasDeviceAuthUrl,
         HasIntrospectionUrl,
-        EndpointMaybeSet,
+        RevocationEndpointMaybeSet,
         HasTokenUrl,
     >
 where
@@ -1246,10 +1346,10 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     /// Revoke an access or refresh token using the [RFC 7009](https://tools.ietf.org/html/rfc7009)
     /// revocation endpoint.

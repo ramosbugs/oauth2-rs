@@ -1,7 +1,11 @@
 use crate::{
+    client::{
+        AuthEndpointNotSet, DeviceAuthEndpointNotSet, IntrospectionEndpointNotSet,
+        RevocationEndpointNotSet, TokenEndpointNotSet,
+    },
     revocation::{RevocationErrorResponseType, StandardRevocableToken},
-    Client, EmptyExtraTokenFields, EndpointNotSet, ErrorResponseType, RequestTokenError,
-    StandardErrorResponse, StandardTokenIntrospectionResponse, StandardTokenResponse, TokenType,
+    Client, EmptyExtraTokenFields, ErrorResponseType, RequestTokenError, StandardErrorResponse,
+    StandardTokenIntrospectionResponse, StandardTokenResponse, TokenType,
 };
 
 use std::fmt::Error as FormatterError;
@@ -9,11 +13,11 @@ use std::fmt::{Debug, Display, Formatter};
 
 /// Basic OAuth2 client specialization, suitable for most applications.
 pub type BasicClient<
-    HasAuthUrl = EndpointNotSet,
-    HasDeviceAuthUrl = EndpointNotSet,
-    HasIntrospectionUrl = EndpointNotSet,
-    HasRevocationUrl = EndpointNotSet,
-    HasTokenUrl = EndpointNotSet,
+    HasAuthUrl = AuthEndpointNotSet,
+    HasDeviceAuthUrl = DeviceAuthEndpointNotSet,
+    HasIntrospectionUrl = IntrospectionEndpointNotSet,
+    HasRevocationUrl = RevocationEndpointNotSet,
+    HasTokenUrl = TokenEndpointNotSet,
 > = Client<
     BasicErrorResponse,
     BasicTokenResponse,

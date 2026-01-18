@@ -1,9 +1,10 @@
 use crate::basic::BasicErrorResponseType;
 use crate::endpoint::{endpoint_request, endpoint_response_status_only};
 use crate::{
-    AccessToken, AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, ConfigurationError,
-    EndpointState, ErrorResponse, ErrorResponseType, HttpRequest, RefreshToken, RequestTokenError,
-    RevocationUrl, SyncHttpClient, TokenIntrospectionResponse, TokenResponse,
+    AccessToken, AsyncHttpClient, AuthEndpointState, AuthType, Client, ClientId, ClientSecret,
+    ConfigurationError, DeviceAuthEndpointState, ErrorResponse, ErrorResponseType, HttpRequest,
+    IntrospectionEndpointState, RefreshToken, RequestTokenError, RevocationEndpointState,
+    RevocationUrl, SyncHttpClient, TokenEndpointState, TokenIntrospectionResponse, TokenResponse,
 };
 
 use serde::{Deserialize, Serialize};
@@ -45,11 +46,11 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     pub(crate) fn revoke_token_impl<'a>(
         &'a self,

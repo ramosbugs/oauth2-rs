@@ -1,6 +1,10 @@
 use crate::{
-    AuthUrl, Client, ClientId, CsrfToken, EndpointState, ErrorResponse, PkceCodeChallenge,
-    RedirectUrl, ResponseType, RevocableToken, Scope, TokenIntrospectionResponse, TokenResponse,
+    client::{
+        AuthEndpointState, DeviceAuthEndpointState, IntrospectionEndpointState,
+        RevocationEndpointState, TokenEndpointState,
+    },
+    AuthUrl, Client, ClientId, CsrfToken, ErrorResponse, PkceCodeChallenge, RedirectUrl,
+    ResponseType, RevocableToken, Scope, TokenIntrospectionResponse, TokenResponse,
 };
 
 use url::Url;
@@ -37,11 +41,11 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     pub(crate) fn authorize_url_impl<'a, S>(
         &'a self,

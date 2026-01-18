@@ -1,5 +1,20 @@
 # Upgrade Guide
 
+## Upgrading from 5.x to 6.x
+
+### Update typestate generic types on `Client`
+
+The 6.x release includes breaking changes that make `Client` typestates specific to the type of endpoint being set. 
+This makes it possible to tell at a glance which endpoints are set for each instance of `Client`.
+
+```rust
+// v5.x syntax:
+let client: BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointSet, EndpointSet> = todo!();
+
+// v6.x syntax
+let client: BasicClient<AuthEndpointSet, DeviceAuthEndpointNotSet, IntrospectionEndpointNotSet, RevocationEndpointSet, TokenEndpointSet> = todo!();
+```
+
 ## Upgrading from 4.x to 5.x
 
 The 5.0 release includes breaking changes to address several long-standing API issues, along with

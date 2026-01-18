@@ -1,9 +1,10 @@
 use crate::endpoint::{endpoint_request, endpoint_response};
 use crate::{
-    AccessToken, AsyncHttpClient, AuthType, AuthorizationCode, Client, ClientId, ClientSecret,
-    EndpointState, ErrorResponse, HttpRequest, PkceCodeVerifier, RedirectUrl, RefreshToken,
-    RequestTokenError, ResourceOwnerPassword, ResourceOwnerUsername, RevocableToken, Scope,
-    SyncHttpClient, TokenIntrospectionResponse, TokenUrl,
+    AccessToken, AsyncHttpClient, AuthEndpointState, AuthType, AuthorizationCode, Client, ClientId,
+    ClientSecret, DeviceAuthEndpointState, ErrorResponse, HttpRequest, IntrospectionEndpointState,
+    PkceCodeVerifier, RedirectUrl, RefreshToken, RequestTokenError, ResourceOwnerPassword,
+    ResourceOwnerUsername, RevocableToken, RevocationEndpointState, Scope, SyncHttpClient,
+    TokenEndpointState, TokenIntrospectionResponse, TokenUrl,
 };
 
 use serde::de::DeserializeOwned;
@@ -49,11 +50,11 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     pub(crate) fn exchange_client_credentials_impl<'a>(
         &'a self,

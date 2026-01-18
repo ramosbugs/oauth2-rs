@@ -1,10 +1,14 @@
 use crate::basic::BasicErrorResponseType;
+use crate::client::{
+    AuthEndpointState, DeviceAuthEndpointState, IntrospectionEndpointState,
+    RevocationEndpointState, TokenEndpointState,
+};
 use crate::endpoint::{endpoint_request, endpoint_response};
 use crate::types::VerificationUriComplete;
 use crate::{
     AsyncHttpClient, AuthType, Client, ClientId, ClientSecret, DeviceAuthorizationUrl, DeviceCode,
-    EndUserVerificationUrl, EndpointState, ErrorResponse, ErrorResponseType, HttpRequest,
-    HttpResponse, RequestTokenError, RevocableToken, Scope, StandardErrorResponse, SyncHttpClient,
+    EndUserVerificationUrl, ErrorResponse, ErrorResponseType, HttpRequest, HttpResponse,
+    RequestTokenError, RevocableToken, Scope, StandardErrorResponse, SyncHttpClient,
     TokenIntrospectionResponse, TokenResponse, TokenUrl, UserCode,
 };
 
@@ -51,11 +55,11 @@ where
     TIR: TokenIntrospectionResponse,
     RT: RevocableToken,
     TRE: ErrorResponse + 'static,
-    HasAuthUrl: EndpointState,
-    HasDeviceAuthUrl: EndpointState,
-    HasIntrospectionUrl: EndpointState,
-    HasRevocationUrl: EndpointState,
-    HasTokenUrl: EndpointState,
+    HasAuthUrl: AuthEndpointState,
+    HasDeviceAuthUrl: DeviceAuthEndpointState,
+    HasIntrospectionUrl: IntrospectionEndpointState,
+    HasRevocationUrl: RevocationEndpointState,
+    HasTokenUrl: TokenEndpointState,
 {
     pub(crate) fn exchange_device_code_impl<'a>(
         &'a self,

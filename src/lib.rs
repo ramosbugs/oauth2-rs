@@ -517,7 +517,14 @@ mod types;
 #[cfg(feature = "ureq")]
 mod ureq_client;
 
-pub use crate::client::{Client, EndpointMaybeSet, EndpointNotSet, EndpointSet, EndpointState};
+pub use crate::client::{
+    AuthEndpointMaybeSet, AuthEndpointNotSet, AuthEndpointSet, AuthEndpointState, Client,
+    DeviceAuthEndpointMaybeSet, DeviceAuthEndpointNotSet, DeviceAuthEndpointSet,
+    DeviceAuthEndpointState, IntrospectionEndpointMaybeSet, IntrospectionEndpointNotSet,
+    IntrospectionEndpointSet, IntrospectionEndpointState, RevocationEndpointMaybeSet,
+    RevocationEndpointNotSet, RevocationEndpointSet, RevocationEndpointState,
+    TokenEndpointMaybeSet, TokenEndpointNotSet, TokenEndpointSet, TokenEndpointState,
+};
 pub use crate::code::AuthorizationRequest;
 #[cfg(all(feature = "curl", not(target_arch = "wasm32")))]
 pub use crate::curl_client::CurlHttpClient;

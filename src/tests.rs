@@ -2,16 +2,18 @@ use crate::basic::{
     BasicClient, BasicErrorResponseType, BasicRevocationErrorResponse, BasicTokenType,
 };
 use crate::{
-    AccessToken, AuthType, AuthUrl, AuthorizationCode, AuthorizationRequest, Client,
-    ClientCredentialsTokenRequest, ClientId, ClientSecret, CodeTokenRequest, CsrfToken,
-    DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationUrl, DeviceCode,
-    DeviceCodeErrorResponse, DeviceCodeErrorResponseType, EmptyExtraDeviceAuthorizationFields,
-    EmptyExtraTokenFields, EndUserVerificationUrl, EndpointNotSet, EndpointSet, HttpClientError,
-    HttpRequest, HttpResponse, PasswordTokenRequest, PkceCodeChallenge, PkceCodeChallengeMethod,
+    AccessToken, AuthEndpointNotSet, AuthEndpointSet, AuthType, AuthUrl, AuthorizationCode,
+    AuthorizationRequest, Client, ClientCredentialsTokenRequest, ClientId, ClientSecret,
+    CodeTokenRequest, CsrfToken, DeviceAccessTokenRequest, DeviceAuthEndpointNotSet,
+    DeviceAuthorizationRequest, DeviceAuthorizationUrl, DeviceCode, DeviceCodeErrorResponse,
+    DeviceCodeErrorResponseType, EmptyExtraDeviceAuthorizationFields, EmptyExtraTokenFields,
+    EndUserVerificationUrl, HttpClientError, HttpRequest, HttpResponse,
+    IntrospectionEndpointNotSet, PasswordTokenRequest, PkceCodeChallenge, PkceCodeChallengeMethod,
     PkceCodeVerifier, RedirectUrl, RefreshToken, RefreshTokenRequest, RequestTokenError,
-    ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, Scope,
+    ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, RevocationEndpointNotSet, Scope,
     StandardDeviceAuthorizationResponse, StandardErrorResponse, StandardRevocableToken,
-    StandardTokenIntrospectionResponse, StandardTokenResponse, TokenUrl, UserCode,
+    StandardTokenIntrospectionResponse, StandardTokenResponse, TokenEndpointNotSet,
+    TokenEndpointSet, TokenUrl, UserCode,
 };
 
 use http::header::HeaderName;
@@ -19,8 +21,13 @@ use http::HeaderValue;
 use thiserror::Error;
 use url::Url;
 
-pub(crate) fn new_client(
-) -> BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet> {
+pub(crate) fn new_client() -> BasicClient<
+    AuthEndpointSet,
+    DeviceAuthEndpointNotSet,
+    IntrospectionEndpointNotSet,
+    RevocationEndpointNotSet,
+    TokenEndpointSet,
+> {
     BasicClient::new(ClientId::new("aaa".to_string()))
         .set_auth_uri(AuthUrl::new("https://example.com/auth".to_string()).unwrap())
         .set_token_uri(TokenUrl::new("https://example.com/token".to_string()).unwrap())
@@ -241,11 +248,11 @@ fn test_send_sync_impl() {
             StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
             StandardRevocableToken,
             BasicRevocationErrorResponse,
-            EndpointNotSet,
-            EndpointNotSet,
-            EndpointNotSet,
-            EndpointNotSet,
-            EndpointNotSet,
+            AuthEndpointNotSet,
+            DeviceAuthEndpointNotSet,
+            IntrospectionEndpointNotSet,
+            RevocationEndpointNotSet,
+            TokenEndpointNotSet,
         >,
     >();
     is_sync_and_send::<

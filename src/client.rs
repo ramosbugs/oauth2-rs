@@ -683,7 +683,7 @@ where
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12)
     ///  attacks. To disable CSRF protections (NOT recommended), use `insecure::authorize_url`
     ///  instead.
-    pub fn authorize_url<S>(&self, state_fn: S) -> AuthorizationRequest
+    pub fn authorize_url<S>(&self, state_fn: S) -> AuthorizationRequest<'_>
     where
         S: FnOnce() -> CsrfToken,
     {
@@ -750,7 +750,7 @@ where
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12)
     ///  attacks. To disable CSRF protections (NOT recommended), use `insecure::authorize_url`
     ///  instead.
-    pub fn authorize_url<S>(&self, state_fn: S) -> Result<AuthorizationRequest, ConfigurationError>
+    pub fn authorize_url<S>(&self, state_fn: S) -> Result<AuthorizationRequest<'_>, ConfigurationError>
     where
         S: FnOnce() -> CsrfToken,
     {
@@ -792,7 +792,7 @@ where
     ///
     /// Requires [`set_token_uri()`](Self::set_token_uri) to have been previously
     /// called to set the token endpoint.
-    pub fn exchange_client_credentials(&self) -> ClientCredentialsTokenRequest<TE, TR> {
+    pub fn exchange_client_credentials(&self) -> ClientCredentialsTokenRequest<'_, TE, TR> {
         self.exchange_client_credentials_impl(self.token_uri())
     }
 
@@ -805,7 +805,7 @@ where
     ///
     /// Requires [`set_token_uri()`](Self::set_token_uri) to have been previously
     /// called to set the token endpoint.
-    pub fn exchange_code(&self, code: AuthorizationCode) -> CodeTokenRequest<TE, TR> {
+    pub fn exchange_code(&self, code: AuthorizationCode) -> CodeTokenRequest<'_, TE, TR> {
         self.exchange_code_impl(self.token_uri(), code)
     }
 
@@ -892,7 +892,7 @@ where
     /// called to set the token endpoint.
     pub fn exchange_client_credentials(
         &self,
-    ) -> Result<ClientCredentialsTokenRequest<TE, TR>, ConfigurationError> {
+    ) -> Result<ClientCredentialsTokenRequest<'_, TE, TR>, ConfigurationError> {
         Ok(self.exchange_client_credentials_impl(
             self.token_url
                 .as_ref()
@@ -912,7 +912,7 @@ where
     pub fn exchange_code(
         &self,
         code: AuthorizationCode,
-    ) -> Result<CodeTokenRequest<TE, TR>, ConfigurationError> {
+    ) -> Result<CodeTokenRequest<'_, TE, TR>, ConfigurationError> {
         Ok(self.exchange_code_impl(
             self.token_url
                 .as_ref()
@@ -1020,7 +1020,7 @@ where
     /// been previously called to set the device authorization endpoint.
     ///
     /// See [`exchange_device_access_token()`](Self::exchange_device_access_token).
-    pub fn exchange_device_code(&self) -> DeviceAuthorizationRequest<TE> {
+    pub fn exchange_device_code(&self) -> DeviceAuthorizationRequest<'_, TE> {
         self.exchange_device_code_impl(self.device_authorization_url())
     }
 
@@ -1070,7 +1070,7 @@ where
     /// See [`exchange_device_access_token()`](Self::exchange_device_access_token).
     pub fn exchange_device_code(
         &self,
-    ) -> Result<DeviceAuthorizationRequest<TE>, ConfigurationError> {
+    ) -> Result<DeviceAuthorizationRequest<'_, TE>, ConfigurationError> {
         Ok(self.exchange_device_code_impl(
             self.device_authorization_url
                 .as_ref()
@@ -1211,7 +1211,7 @@ where
     pub fn revoke_token(
         &self,
         token: RT,
-    ) -> Result<RevocationRequest<RT, TRE>, ConfigurationError> {
+    ) -> Result<RevocationRequest<'_, RT, TRE>, ConfigurationError> {
         self.revoke_token_impl(self.revocation_url(), token)
     }
 
@@ -1259,7 +1259,7 @@ where
     pub fn revoke_token(
         &self,
         token: RT,
-    ) -> Result<RevocationRequest<RT, TRE>, ConfigurationError> {
+    ) -> Result<RevocationRequest<'_, RT, TRE>, ConfigurationError> {
         self.revoke_token_impl(
             self.revocation_url
                 .as_ref()

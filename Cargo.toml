@@ -22,6 +22,7 @@ native-tls = ["reqwest/native-tls"]
 reqwest-blocking = ["reqwest/blocking"]
 rustls-tls = ["reqwest/rustls-tls"]
 timing-resistant-secret-traits = []
+ureq = ["dep:ureq"]
 
 [[example]]
 name = "github"
@@ -56,7 +57,7 @@ reqwest = { version = "0.12", optional = true, default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
-ureq = { version = "2", optional = true }
+ureq = { version = "3", optional = true, features = ["platform-verifier"] }
 url = { version = "2.1", features = ["serde"] }
 chrono = { version = "0.4.31", default-features = false, features = ["clock", "serde", "std", "wasmbind"] }
 serde_path_to_error = "0.1.2"

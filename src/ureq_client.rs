@@ -1,60 +1,45 @@
 use crate::{HttpClientError, HttpRequest, HttpResponse};
 
-use http::{
-    header::{HeaderValue, CONTENT_TYPE},
-    method::Method,
-    status::StatusCode,
-};
-
-use std::io::Read;
-
 impl crate::SyncHttpClient for ureq::Agent {
     type Error = HttpClientError<ureq::Error>;
 
     fn call(&self, request: HttpRequest) -> Result<HttpResponse, Self::Error> {
-        let mut req = if *request.method() == Method::POST {
-            self.post(&request.uri().to_string())
-        } else {
-            debug_assert_eq!(*request.method(), Method::GET);
-            self.get(&request.uri().to_string())
+        let uri = request.uri().to_string();
+
+        let response = match request.method() {
+            &http::Method::POST => {
+                let req = request
+                    .headers()
+                    .iter()
+                    .fold(self.post(&uri), |req, (name, value)| {
+                        req.header(name, value)
+                    });
+                req.send(request.body()).map_err(Box::new)?
+            }
+            &http::Method::GET => {
+                let req = request
+                    .headers()
+                    .iter()
+                    .fold(self.get(&uri), |req, (name, value)| req.header(name, value));
+                req.call().map_err(Box::new)?
+            }
+            m => {
+                return Err(crate::HttpClientError::Other(format!(
+                    "unexpected method: {m}"
+                )));
+            }
         };
 
-        for (name, value) in request.headers() {
-            req = req.set(
-                name.as_ref(),
-                // TODO: In newer `ureq` it should be easier to convert arbitrary byte sequences
-                // without unnecessary UTF-8 fallibility here.
-                value.to_str().map_err(|_| {
-                    HttpClientError::Other(format!(
-                        "invalid `{name}` header value {:?}",
-                        value.as_bytes()
-                    ))
-                })?,
-            );
+        let mut builder = http::Response::builder().status(response.status());
+
+        if let Some(content_type) = response.headers().get(http::header::CONTENT_TYPE) {
+            builder = builder.header(http::header::CONTENT_TYPE, content_type);
         }
 
-        let response = if let Method::POST = *request.method() {
-            req.send_bytes(request.body())
-        } else {
-            req.call()
-        }
-        .map_err(Box::new)?;
+        let (_, mut body) = response.into_parts();
 
-        let mut builder = http::Response::builder()
-            .status(StatusCode::from_u16(response.status()).map_err(http::Error::from)?);
+        let body = body.read_to_vec().map_err(Box::new)?;
 
-        if let Some(content_type) = response
-            .header(CONTENT_TYPE.as_str())
-            .map(HeaderValue::from_str)
-            .transpose()
-            .map_err(http::Error::from)?
-        {
-            builder = builder.header(CONTENT_TYPE, content_type);
-        }
-
-        let mut body = Vec::new();
-        response.into_reader().read_to_end(&mut body)?;
-
-        builder.body(body).map_err(HttpClientError::Http)
+        builder.body(body).map_err(crate::HttpClientError::Http)
     }
 }

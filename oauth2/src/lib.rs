@@ -1,3 +1,4 @@
+#![allow(unknown_lints, clippy::doc_overindented_list_items)]
 #![warn(missing_docs)]
 //!
 //! An extensible, strongly-typed implementation of OAuth2

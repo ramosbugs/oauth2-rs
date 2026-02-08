@@ -209,7 +209,7 @@ pub(crate) fn mock_http_client_success_fail(
 
         {
             let mut rsp_vec = sync_responses.lock().unwrap();
-            if rsp_vec.len() == 0 {
+            if rsp_vec.is_empty() {
                 Err(FakeError::Err)
             } else {
                 Ok(rsp_vec.remove(0))

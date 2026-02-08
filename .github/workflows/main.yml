@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         rust_os:
-          - { rust: 1.65.0, os: ubuntu-22.04 }
+          - { rust: 1.71.0, os: ubuntu-22.04 }
           - { rust: stable, os: ubuntu-latest }
           - { rust: beta, os: ubuntu-latest }
           - { rust: nightly, os: ubuntu-latest }
@@ -49,10 +49,10 @@ jobs:
 
       # Newer dependency versions may not support the MSRV, so we use a Cargo.lock file for those
       # builds.
-      - name: Use Rust 1.65 lockfile
-        if: ${{ matrix.rust_os.rust == '1.65.0' }}
+      - name: Use Rust 1.71 lockfile
+        if: ${{ matrix.rust_os.rust == '1.71.0' }}
         run: |
-          cp Cargo-1.65.lock Cargo.lock
+          cp Cargo-1.71.lock Cargo.lock
           echo "CARGO_LOCKED=--locked" >> $GITHUB_ENV
 
       - name: Run tests
@@ -69,11 +69,11 @@ jobs:
         run: cargo ${CARGO_LOCKED} test --tests --features curl --no-default-features
 
       - name: Check fmt
-        if: ${{ matrix.rust_os.rust == '1.65.0' }}
+        if: ${{ matrix.rust_os.rust == '1.71.0' }}
         run: cargo ${CARGO_LOCKED} fmt --all -- --check
 
       - name: Clippy
-        if: ${{ matrix.rust_os.rust == '1.65.0' }}
+        if: ${{ matrix.rust_os.rust == '1.71.0' }}
         run: cargo ${CARGO_LOCKED} clippy --all --all-features -- --deny warnings
 
       - name: Audit

@@ -73,4 +73,3 @@ hmac = "0.12"
 uuid = { version = "1.10", features = ["v4"] }
 anyhow = "1.0"
 tokio = { version = "1.0", features = ["full"] }
-async-std = "1.13"

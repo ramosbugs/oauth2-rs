@@ -40,7 +40,7 @@
 //!
 //! For the HTTP client modes described above, the following HTTP client implementations can be
 //! used:
-//!  * **[`reqwest`](reqwest)**
+//!  * **[`reqwest`] 0.12**
 //!
 //!    The `reqwest` HTTP client supports both the synchronous and asynchronous modes and is enabled
 //!    by default.
@@ -51,14 +51,20 @@
 //!    Asynchronous client: [`reqwest::Client`] (requires either the
 //!    `reqwest` or `reqwest-blocking` feature flags)
 //!
-//!  * **[`curl`](curl)**
+//!  * **[`reqwest`] 0.13**
+//!
+//!    Support for `reqwest` 0.13 is provided by the
+//!    [`oauth2-reqwest`](https://docs.rs/oauth2-reqwest/latest) crate. Please refer to that
+//!    crate's documentation for usage instructions.
+//!
+//!  * **[`curl`]**
 //!
 //!    The `curl` HTTP client only supports the synchronous HTTP client mode and can be enabled in
 //!    `Cargo.toml` via the `curl` feature flag.
 //!
 //!    Synchronous client: [`oauth2::CurlHttpClient`](CurlHttpClient)
 //!
-//! * **[`ureq`](ureq)**
+//! * **[`ureq`]**
 //!
 //!    The `ureq` HTTP client is a simple HTTP client with minimal dependencies. It only supports
 //!    the synchronous HTTP client mode and can be enabled in `Cargo.toml` via the `ureq` feature

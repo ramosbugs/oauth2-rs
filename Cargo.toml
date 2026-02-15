@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "oauth2",
+    "oauth2-reqwest",
 ]
 resolver = "2"
 

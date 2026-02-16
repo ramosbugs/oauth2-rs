@@ -4,6 +4,7 @@ authors = ["David A. Ramos <ramos@cs.stanford.edu>"]
 version = "0.1.0-alpha.1"
 license = "MIT"
 description = "reqwest HTTP client for oauth2"
+repository = "https://github.com/ramosbugs/oauth2-rs"
 edition = "2021"
 readme = "../README.md"
 rust-version = "1.71"

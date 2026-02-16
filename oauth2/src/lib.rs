@@ -461,13 +461,8 @@
 //!
 //! # Other examples
 //!
-//! More specific implementations are available as part of the examples:
-//!
-//! - [Google](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/google.rs) (includes token revocation)
-//! - [Github](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/github.rs)
-//! - [Microsoft Device Authorization Flow (async)](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/microsoft_devicecode.rs)
-//! - [Microsoft Graph](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/msgraph.rs)
-//! - [Wunderlist](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/wunderlist.rs)
+//! More specific implementations are available in the
+//! [`examples`](https://github.com/ramosbugs/oauth2-rs/blob/main/oauth2/examples) directory.
 //!
 //! ## Contributed Examples
 //!

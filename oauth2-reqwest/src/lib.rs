@@ -45,18 +45,19 @@
 //! # async fn err_wrapper() -> Result<(), anyhow::Error> {
 //! # let client = oauth2::basic::BasicClient::new(oauth2::ClientId::new("client_id".to_string()))
 //! #     .set_token_uri(oauth2::TokenUrl::new("http://token".to_string())?);
-//! let http_client = reqwest::ClientBuilder::new()
+//! let reqwest_client = reqwest::ClientBuilder::new()
 //!     // Following redirects opens the client up to SSRF vulnerabilities.
 //!     .redirect(reqwest::redirect::Policy::none())
 //!     .build()
 //!     .expect("Client should build");
+//! let http_client = ReqwestClient::from(reqwest_client);
 //!
 //! # let code = oauth2::AuthorizationCode::new("code".to_string());
 //! // This code assumes `client` is a previously constructed `oauth2::Client` and `code` is an
 //! // `oauth2::AuthorizationCode`.
 //! let token_result = client
 //!     .exchange_code(code)
-//!     .request_async(&ReqwestClient::from(&http_client))
+//!     .request_async(&http_client)
 //!     .await?;
 //!
 //! # Ok(())
@@ -82,18 +83,19 @@
 //! # fn err_wrapper() -> Result<(), anyhow::Error> {
 //! # let client = oauth2::basic::BasicClient::new(oauth2::ClientId::new("client_id".to_string()))
 //! #     .set_token_uri(oauth2::TokenUrl::new("http://token".to_string())?);
-//! let http_client = reqwest::blocking::ClientBuilder::new()
+//! let reqwest_client = reqwest::blocking::ClientBuilder::new()
 //!     // Following redirects opens the client up to SSRF vulnerabilities.
 //!     .redirect(reqwest::redirect::Policy::none())
 //!     .build()
 //!     .expect("Client should build");
+//! let http_client = ReqwestBlockingClient::from(reqwest_client);
 //!
 //! # let code = oauth2::AuthorizationCode::new("code".to_string());
 //! // This code assumes `client` is a previously constructed `oauth2::Client` and `code` is an
 //! // `oauth2::AuthorizationCode`.
 //! let token_result = client
 //!     .exchange_code(code)
-//!     .request(&ReqwestBlockingClient::from(&http_client))?;
+//!     .request(&http_client)?;
 //!
 //! # Ok(())
 //! # }
@@ -105,15 +107,15 @@ use std::pin::Pin;
 /// Asynchronous `reqwest` [`Client`](reqwest::Client) wrapper.
 ///
 /// See the [crate-level documentation](crate) for usage instructions.
-pub struct ReqwestClient<'c>(&'c reqwest::Client);
+pub struct ReqwestClient(reqwest::Client);
 
-impl<'c> From<&'c reqwest::Client> for ReqwestClient<'c> {
-    fn from(inner: &'c reqwest::Client) -> Self {
+impl From<reqwest::Client> for ReqwestClient {
+    fn from(inner: reqwest::Client) -> Self {
         Self(inner)
     }
 }
 
-impl<'c> AsyncHttpClient<'c> for ReqwestClient<'c> {
+impl<'c> AsyncHttpClient<'c> for ReqwestClient {
     type Error = HttpClientError<reqwest::Error>;
 
     #[cfg(target_arch = "wasm32")]
@@ -158,9 +160,9 @@ mod blocking {
     /// Synchronous `reqwest` blocking [`Client`](reqwest::blocking::Client) wrapper.
     ///
     /// See the [crate-level documentation](crate) for usage instructions.
-    pub struct ReqwestBlockingClient<'c>(&'c reqwest::blocking::Client);
+    pub struct ReqwestBlockingClient(reqwest::blocking::Client);
 
-    impl<'c> oauth2::SyncHttpClient for ReqwestBlockingClient<'c> {
+    impl<'c> oauth2::SyncHttpClient for ReqwestBlockingClient {
         type Error = HttpClientError<reqwest::Error>;
 
         fn call(&self, request: HttpRequest) -> Result<HttpResponse, Self::Error> {
@@ -184,8 +186,8 @@ mod blocking {
         }
     }
 
-    impl<'c> From<&'c reqwest::blocking::Client> for ReqwestBlockingClient<'c> {
-        fn from(inner: &'c reqwest::blocking::Client) -> Self {
+    impl From<reqwest::blocking::Client> for ReqwestBlockingClient {
+        fn from(inner: reqwest::blocking::Client) -> Self {
             Self(inner)
         }
     }

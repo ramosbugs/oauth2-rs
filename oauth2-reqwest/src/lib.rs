@@ -107,6 +107,7 @@ use std::pin::Pin;
 /// Asynchronous `reqwest` [`Client`](reqwest::Client) wrapper.
 ///
 /// See the [crate-level documentation](crate) for usage instructions.
+#[derive(Clone, Debug, Default)]
 pub struct ReqwestClient(reqwest::Client);
 
 impl From<reqwest::Client> for ReqwestClient {
@@ -160,6 +161,7 @@ mod blocking {
     /// Synchronous `reqwest` blocking [`Client`](reqwest::blocking::Client) wrapper.
     ///
     /// See the [crate-level documentation](crate) for usage instructions.
+    #[derive(Clone, Debug, Default)]
     pub struct ReqwestBlockingClient(reqwest::blocking::Client);
 
     impl<'c> oauth2::SyncHttpClient for ReqwestBlockingClient {

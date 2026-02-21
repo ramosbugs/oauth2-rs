@@ -164,7 +164,7 @@ mod blocking {
     #[derive(Clone, Debug, Default)]
     pub struct ReqwestBlockingClient(reqwest::blocking::Client);
 
-    impl<'c> oauth2::SyncHttpClient for ReqwestBlockingClient {
+    impl oauth2::SyncHttpClient for ReqwestBlockingClient {
         type Error = HttpClientError<reqwest::Error>;
 
         fn call(&self, request: HttpRequest) -> Result<HttpResponse, Self::Error> {

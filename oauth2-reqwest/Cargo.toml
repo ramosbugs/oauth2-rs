@@ -16,7 +16,7 @@ all-features = true
 blocking = ["reqwest/blocking"]
 
 [dependencies]
-oauth2 = { path = "../oauth2", version = "5" }
+oauth2 = { path = "../oauth2", version = "5", default-features = false }
 reqwest = { version = "0.13", default-features = false }
 
 [dev-dependencies]

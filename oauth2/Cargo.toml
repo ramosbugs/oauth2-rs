@@ -49,7 +49,7 @@ required-features = ["reqwest-blocking"]
 
 [dependencies]
 base64 = ">= 0.21, <0.23"
-thiserror = "1.0"
+thiserror = "2"
 http = "1.0"
 rand = "0.8"
 reqwest = { version = "0.12", optional = true, default-features = false }

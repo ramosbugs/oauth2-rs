@@ -52,7 +52,7 @@ fn main() {
         .set_client_secret(graph_client_secret)
         .set_auth_uri(auth_url)
         .set_token_uri(token_url)
-        // Microsoft Graph requires client_id and client_secret in URL rather than
+        // Microsoft Graph requires client_id and client_secret in request body rather than
         // using Basic authentication.
         .set_auth_type(AuthType::RequestBody)
         // This example will be running its own server at localhost:3003.

@@ -58,14 +58,15 @@ serde_json = "1.0"
 sha2 = "0.10"
 ureq = { version = "2", optional = true }
 url = { version = "2.1", features = ["serde"] }
-chrono = { version = "0.4.31", default-features = false, features = ["clock", "serde", "std", "wasmbind"] }
 serde_path_to_error = "0.1.2"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
+chrono = { version = "0.4.31", default-features = false, features = ["clock", "serde", "std", "wasmbind"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 curl = { version = "0.4.0", optional = true }
+chrono = { version = "0.4.31", default-features = false, features = ["clock", "serde", "std"] }
 
 [dev-dependencies]
 hex = "0.4"

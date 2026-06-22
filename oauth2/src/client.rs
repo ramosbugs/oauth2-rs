@@ -1,11 +1,12 @@
 use crate::{
     AccessToken, AuthType, AuthUrl, AuthorizationCode, AuthorizationRequest,
-    ClientCredentialsTokenRequest, ClientId, ClientSecret, CodeTokenRequest, ConfigurationError,
-    CsrfToken, DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationResponse,
-    DeviceAuthorizationUrl, ErrorResponse, ExtraDeviceAuthorizationFields, IntrospectionRequest,
-    IntrospectionUrl, PasswordTokenRequest, RedirectUrl, RefreshToken, RefreshTokenRequest,
-    ResourceOwnerPassword, ResourceOwnerUsername, RevocableToken, RevocationRequest, RevocationUrl,
-    TokenIntrospectionResponse, TokenResponse, TokenUrl,
+    ClientCredentialsTokenRequest, ClientId, ClientName, ClientSecret, CodeTokenRequest,
+    ConfigurationError, CsrfToken, DeviceAccessTokenRequest, DeviceAuthorizationRequest,
+    DeviceAuthorizationResponse, DeviceAuthorizationUrl, DynamicClient,
+    DynamicClientRegistrationUrl, ErrorResponse, ExtraDeviceAuthorizationFields,
+    IntrospectionRequest, IntrospectionUrl, PasswordTokenRequest, RedirectUrl, RefreshToken,
+    RefreshTokenRequest, ResourceOwnerPassword, ResourceOwnerUsername, RevocableToken,
+    RevocationRequest, RevocationUrl, TokenIntrospectionResponse, TokenResponse, TokenUrl,
 };
 
 use std::marker::PhantomData;
@@ -200,6 +201,14 @@ where
             device_authorization_url: None,
             phantom: PhantomData,
         }
+    }
+
+    /// Create a request to dynamically register an OAuth 2.0 client.
+    pub fn dynamic_client<'a>(
+        client_name: ClientName,
+        dynamic_client_registration_url: &'a DynamicClientRegistrationUrl,
+    ) -> DynamicClient<'a, TE, TR, TIR, RT, TRE> {
+        DynamicClient::new(client_name, dynamic_client_registration_url)
     }
 }
 impl<

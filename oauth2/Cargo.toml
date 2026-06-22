@@ -47,6 +47,10 @@ required-features = ["reqwest-blocking"]
 name = "wunderlist"
 required-features = ["reqwest-blocking"]
 
+[[example]]
+name = "dynamic_client_registration"
+required-features = ["reqwest-blocking"]
+
 [dependencies]
 base64 = ">= 0.21, <0.23"
 thiserror = "1.0"

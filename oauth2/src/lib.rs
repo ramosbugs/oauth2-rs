@@ -477,6 +477,8 @@ mod client;
 
 mod code;
 
+mod dcr;
+
 /// HTTP client backed by the [curl](https://crates.io/crates/curl) crate.
 /// Requires "curl" feature.
 #[cfg(all(feature = "curl", not(target_arch = "wasm32")))]
@@ -523,6 +525,12 @@ pub use crate::client::{Client, EndpointMaybeSet, EndpointNotSet, EndpointSet, E
 pub use crate::code::AuthorizationRequest;
 #[cfg(all(feature = "curl", not(target_arch = "wasm32")))]
 pub use crate::curl_client::CurlHttpClient;
+pub use crate::dcr::{
+    DynamicClientRegistrationErrorResponse, DynamicClientRegistrationErrorResponseType,
+    DynamicClient, DynamicClientRegistrationRequest,
+    DynamicClientRegistrationResponse, EmptyExtraDynamicClientRegistrationFields,
+    ExtraDynamicClientRegistrationFields, StandardDynamicClientRegistrationResponse,
+};
 pub use crate::devicecode::{
     DeviceAccessTokenRequest, DeviceAuthorizationRequest, DeviceAuthorizationResponse,
     DeviceCodeErrorResponse, DeviceCodeErrorResponseType, EmptyExtraDeviceAuthorizationFields,
@@ -543,11 +551,11 @@ pub use crate::token::{
     PasswordTokenRequest, RefreshTokenRequest, StandardTokenResponse, TokenResponse, TokenType,
 };
 pub use crate::types::{
-    AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
-    DeviceAuthorizationUrl, DeviceCode, EndUserVerificationUrl, IntrospectionUrl,
-    PkceCodeChallenge, PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl, RefreshToken,
-    ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, RevocationUrl, Scope, TokenUrl,
-    UserCode, VerificationUriComplete,
+    AccessToken, AuthUrl, AuthorizationCode, ClientId, ClientName, ClientSecret, CsrfToken,
+    DeviceAuthorizationUrl, DeviceCode, DynamicClientRegistrationUrl, EndUserVerificationUrl,
+    IntrospectionUrl, PkceCodeChallenge, PkceCodeChallengeMethod, PkceCodeVerifier, RedirectUrl,
+    RefreshToken, ResourceOwnerPassword, ResourceOwnerUsername, ResponseType, RevocationUrl, Scope,
+    TokenUrl, UserCode, VerificationUriComplete,
 };
 use std::error::Error;
 

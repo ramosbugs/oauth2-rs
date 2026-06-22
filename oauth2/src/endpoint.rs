@@ -162,7 +162,20 @@ where
     TE: ErrorResponse,
     DO: DeserializeOwned,
 {
-    check_response_status(&http_response)?;
+    endpoint_response_with_status(http_response, &[StatusCode::OK])
+}
+
+/// Like [`endpoint_response`], but accepts any of the given success status codes.
+pub(crate) fn endpoint_response_with_status<RE, TE, DO>(
+    http_response: HttpResponse,
+    success_statuses: &[StatusCode],
+) -> Result<DO, RequestTokenError<RE, TE>>
+where
+    RE: Error,
+    TE: ErrorResponse,
+    DO: DeserializeOwned,
+{
+    check_response_statuses(&http_response, success_statuses)?;
 
     check_response_body(&http_response)?;
 
@@ -188,7 +201,20 @@ where
     RE: Error + 'static,
     TE: ErrorResponse,
 {
-    if http_response.status() != StatusCode::OK {
+    check_response_statuses(http_response, &[StatusCode::OK])
+}
+
+fn check_response_statuses<RE, TE>(
+    http_response: &HttpResponse,
+    success_statuses: &[StatusCode],
+) -> Result<(), RequestTokenError<RE, TE>>
+where
+    RE: Error + 'static,
+    TE: ErrorResponse,
+{
+    if success_statuses.contains(&http_response.status()) {
+        Ok(())
+    } else {
         let reason = http_response.body().as_slice();
         if reason.is_empty() {
             Err(RequestTokenError::Other(
@@ -203,8 +229,6 @@ where
             };
             Err(error)
         }
-    } else {
-        Ok(())
     }
 }
 

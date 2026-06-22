@@ -353,6 +353,11 @@ new_type![
     #[derive(Deserialize, Serialize, Eq, Hash)]
     ClientId(String)
 ];
+new_type![
+    /// Client name used to identify the client during the registration process.
+    #[derive(Deserialize, Serialize, Eq, Hash)]
+    ClientName(String)
+];
 
 new_url_type![
     /// URL of the authorization server's authorization endpoint.
@@ -381,6 +386,10 @@ new_url_type![
 new_url_type![
     /// URL of the end-user verification URI on the authorization server.
     EndUserVerificationUrl
+];
+new_url_type![
+    /// URL of the client's dynamic client registration endpoint.
+    DynamicClientRegistrationUrl
 ];
 new_type![
     /// Authorization endpoint response (grant) type defined in

@@ -14,7 +14,7 @@
 //!
 
 use oauth2::basic::BasicClient;
-use oauth2::reqwest;
+use oauth2::{PkceCodeChallenge, reqwest};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope,
     TokenResponse, TokenUrl,
@@ -55,12 +55,15 @@ fn main() {
         .build()
         .expect("Client should build");
 
+    let (pkce_code_challenge, pkce_code_verifier) = PkceCodeChallenge::new_random_sha256();
+
     // Generate the authorization URL to which we'll redirect the user.
     let (authorize_url, csrf_state) = client
         .authorize_url(CsrfToken::new_random)
         // This example is requesting access to the user's public repos and email.
         .add_scope(Scope::new("public_repo".to_string()))
         .add_scope(Scope::new("user:email".to_string()))
+        .set_pkce_challenge(pkce_code_challenge)
         .url();
 
     println!("Open this URL in your browser:\n{authorize_url}\n");
@@ -113,7 +116,10 @@ fn main() {
     );
 
     // Exchange the code with a token.
-    let token_res = client.exchange_code(code).request(&http_client);
+    let token_res = client
+        .exchange_code(code)
+        .set_pkce_verifier(pkce_code_verifier)
+        .request(&http_client);
 
     println!("Github returned the following token:\n{token_res:?}\n");
 

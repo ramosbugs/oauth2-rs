@@ -129,9 +129,8 @@ impl<'a> AuthorizationRequest<'a> {
     /// Enables the use of [Proof Key for Code Exchange](https://tools.ietf.org/html/rfc7636)
     /// (PKCE).
     ///
-    /// PKCE is *highly recommended* for all public clients (i.e., those for which there
-    /// is no client secret or for which the client secret is distributed with the client,
-    /// such as in a native, mobile app, or browser app).
+    /// PKCE is *highly recommended* for all clients, including both confidential clients and 
+    /// public clients. See [RFC 9700](https://datatracker.ietf.org/doc/rfc9700/), section 7.5.1.
     pub fn set_pkce_challenge(mut self, pkce_code_challenge: PkceCodeChallenge) -> Self {
         self.pkce_challenge = Some(pkce_code_challenge);
         self

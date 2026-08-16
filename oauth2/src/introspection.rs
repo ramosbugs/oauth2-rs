@@ -5,8 +5,7 @@ use crate::{
     RevocableToken, Scope, SyncHttpClient, TokenResponse, TokenType,
 };
 
-use chrono::serde::ts_seconds_option;
-use chrono::{DateTime, Utc};
+use jiff::{fmt::serde::timestamp::second::optional as ts_seconds_option, Timestamp};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -224,15 +223,15 @@ pub trait TokenIntrospectionResponse: Debug + DeserializeOwned + Serialize {
     /// OPTIONAL.  Integer timestamp, measured in the number of seconds
     /// since January 1 1970 UTC, indicating when this token will expire,
     /// as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
-    fn exp(&self) -> Option<DateTime<Utc>>;
+    fn exp(&self) -> Option<Timestamp>;
     /// OPTIONAL.  Integer timestamp, measured in the number of seconds
     /// since January 1 1970 UTC, indicating when this token was
     /// originally issued, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
-    fn iat(&self) -> Option<DateTime<Utc>>;
+    fn iat(&self) -> Option<Timestamp>;
     /// OPTIONAL.  Integer timestamp, measured in the number of seconds
     /// since January 1 1970 UTC, indicating when this token is not to be
     /// used before, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
-    fn nbf(&self) -> Option<DateTime<Utc>>;
+    fn nbf(&self) -> Option<Timestamp>;
     /// OPTIONAL.  Subject of the token, as defined in JWT [RFC7519](https://tools.ietf.org/html/rfc7519).
     /// Usually a machine-readable identifier of the resource owner who
     /// authorized this token.
@@ -281,15 +280,15 @@ where
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(with = "ts_seconds_option")]
     #[serde(default)]
-    exp: Option<DateTime<Utc>>,
+    exp: Option<Timestamp>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(with = "ts_seconds_option")]
     #[serde(default)]
-    iat: Option<DateTime<Utc>>,
+    iat: Option<Timestamp>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(with = "ts_seconds_option")]
     #[serde(default)]
-    nbf: Option<DateTime<Utc>>,
+    nbf: Option<Timestamp>,
     #[serde(skip_serializing_if = "Option::is_none")]
     sub: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -356,15 +355,15 @@ where
         self.token_type = token_type;
     }
     /// Sets the `set_exp` field.
-    pub fn set_exp(&mut self, exp: Option<DateTime<Utc>>) {
+    pub fn set_exp(&mut self, exp: Option<Timestamp>) {
         self.exp = exp;
     }
     /// Sets the `set_iat` field.
-    pub fn set_iat(&mut self, iat: Option<DateTime<Utc>>) {
+    pub fn set_iat(&mut self, iat: Option<Timestamp>) {
         self.iat = iat;
     }
     /// Sets the `set_nbf` field.
-    pub fn set_nbf(&mut self, nbf: Option<DateTime<Utc>>) {
+    pub fn set_nbf(&mut self, nbf: Option<Timestamp>) {
         self.nbf = nbf;
     }
     /// Sets the `set_sub` field.
@@ -419,15 +418,15 @@ where
         self.token_type.as_ref()
     }
 
-    fn exp(&self) -> Option<DateTime<Utc>> {
+    fn exp(&self) -> Option<Timestamp> {
         self.exp
     }
 
-    fn iat(&self) -> Option<DateTime<Utc>> {
+    fn iat(&self) -> Option<Timestamp> {
         self.iat
     }
 
-    fn nbf(&self) -> Option<DateTime<Utc>> {
+    fn nbf(&self) -> Option<Timestamp> {
         self.nbf
     }
 
@@ -454,9 +453,9 @@ mod tests {
     use crate::tests::{mock_http_client, new_client};
     use crate::{AccessToken, AuthType, ClientId, IntrospectionUrl, RedirectUrl, Scope};
 
-    use chrono::DateTime;
     use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
     use http::{HeaderValue, Response, StatusCode};
+    use jiff::Timestamp;
 
     #[test]
     fn test_token_introspection_successful_with_basic_auth_minimal_response() {
@@ -574,15 +573,15 @@ mod tests {
             introspection_response.token_type
         );
         assert_eq!(
-            Some(DateTime::from_timestamp(1604073517, 0).unwrap()),
+            Some(Timestamp::from_second(1604073517).unwrap()),
             introspection_response.exp
         );
         assert_eq!(
-            Some(DateTime::from_timestamp(1604073217, 0).unwrap()),
+            Some(Timestamp::from_second(1604073217).unwrap()),
             introspection_response.iat
         );
         assert_eq!(
-            Some(DateTime::from_timestamp(1604073317, 0).unwrap()),
+            Some(Timestamp::from_second(1604073317).unwrap()),
             introspection_response.nbf
         );
         assert_eq!(Some("demo".to_string()), introspection_response.sub);

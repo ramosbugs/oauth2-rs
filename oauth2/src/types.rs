@@ -1,5 +1,5 @@
 use base64::prelude::*;
-use rand::{thread_rng, Rng};
+use rand::{rng, RngExt};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use url::Url;
@@ -448,7 +448,7 @@ impl PkceCodeChallenge {
     ///
     /// This method panics if the resulting PKCE code verifier is not of a suitable length
     /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
-    pub fn new_random_sha256_len(num_bytes: u32) -> (Self, PkceCodeVerifier) {
+    pub fn new_random_sha256_len(num_bytes: usize) -> (Self, PkceCodeVerifier) {
         let code_verifier = Self::new_random_len(num_bytes);
         (
             Self::from_code_verifier_sha256(&code_verifier),
@@ -468,12 +468,16 @@ impl PkceCodeChallenge {
     ///
     /// This method panics if the resulting PKCE code verifier is not of a suitable length
     /// to comply with [RFC 7636](https://tools.ietf.org/html/rfc7636).
-    fn new_random_len(num_bytes: u32) -> PkceCodeVerifier {
+    fn new_random_len(num_bytes: usize) -> PkceCodeVerifier {
         // The RFC specifies that the code verifier must have "a minimum length of 43
         // characters and a maximum length of 128 characters".
         // This implies 32-96 octets of random data to be base64 encoded.
         assert!((32..=96).contains(&num_bytes));
-        let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
+        let random_bytes: Vec<u8> = {
+            let mut buf = vec![0; num_bytes];
+            rng().fill(&mut buf[..]);
+            buf
+        };
         PkceCodeVerifier::new(BASE64_URL_SAFE_NO_PAD.encode(random_bytes))
     }
 
@@ -567,8 +571,12 @@ new_secret_type![
         /// # Arguments
         ///
         /// * `num_bytes` - Number of random bytes to generate, prior to base64-encoding.
-        pub fn new_random_len(num_bytes: u32) -> Self {
-            let random_bytes: Vec<u8> = (0..num_bytes).map(|_| thread_rng().gen::<u8>()).collect();
+        pub fn new_random_len(num_bytes: usize) -> Self {
+            let random_bytes: Vec<u8> ={
+                let mut buf = vec![0;num_bytes];
+                rng().fill(&mut buf[..]);
+                buf
+            };
             CsrfToken::new(BASE64_URL_SAFE_NO_PAD.encode(random_bytes))
         }
     }

@@ -7,7 +7,7 @@ description = "reqwest HTTP client for oauth2"
 repository = "https://github.com/ramosbugs/oauth2-rs"
 edition = "2021"
 readme = "../README.md"
-rust-version = "1.71"
+rust-version = "1.85"
 
 [package.metadata.docs.rs]
 all-features = true

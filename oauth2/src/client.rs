@@ -681,8 +681,7 @@ where
     /// that this value matches the `state` parameter passed by the authorization server to the
     /// redirect URI. Doing so mitigates
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12)
-    ///  attacks. To disable CSRF protections (NOT recommended), use `insecure::authorize_url`
-    ///  instead.
+    ///  attacks.
     pub fn authorize_url<S>(&self, state_fn: S) -> AuthorizationRequest<'_>
     where
         S: FnOnce() -> CsrfToken,
@@ -748,8 +747,7 @@ where
     /// that this value matches the `state` parameter passed by the authorization server to the
     /// redirect URI. Doing so mitigates
     /// [Cross-Site Request Forgery](https://tools.ietf.org/html/rfc6749#section-10.12)
-    ///  attacks. To disable CSRF protections (NOT recommended), use `insecure::authorize_url`
-    ///  instead.
+    ///  attacks.
     pub fn authorize_url<S>(
         &self,
         state_fn: S,

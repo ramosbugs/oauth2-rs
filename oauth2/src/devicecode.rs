@@ -8,7 +8,7 @@ use crate::{
     TokenIntrospectionResponse, TokenResponse, TokenUrl, UserCode,
 };
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -87,7 +87,7 @@ where
             extra_params: Vec::new(),
             token_url,
             dev_auth_resp: auth_response,
-            time_fn: Arc::new(Utc::now),
+            time_fn: Arc::new(Timestamp::now),
             max_backoff_interval: None,
             _phantom: PhantomData,
         }
@@ -215,7 +215,7 @@ where
     pub(crate) extra_params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
     pub(crate) token_url: &'a TokenUrl,
     pub(crate) dev_auth_resp: &'a DeviceAuthorizationResponse<EF>,
-    pub(crate) time_fn: Arc<dyn Fn() -> DateTime<Utc> + Send + Sync + 'b>,
+    pub(crate) time_fn: Arc<dyn Fn() -> Timestamp + Send + Sync + 'b>,
     pub(crate) max_backoff_interval: Option<Duration>,
     pub(crate) _phantom: PhantomData<(TR, EF)>,
 }
@@ -252,7 +252,7 @@ where
     /// This function is used while polling the authorization server.
     pub fn set_time_fn<'t, T>(self, time_fn: T) -> DeviceAccessTokenRequest<'a, 't, TR, EF>
     where
-        T: Fn() -> DateTime<Utc> + Send + Sync + 't,
+        T: Fn() -> Timestamp + Send + Sync + 't,
     {
         DeviceAccessTokenRequest {
             auth_type: self.auth_type,
@@ -445,7 +445,7 @@ where
     fn compute_timeout<RE>(
         &self,
         timeout: Option<Duration>,
-    ) -> Result<DateTime<Utc>, RequestTokenError<RE, DeviceCodeErrorResponse>>
+    ) -> Result<Timestamp, RequestTokenError<RE, DeviceCodeErrorResponse>>
     where
         RE: Error + 'static,
     {
@@ -453,16 +453,16 @@ where
         // use that, otherwise use the value given by the device authorization
         // response.
         let timeout_dur = timeout.unwrap_or_else(|| self.dev_auth_resp.expires_in());
-        let chrono_timeout = chrono::Duration::from_std(timeout_dur).map_err(|e| {
+        let jiff_timeout = jiff::SignedDuration::try_from(timeout_dur).map_err(|e| {
             RequestTokenError::Other(format!(
-                "failed to convert `{timeout_dur:?}` to `chrono::Duration`: {e}"
+                "failed to convert `{timeout_dur:?}` to `jiff::SignedDuration`: {e}"
             ))
         })?;
 
         // Calculate the DateTime at which the request times out.
         let timeout_dt = (*self.time_fn)()
-            .checked_add_signed(chrono_timeout)
-            .ok_or_else(|| RequestTokenError::Other("failed to calculate timeout".to_string()))?;
+            .checked_add(jiff_timeout)
+            .map_err(|_| RequestTokenError::Other("failed to calculate timeout".to_string()))?;
 
         Ok(timeout_dt)
     }
@@ -716,9 +716,9 @@ mod tests {
         StandardDeviceAuthorizationResponse, TokenResponse,
     };
 
-    use chrono::{DateTime, Utc};
     use http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
     use http::{HeaderValue, Response, StatusCode};
+    use jiff::Timestamp;
 
     use std::time::Duration;
 
@@ -914,14 +914,14 @@ mod tests {
         fn new() -> Self {
             Self { times: (0..) }
         }
-        fn next(&mut self) -> DateTime<Utc> {
+        fn next(&mut self) -> Timestamp {
             let next_value = self.times.next().unwrap();
-            DateTime::from_timestamp(next_value, 0).unwrap()
+            Timestamp::from_second(next_value).unwrap()
         }
     }
 
     /// Creates a time function that increments by one second each time.
-    fn mock_time_fn() -> impl Fn() -> DateTime<Utc> + Send + Sync {
+    fn mock_time_fn() -> impl Fn() -> Timestamp + Send + Sync {
         let timer = std::sync::Mutex::new(IncreasingTime::new());
         move || timer.lock().unwrap().next()
     }

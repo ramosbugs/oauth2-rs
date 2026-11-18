@@ -49,7 +49,7 @@ required-features = ["reqwest-blocking"]
 
 [dependencies]
 base64 = ">= 0.21, <0.23"
-jiff = { version = "0.2.35", default-features = false, features = ["std", "serde"] }
+jiff = { version = "1.0", default-features = false, features = ["std", "serde"] }
 thiserror = "1.0"
 http = "1.0"
 rand = "0.8"
